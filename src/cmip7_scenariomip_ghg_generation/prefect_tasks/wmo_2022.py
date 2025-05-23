@@ -11,7 +11,7 @@ import pandas as pd
 from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
 
 
-@task_standard_cache(task_run_name="extract_wmo_data_{raw_data_path}")
+@task_standard_cache(task_run_name="extract-wmo-data_{raw_data_path}")
 def extract_wmo_data(raw_data_path: Path, out_file: Path) -> Path:
     """
     Extract the WMO data from its raw format
@@ -56,3 +56,27 @@ def extract_wmo_data(raw_data_path: Path, out_file: Path) -> Path:
     res.to_feather(out_file)
 
     return out_file
+
+
+@task_standard_cache(task_run_name="get-wmo-ghgs_{extracted_data_path}")
+def get_wmo_ghgs(extracted_data_path: Path) -> tuple[str, ...]:
+    """
+    Get the GHGs that should be based on WMO data
+
+    Parameters
+    ----------
+    extracted_data_path
+        Path to the extracted data
+
+    Returns
+    -------
+    :
+        GHGs to use from WMO data
+    """
+    ghgs = tuple(
+        sorted(
+            pd.read_feather(extracted_data_path).index.get_level_values("ghg").unique()
+        )
+    )
+
+    return ghgs

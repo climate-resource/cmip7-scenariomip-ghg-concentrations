@@ -6,7 +6,10 @@ from pathlib import Path
 
 from prefect import flow
 
-from cmip7_scenariomip_ghg_generation.prefect_tasks import extract_wmo_data
+from cmip7_scenariomip_ghg_generation.prefect_tasks import (
+    extract_wmo_data,
+    get_wmo_ghgs,
+)
 
 
 def create_scenariomip_ghgs(
@@ -30,6 +33,13 @@ def create_scenariomip_ghgs(
     """
     extracted_wmo_data_path = extract_wmo_data(
         raw_data_path=wmo_raw_data_path, out_file=wmo_extracted_data_path
+    )
+
+    wmo_ghgs = get_wmo_ghgs(extracted_wmo_data_path)
+
+    wmo_based_annual_mean_files = create_wmo_based_annual_mean_file.map(
+        ghg=wmo_ghgs,
+        historical_data_root_dir=cmip7_historical_ghg_data_root_dir,
     )
 
 
