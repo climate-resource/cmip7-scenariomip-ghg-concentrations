@@ -2,13 +2,17 @@
 authors = [
     { name = "Zebedee Nicholls", email = "zebedee.nicholls@climate-resource.com"},
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "pre-commit>=3.3.1",
     "jupyterlab>=4.0.0",
     "jupytext>=1.15.2",
+    "openpyxl>=3.1.5,<4",
+    "pandas>=2.2.3,<3.0",
+    "prefect>=3.4.3,<4",
+    "typer>=0.15.4,<0.16", "pyarrow>=20.0.0,<21",
 ]
-name = "prototype"
+name = "cmip7_scenariomip_ghg_generation"
 version = "0.1.0"
 description = "Generation of GHG concentration inputs (i.e. forcings) for CMIP7's ScenarioMIP."
 readme = "README.md"
@@ -26,6 +30,11 @@ platforms = [
 ]
 
 [tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+
+[tool.pixi.pypi-dependencies]
+cmip7_scenariomip_ghg_generation = { path = ".", editable = true }
 
 [tool.jupytext]
 formats = "ipynb,py:percent"
