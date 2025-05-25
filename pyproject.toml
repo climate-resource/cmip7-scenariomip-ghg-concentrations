@@ -9,8 +9,10 @@ dependencies = [
     "jupytext>=1.15.2",
     "openpyxl>=3.1.5,<4",
     "pandas>=2.2.3,<3.0",
-    "prefect>=3.4.3,<4",
-    "typer>=0.15.4,<0.16", "pyarrow>=20.0.0,<21",
+    "pooch>=1.8.2,<2",
+    "prefect[dask]>=3.4.3,<4",
+    "pyarrow>=20.0.0,<21",
+    "typer>=0.15.4,<0.16",
 ]
 name = "cmip7_scenariomip_ghg_generation"
 version = "0.1.0"

@@ -2,19 +2,69 @@
 Generate the concentration files
 """
 
+import multiprocessing
 from pathlib import Path
 from typing import Annotated
 
 import typer
-from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs_wrapper
+from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
 
 REPO_ROOT_DIR = Path(__file__).parents[1]
-DATA_ROOT = REPO_ROOT_DIR / "data"
-DATA_RAW_ROOT = DATA_ROOT / "raw"
-DATA_INTERIM_ROOT = DATA_ROOT / "interim"
+OUTPUT_BUNDLES_ROOT_DIR = REPO_ROOT_DIR / "output-bundles"
+REPO_DATA_DIR = REPO_ROOT_DIR / "data" / "raw"
+
+ALL_GHGS = [
+    "c2f6",
+    "c3f8",
+    "c4f10",
+    "c5f12",
+    "c6f14",
+    "c7f16",
+    "c8f18",
+    "cc4f8",
+    "ccl4",
+    "cf4",
+    "cfc11",
+    "cfc113",
+    "cfc114",
+    "cfc115",
+    "cfc11eq",
+    "cfc12",
+    "cfc12eq",
+    "ch2cl2",
+    "ch3br",
+    "ch3ccl3",
+    "ch3cl",
+    "ch4",
+    "chcl3",
+    "co2",
+    "halon1211",
+    "halon1301",
+    "halon2402",
+    "hcfc141b",
+    "hcfc142b",
+    "hcfc22",
+    "hfc125",
+    "hfc134a",
+    "hfc134aeq",
+    "hfc143a",
+    "hfc152a",
+    "hfc227ea",
+    "hfc23",
+    "hfc236fa",
+    "hfc245fa",
+    "hfc32",
+    "hfc365mfc",
+    "hfc4310mee",
+    "n2o",
+    "nf3",
+    "sf6",
+    "so2f2",
+]
 
 
 def main(
+    ghg: Annotated[list[str], typer.Option(help="GHG to process")] = ALL_GHGS,
     run_id: Annotated[
         str,
         typer.Option(
@@ -27,25 +77,42 @@ this will lead to a new run being done
 (i.e. there will be no caching)."""
         ),
     ] = "dev-test",
+    n_workers: Annotated[
+        int, typer.Option(help="Number of workers to use for parallel work")
+    ] = multiprocessing.cpu_count(),
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
     """
+    ghgs = tuple(ghg)
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
+    data_root = OUTPUT_BUNDLES_ROOT_DIR / run_id / "data"
+    data_raw_root = data_root / "raw"
+    data_interim_root = data_root / "interim"
+
+    ### Historical GHG version
+    cmip7_historical_ghg_concentration_source_id = "CR-CMIP-1-0-0"
+
+    ### Output directories
+    cmip7_historical_ghg_concentration_data_root_dir = (
+        data_raw_root / "historical-ghg-concs"
+    )
 
     ### WMO 2022 stuff
-    wmo_raw_data_path = Path(
-        DATA_RAW_ROOT / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx",
-    )
+    wmo_raw_data_path = REPO_DATA_DIR / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx"
     # Save as feather as this is an interim product
-    wmo_extracted_data_path = Path(
-        DATA_INTERIM_ROOT / "wmo-2022" / "extracted-mixing-ratios.feather",
+    wmo_extracted_data_path = (
+        data_interim_root / "wmo-2022" / "extracted-mixing-ratios.feather"
     )
 
-    create_scenariomip_ghgs_wrapper(
+    create_scenariomip_ghgs(
+        ghgs=ghgs,
         run_id=run_id,
+        n_workers=n_workers,
+        cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
+        cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         wmo_raw_data_path=wmo_raw_data_path,
         wmo_extracted_data_path=wmo_extracted_data_path,
     )
