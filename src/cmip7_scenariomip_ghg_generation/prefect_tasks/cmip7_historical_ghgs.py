@@ -37,6 +37,7 @@ def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_
 
     for frequency, grid, time_frame in [
         ("yr", "gm", "1750-2022"),  # global annual-mean
+        ("mon", "gm", "175001-202212"),  # global monthly-mean
         ("mon", "gnz", "175001-202212"),  # monthly 15-degree
     ]:
         out_path = "/".join(

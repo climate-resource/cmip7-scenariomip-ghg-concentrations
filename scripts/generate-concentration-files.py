@@ -101,14 +101,20 @@ this will lead to a new run being done
     ### Historical GHG
     cmip7_historical_ghg_concentration_source_id = "CR-CMIP-1-0-0"
     cmip7_historical_ghg_concentration_data_root_dir = data_raw_root / "historical-ghg-concs"
+    cmip7_historical_seasonality_lat_gradient_info_raw_file_url = (
+        "https://zenodo.org/records/14892947/files/data--interim.tar.gz?download=1"
+    )
+    cmip7_historical_seasonality_lat_gradient_info_raw_file = data_raw_root / "historical-ghg-data-interim-info.tar.gz"
+    cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir = data_raw_root / "historical-ghg-data-interim"
 
     ### WMO 2022 stuff
     wmo_raw_data_path = REPO_DATA_DIR / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx"
     # Save as feather as this is an interim product
     wmo_extracted_data_path = data_interim_root / "wmo-2022" / "extracted-mixing-ratios.feather"
 
-    ### Annual-mean output
+    ### Interim outputs
     annual_mean_dir = data_interim_root / "annual-means"
+    monthly_mean_dir = data_interim_root / "monthly-means"
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
@@ -118,9 +124,13 @@ this will lead to a new run being done
         executed_notebooks_dir=executed_notebooks_dir,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+        cmip7_historical_seasonality_lat_gradient_info_raw_file_url=cmip7_historical_seasonality_lat_gradient_info_raw_file_url,
+        cmip7_historical_seasonality_lat_gradient_info_raw_file=cmip7_historical_seasonality_lat_gradient_info_raw_file,
+        cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
         wmo_raw_data_path=wmo_raw_data_path,
         wmo_extracted_data_path=wmo_extracted_data_path,
         annual_mean_dir=annual_mean_dir,
+        monthly_mean_dir=monthly_mean_dir,
     )
 
 

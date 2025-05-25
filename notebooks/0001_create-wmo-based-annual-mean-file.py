@@ -33,7 +33,7 @@ import xarray as xr
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "cfc11"
+ghg: str = "ccl4"
 extracted_wmo_data_path: str = "../output-bundles/dev-test/data/interim/wmo-2022/extracted-mixing-ratios.feather"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 out_file: str = "../output-bundles/dev-test/data/interim/annual-means/wmo-based_ccl4_annual-mean.feather"
@@ -51,8 +51,6 @@ out_file_p = Path(out_file)
 # ## Set up
 
 # %% editable=true slideshow={"slide_type": ""}
-# Has to be last year of historical data or earlier
-harmonisation_year = 2022
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Load data
@@ -69,7 +67,7 @@ wmo_data_raw = wmo_data_all.loc[pix.isin(ghg=ghg)]
 # ### CMIP7 historical GHG concentrations
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_file_l = list(historical_data_root_dir_p.rglob(f"*{ghg}_*gm*.nc"))
+cmip7_historical_gm_file_l = list(historical_data_root_dir_p.rglob(f"*{ghg}_*gm_1750-*.nc"))
 if len(cmip7_historical_gm_file_l) != 1:
     raise AssertionError(cmip7_historical_gm_file_l)
 
@@ -101,9 +99,13 @@ wmo_mid_year
 # ## Check harmonisation
 
 # %% editable=true slideshow={"slide_type": ""}
+last_history_year = int(cmip7_historical_gm["time"].dt.year.max())
+last_history_year
+
+# %% editable=true slideshow={"slide_type": ""}
 np.testing.assert_allclose(
-    cmip7_historical_gm.sel(time=cmip7_historical_gm["time"].dt.year == harmonisation_year),
-    wmo_mid_year.loc[:, harmonisation_year],
+    cmip7_historical_gm.sel(time=cmip7_historical_gm["time"].dt.year == last_history_year),
+    wmo_mid_year.loc[:, last_history_year],
     rtol=1e-3,
 )
 
@@ -115,4 +117,4 @@ np.testing.assert_allclose(
 
 # %% editable=true slideshow={"slide_type": ""}
 out_file_p.parent.mkdir(parents=True, exist_ok=True)
-wmo_mid_year.to_feather(out_file_p)
+wmo_mid_year.loc[:, last_history_year:].to_feather(out_file_p)

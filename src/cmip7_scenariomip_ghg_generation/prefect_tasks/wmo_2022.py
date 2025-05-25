@@ -111,7 +111,6 @@ def create_wmo_based_annual_mean_file(  # noqa: PLR0913
     executed_notebooks_dir
         Directory in which executed notebooks should be written
 
-
     Returns
     -------
     :
