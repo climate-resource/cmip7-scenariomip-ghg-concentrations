@@ -69,7 +69,7 @@ wmo_data_raw = wmo_data_all.loc[pix.isin(ghg=ghg)]
 # ### CMIP7 historical GHG concentrations
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_file_l = list(historical_data_root_dir_p.rglob(f"*{ghg}*gm*.nc"))
+cmip7_historical_gm_file_l = list(historical_data_root_dir_p.rglob(f"*{ghg}_*gm*.nc"))
 if len(cmip7_historical_gm_file_l) != 1:
     raise AssertionError(cmip7_historical_gm_file_l)
 
