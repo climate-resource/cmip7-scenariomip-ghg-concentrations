@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
 
 REPO_ROOT_DIR = Path(__file__).parents[1]
@@ -88,33 +89,38 @@ this will lead to a new run being done
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
-    data_root = OUTPUT_BUNDLES_ROOT_DIR / run_id / "data"
+    raw_notebooks_root_dir = REPO_ROOT_DIR / "notebooks"
+
+    output_bundle_root_dir = OUTPUT_BUNDLES_ROOT_DIR / run_id
+    data_root = output_bundle_root_dir / "data"
     data_raw_root = data_root / "raw"
     data_interim_root = data_root / "interim"
 
-    ### Historical GHG version
-    cmip7_historical_ghg_concentration_source_id = "CR-CMIP-1-0-0"
+    executed_notebooks_dir = output_bundle_root_dir / "notebooks-executed"
 
-    ### Output directories
-    cmip7_historical_ghg_concentration_data_root_dir = (
-        data_raw_root / "historical-ghg-concs"
-    )
+    ### Historical GHG
+    cmip7_historical_ghg_concentration_source_id = "CR-CMIP-1-0-0"
+    cmip7_historical_ghg_concentration_data_root_dir = data_raw_root / "historical-ghg-concs"
 
     ### WMO 2022 stuff
     wmo_raw_data_path = REPO_DATA_DIR / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx"
     # Save as feather as this is an interim product
-    wmo_extracted_data_path = (
-        data_interim_root / "wmo-2022" / "extracted-mixing-ratios.feather"
-    )
+    wmo_extracted_data_path = data_interim_root / "wmo-2022" / "extracted-mixing-ratios.feather"
+
+    ### Annual-mean output
+    annual_mean_dir = data_interim_root / "annual-means"
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
         run_id=run_id,
         n_workers=n_workers,
+        raw_notebooks_root_dir=raw_notebooks_root_dir,
+        executed_notebooks_dir=executed_notebooks_dir,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         wmo_raw_data_path=wmo_raw_data_path,
         wmo_extracted_data_path=wmo_extracted_data_path,
+        annual_mean_dir=annual_mean_dir,
     )
 
 

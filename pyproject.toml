@@ -7,12 +7,18 @@ dependencies = [
     "pre-commit>=3.3.1",
     "jupyterlab>=4.0.0",
     "jupytext>=1.15.2",
+    "matplotlib>=3.10.3,<4",
+    "netcdf4>=1.7.2,<2",
     "openpyxl>=3.1.5,<4",
     "pandas>=2.2.3,<3.0",
+    "pandas-indexing>=0.6.3,<0.7",
+    "papermill>=2.6.0,<3",
     "pooch>=1.8.2,<2",
     "prefect[dask]>=3.4.3,<4",
     "pyarrow>=20.0.0,<21",
+    "seaborn>=0.13.2,<0.14",
     "typer>=0.15.4,<0.16",
+    "xarray>=2025.4.0,<2026",
 ]
 name = "cmip7_scenariomip_ghg_generation"
 version = "0.1.0"
@@ -41,6 +47,10 @@ cmip7_scenariomip_ghg_generation = { path = ".", editable = true }
 [tool.jupytext]
 formats = "ipynb,py:percent"
 
+[tool.ruff]
+src = ["src"]
+line-length = 120
+
 [tool.ruff.lint]
 select = [
     "E",
@@ -64,3 +74,11 @@ ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*" = [
+    "D100",  # Missing docstring in public module
+    # "E402",  # Module level import not at top of file
+    # "E501",  # Line too long (false failure on comments coming from markdown cells)
+    "S101",  # Use of `assert` detected
+]

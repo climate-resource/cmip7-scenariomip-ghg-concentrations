@@ -11,12 +11,8 @@ import pooch
 from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
 
 
-@task_standard_cache(
-    task_run_name="download-cmip7-historical-ghg-concentrations_{ghg}_{source_id}"
-)
-def download_cmip7_historical_ghg_concentrations(
-    ghg: str, source_id: str, root_dir: Path
-) -> None:
+@task_standard_cache(task_run_name="download-cmip7-historical-ghg-concentrations_{ghg}_{source_id}")
+def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_dir: Path) -> None:
     """
     Download CMIP7 historical GHG concentration data
 
@@ -55,18 +51,20 @@ def download_cmip7_historical_ghg_concentrations(
                 ghg,
                 grid,
                 pub_date,
-                f"{ghg}_input4MIPs_GHGConcentrations_CMIP_{source_id}_{grid}_{time_frame}.nc",
             ]
         )
+        out_name = f"{ghg}_input4MIPs_GHGConcentrations_CMIP_{source_id}_{grid}_{time_frame}.nc"
         download_url = "/".join(
             [
                 "https://esgf1.dkrz.de/thredds/fileServer/input4mips",
                 out_path,
+                out_name,
             ]
         )
 
         pooch.retrieve(
             download_url,
             known_hash=None,  # from ESGF, assume safe
+            fname=out_name,
             path=root_dir / out_path,
         )

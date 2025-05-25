@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
 from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
 
 
@@ -61,7 +62,7 @@ def extract_wmo_data(raw_data_path: Path, out_file: Path) -> Path:
 @task_standard_cache(task_run_name="get-wmo-ghgs_{extracted_data_path}")
 def get_wmo_ghgs(extracted_data_path: Path) -> tuple[str, ...]:
     """
-    Get the GHGs that should be based on WMO data
+    Get the GHGs included in WMO data
 
     Parameters
     ----------
@@ -73,10 +74,61 @@ def get_wmo_ghgs(extracted_data_path: Path) -> tuple[str, ...]:
     :
         GHGs to use from WMO data
     """
-    ghgs = tuple(
-        sorted(
-            pd.read_feather(extracted_data_path).index.get_level_values("ghg").unique()
-        )
-    )
+    ghgs = tuple(sorted(pd.read_feather(extracted_data_path).index.get_level_values("ghg").unique()))
 
     return ghgs
+
+
+@task_standard_cache(task_run_name="create-wmo-based-annual-mean-file_{ghg}")
+def create_wmo_based_annual_mean_file(  # noqa: PLR0913
+    ghg: str,
+    extracted_wmo_data_path: Path,
+    historical_data_root_dir: Path,
+    annual_mean_dir: Path,
+    raw_notebooks_root_dir: Path,
+    executed_notebooks_dir: Path,
+) -> Path:
+    """
+    Create a WMO-based annual-mean file
+
+    Parameters
+    ----------
+    ghg
+        GHG for which to create the annual-mean
+
+    extracted_wmo_data_path
+        Path in which the WMO data has been extracted
+
+    historical_data_root_dir
+        Root path in which the historical data was downloaded
+
+    annual_mean_dir
+        Directory in which to write the annual-mean file
+
+    raw_notebooks_root_dir
+        Directory in which the raw notebooks live
+
+    executed_notebooks_dir
+        Directory in which executed notebooks should be written
+
+
+    Returns
+    -------
+    :
+        Written path
+    """
+    out_file = annual_mean_dir / f"wmo-based_{ghg}_annual-mean.feather"
+
+    run_notebook(
+        raw_notebooks_root_dir / "0001_create-wmo-based-annual-mean-file.py",
+        parameters={
+            "ghg": ghg,
+            "extracted_wmo_data_path": str(extracted_wmo_data_path),
+            "historical_data_root_dir": str(historical_data_root_dir),
+            "out_file": str(out_file),
+        },
+        run_notebooks_dir=executed_notebooks_dir,
+        identity=ghg,
+    )
+
+    return out_file
