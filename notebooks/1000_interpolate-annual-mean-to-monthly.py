@@ -27,12 +27,16 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pandas_indexing as pix
 import xarray as xr
 
+from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import (
+    LaiKaplanInterpolator,
+    interpolate_annual_mean_to_monthly,
+)
+from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan import (
+    get_wall_control_points_y_linear_with_flat_override_on_left,
+)
 from cmip7_scenariomip_ghg_generation.xarray_helpers import convert_year_month_to_time
-from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import interpolate_annual_mean_to_monthly, LaiKaplanInterpolator
-from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan import get_wall_control_points_y_linear_with_flat_override_on_left
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Parameters
@@ -41,7 +45,9 @@ from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan i
 ghg: str = "ccl4"
 annual_mean_file: str = "../output-bundles/dev-test/data/interim/annual-means/wmo-based_ccl4_annual-mean.feather"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
-historical_data_seasonality_lat_gradient_info_root: str = "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
+historical_data_seasonality_lat_gradient_info_root: str = (
+    "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
+)
 out_file: str = "../output-bundles/dev-test/data/interim/monthly-means/wmo-based_ccl4_monthly-mean.feather"
 
 
@@ -73,6 +79,7 @@ annual_mean
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### CMIP7 historical GHG concentrations
 
+
 # %% editable=true slideshow={"slide_type": ""}
 def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
     file_l = list(base_dir.rglob(glob))
@@ -95,7 +102,9 @@ cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
 # cmip7_historical_gm_monthly
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_monthly_no_seasonality_ds = load_file_from_glob(f"{ghg}_global-annual-mean_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p)
+cmip7_historical_monthly_no_seasonality_ds = load_file_from_glob(
+    f"{ghg}_global-annual-mean_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p
+)
 cmip7_historical_monthly_no_seasonality = list(cmip7_historical_monthly_no_seasonality_ds.data_vars.values())[0]
 # cmip7_historical_monthly_no_seasonality
 
@@ -123,17 +132,12 @@ np.testing.assert_allclose(
 cmip7_historical_gm_annual_df = pd.DataFrame(
     cmip7_historical_gm_annual.values[np.newaxis, :],
     columns=cmip7_historical_gm_annual["time"].dt.year.values,
-    index=pd.MultiIndex.from_tuples(
-        [
-            (ghg, cmip7_historical_gm_annual.attrs["units"])
-        ],
-        names=["ghg", "unit"]
-    )
+    index=pd.MultiIndex.from_tuples([(ghg, cmip7_historical_gm_annual.attrs["units"])], names=["ghg", "unit"]),
 )
 # cmip7_historical_gm_annual_df
 
 # %% editable=true slideshow={"slide_type": ""}
-stitched = pd.concat([cmip7_historical_gm_annual_df, annual_mean.loc[:, overlap_year + 1:]], axis="columns")
+stitched = pd.concat([cmip7_historical_gm_annual_df, annual_mean.loc[:, overlap_year + 1 :]], axis="columns")
 stitched.T.plot()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -143,7 +147,7 @@ stitched.T.plot()
 stitched_units_l = stitched.pix.unique("unit")
 if len(stitched_units_l) != 1:
     raise AssertionError(stitched_units_l)
-    
+
 stitched_units = stitched_units_l[0]
 
 stitched_monthly = interpolate_annual_mean_to_monthly(
@@ -153,7 +157,7 @@ stitched_monthly = interpolate_annual_mean_to_monthly(
     algorithm=LaiKaplanInterpolator(
         get_wall_control_points_y_from_interval_ys=get_wall_control_points_y_linear_with_flat_override_on_left,
         progress_bar=True,
-    )
+    ),
 )
 stitched_monthly
 
@@ -171,12 +175,23 @@ cmip7_historical_monthly_no_seasonality_time_axis = convert_year_month_to_time(
 fig, ax = plt.subplots()
 
 years_to_plot = np.arange(overlap_year - 4, overlap_year + 1)
-cmip7_historical_gm_monthly.sel(time=cmip7_historical_gm_monthly["time"].dt.year.isin(np.arange(overlap_year - 4, overlap_year + 1))).plot.scatter(ax=ax, label="CMIP7 hist incl. seasonality", alpha=0.6)
-cmip7_historical_monthly_no_seasonality_time_axis.sel(time=cmip7_historical_monthly_no_seasonality_time_axis["time"].dt.year.isin(np.arange(overlap_year - 4, overlap_year + 1))).plot.scatter(ax=ax, label="CMIP7 hist excl. seasonality", alpha=0.6)
-stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(years_to_plot)).plot.scatter(ax=ax, label="Stitched monthly", alpha=0.6)
+cmip7_historical_gm_monthly.sel(
+    time=cmip7_historical_gm_monthly["time"].dt.year.isin(np.arange(overlap_year - 4, overlap_year + 1))
+).plot.scatter(ax=ax, label="CMIP7 hist incl. seasonality", alpha=0.6)
+cmip7_historical_monthly_no_seasonality_time_axis.sel(
+    time=cmip7_historical_monthly_no_seasonality_time_axis["time"].dt.year.isin(
+        np.arange(overlap_year - 4, overlap_year + 1)
+    )
+).plot.scatter(ax=ax, label="CMIP7 hist excl. seasonality", alpha=0.6)
+stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(years_to_plot)).plot.scatter(
+    ax=ax, label="Stitched monthly", alpha=0.6
+)
 
 ax.grid()
 ax.legend()
+
+# %% editable=true slideshow={"slide_type": ""}
+stitched_monthly.plot()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Check harmonisation
