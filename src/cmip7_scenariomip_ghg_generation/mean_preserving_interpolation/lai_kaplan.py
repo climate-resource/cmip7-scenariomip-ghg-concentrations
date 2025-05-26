@@ -1225,8 +1225,8 @@ class LaiKaplanInterpolator:
         iterh = range(y_out_m.size)
         if self.progress_bar:
             # # TODO: switch to optional pattern
-            # tqdman = get_optional_dependency("tqdm.autonotebook")
-            import tqdm.autonotebook as tqdman
+            # tqdman = get_optional_dependency("tqdm.auto")
+            import tqdm.auto as tqdman
 
             iterh = tqdman.tqdm(iterh, desc="Calculating output values")
 
@@ -1313,8 +1313,8 @@ class LaiKaplanInterpolator:
         iterh = np.where(below_min_in_group > 0)[0]
         if self.progress_bar:
             # # TODO: switch to optional pattern
-            # tqdman = get_optional_dependency("tqdm.autonotebook")
-            import tqdm.autonotebook as tqdman
+            # tqdman = get_optional_dependency("tqdm.auto")
+            import tqdm.auto as tqdman
 
             iterh = tqdman.tqdm(iterh, desc="Updating intervals where the solution is less than the minimum value")
 

@@ -4,7 +4,7 @@ Main flow
 
 from pathlib import Path
 
-from prefect import flow, unmapped
+from prefect import flow
 from prefect.task_runners import ThreadPoolTaskRunner
 from prefect_dask import DaskTaskRunner
 
@@ -79,11 +79,15 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     :
         Generated paths
     """
+    # Download some data
+    # Crunch GHG whatever
+    # Crunch next thing
+
     downloaded_cmip7_historical_ghgs_futures = {
         ghg: download_cmip7_historical_ghg_concentrations.submit(
             ghg,
-            source_id=unmapped(cmip7_historical_ghg_concentration_source_id),
-            root_dir=unmapped(cmip7_historical_ghg_concentration_data_root_dir),
+            source_id=cmip7_historical_ghg_concentration_source_id,
+            root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         )
         for ghg in ghgs
     }
@@ -104,37 +108,37 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     wmo_based_global_mean_yearly_file_futures = {
         ghg: create_wmo_based_annual_mean_file.submit(
             ghg=ghg,
-            extracted_wmo_data_path=unmapped(extracted_wmo_data_path),
-            historical_data_root_dir=unmapped(cmip7_historical_ghg_concentration_data_root_dir),
-            annual_mean_dir=unmapped(annual_mean_dir),
-            raw_notebooks_root_dir=unmapped(raw_notebooks_root_dir),
-            executed_notebooks_dir=unmapped(executed_notebooks_dir),
+            extracted_wmo_data_path=extracted_wmo_data_path,
+            historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+            annual_mean_dir=annual_mean_dir,
+            raw_notebooks_root_dir=raw_notebooks_root_dir,
+            executed_notebooks_dir=executed_notebooks_dir,
             wait_for=downloaded_cmip7_historical_ghgs_futures[ghg],
         )
         for ghg in wmo_based_ghgs
     }
 
-    wmo_based_global_mean_monthly_file_futures = {
-        ghg: interpolate_annual_mean_to_monthly.submit(
+    wmo_based_global_mean_monthly_file_futures = {}
+    for ghg, yearly_future in wmo_based_global_mean_yearly_file_futures.items():
+        wmo_based_global_mean_monthly_file_futures[ghg] = interpolate_annual_mean_to_monthly.submit(
             ghg=ghg,
             annual_mean_file=yearly_future.result(),
-            historical_data_root_dir=unmapped(cmip7_historical_ghg_concentration_data_root_dir),
-            historical_data_seasonality_lat_gradient_info_root=unmapped(
+            historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+            historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted
             ),
-            monthly_mean_dir=unmapped(monthly_mean_dir),
-            raw_notebooks_root_dir=unmapped(raw_notebooks_root_dir),
-            executed_notebooks_dir=unmapped(executed_notebooks_dir),
+            monthly_mean_dir=monthly_mean_dir,
+            raw_notebooks_root_dir=raw_notebooks_root_dir,
+            executed_notebooks_dir=executed_notebooks_dir,
         )
-        for ghg, yearly_future in wmo_based_global_mean_yearly_file_futures.items()
-    }
+    # breakpoint()
 
-    # extend seasonality with annual-mean
-    # extend lat. gradient with emissions
-    #    - interpolate PCs to monthly before applying
-    # interpolate annual-mean to monthly
-
-    return (v.result() for v in wmo_based_global_mean_yearly_file_futures.values())
+    # # extend seasonality with annual-mean
+    # # extend lat. gradient with emissions
+    # #    - interpolate PCs to monthly before applying
+    # # interpolate annual-mean to monthly
+    #
+    return tuple(v.result() for v in wmo_based_global_mean_monthly_file_futures.values())
 
 
 def create_scenariomip_ghgs(  # noqa: PLR0913

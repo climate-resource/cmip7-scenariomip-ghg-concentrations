@@ -23,6 +23,7 @@ def extract_tar(tar_file: Path, extract_root_dir: Path) -> Path:
     extract_root_dir
         Root directory in which to extract
     """
+    print(tar_file)
     with tarfile.open(tar_file, "r:gz") as tar:
         tar.extractall(extract_root_dir)  # noqa: S202 # downloaded ourself
 

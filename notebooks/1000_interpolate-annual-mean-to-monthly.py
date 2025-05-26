@@ -26,7 +26,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import openscm_units
 import pandas as pd
+import pandas_indexing as pix  # noqa: F401
+import pint_xarray  # noqa: F401
 import xarray as xr
 
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import (
@@ -48,7 +51,7 @@ historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
-out_file: str = "../output-bundles/dev-test/data/interim/monthly-means/wmo-based_ccl4_monthly-mean.feather"
+out_file: str = "../output-bundles/dev-test/data/interim/monthly-means/wmo-based_ccl4_monthly-mean.nc"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -157,8 +160,10 @@ stitched_monthly = interpolate_annual_mean_to_monthly(
     algorithm=LaiKaplanInterpolator(
         get_wall_control_points_y_from_interval_ys=get_wall_control_points_y_linear_with_flat_override_on_left,
         progress_bar=True,
+        min_val=openscm_units.unit_registry.Quantity(0, "ppt"),
     ),
-)
+    unit_registry=openscm_units.unit_registry,
+).pint.dequantify()
 stitched_monthly
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -183,27 +188,44 @@ cmip7_historical_monthly_no_seasonality_time_axis.sel(
         np.arange(overlap_year - 4, overlap_year + 1)
     )
 ).plot.scatter(ax=ax, label="CMIP7 hist excl. seasonality", alpha=0.6)
+
+years_to_plot = np.arange(overlap_year - 4, overlap_year + 5)
 stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(years_to_plot)).plot.scatter(
-    ax=ax, label="Stitched monthly", alpha=0.6
+    ax=ax, label="Stitched monthly", alpha=0.3
 )
 
 ax.grid()
 ax.legend()
 
 # %% editable=true slideshow={"slide_type": ""}
-stitched_monthly.plot()
+overlap_times = np.intersect1d(cmip7_historical_monthly_no_seasonality_time_axis["time"], stitched_monthly["time"])
 
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# ## Check harmonisation
-
-# %% editable=true slideshow={"slide_type": ""}
-
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# ## Use WMO data directly for projections
-#
-# Given we've checked harmonisation,
-# no further processing is needed.
+np.testing.assert_allclose(
+    cmip7_historical_monthly_no_seasonality_time_axis.sel(time=overlap_times),
+    stitched_monthly.sel(time=overlap_times),
+    atol=1e-8,
+    rtol=1e-3,
+)
 
 # %% editable=true slideshow={"slide_type": ""}
-out_file_p.parent.mkdir(parents=True, exist_ok=True)
-wmo_mid_year.to_feather(out_file_p)
+fig, ax = plt.subplots()
+stitched_monthly.groupby("time.year").mean().plot(ax=ax)
+ax.set_xlim([2000, 2500])
+ax.set_xticks(np.arange(2000, 2500 + 1, 50))
+ax.grid()
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# ## Prepare output
+
+# %% editable=true slideshow={"slide_type": ""}
+out = stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(annual_mean.loc[:, overlap_year + 1 :].columns))
+out.name = ghg
+out
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# ## Save
+
+# %% editable=true slideshow={"slide_type": ""}
+out_file_p.parent.mkdir(exist_ok=True, parents=True)
+out.to_netcdf(out_file_p)
+out_file_p

@@ -11,7 +11,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
 
 
 @task_standard_cache(task_run_name="interpolate-annual-mean-to-monthly_{ghg}")
-def interpolate_annual_mean_to_monthly(
+def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     ghg: str,
     annual_mean_file: Path,
     historical_data_root_dir: Path,
@@ -54,7 +54,10 @@ def interpolate_annual_mean_to_monthly(
     if "annual" not in annual_mean_file.name:
         raise AssertionError(annual_mean_file.name)
 
-    out_file = monthly_mean_dir / annual_mean_file.name.replace("annual", "monthly")
+    if not annual_mean_file.name.endswith(".feather"):
+        raise AssertionError(annual_mean_file.name)
+
+    out_file = monthly_mean_dir / annual_mean_file.name.replace("annual", "monthly").replace(".feather", ".nc")
 
     run_notebook(
         raw_notebooks_root_dir / "1000_interpolate-annual-mean-to-monthly.py",

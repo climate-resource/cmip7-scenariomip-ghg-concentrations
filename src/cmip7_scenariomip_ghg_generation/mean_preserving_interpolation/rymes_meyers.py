@@ -179,8 +179,8 @@ class RymesMeyersInterpolator:
         iterh = range(self.max_it)
         if self.progress_bar:
             # # TODO: switch to optional pattern
-            # tqdman = get_optional_dependency("tqdm.autonotebook")
-            import tqdm.autonotebook as tqdman
+            # tqdman = get_optional_dependency("tqdm.auto")
+            import tqdm.auto as tqdman
 
             iterh = tqdman.tqdm(iterh)
 
