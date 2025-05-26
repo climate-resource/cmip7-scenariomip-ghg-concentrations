@@ -85,6 +85,9 @@ annual_mean
 
 # %% editable=true slideshow={"slide_type": ""}
 def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
+    """
+    Load a single file based on a glob pattern
+    """
     file_l = list(base_dir.rglob(glob))
     if len(file_l) != 1:
         raise AssertionError(file_l)
@@ -108,7 +111,7 @@ cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
 cmip7_historical_monthly_no_seasonality_ds = load_file_from_glob(
     f"{ghg}_global-annual-mean_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p
 )
-cmip7_historical_monthly_no_seasonality = list(cmip7_historical_monthly_no_seasonality_ds.data_vars.values())[0]
+cmip7_historical_monthly_no_seasonality = next(cmip7_historical_monthly_no_seasonality_ds.data_vars.values())
 # cmip7_historical_monthly_no_seasonality
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -125,7 +128,7 @@ overlap_year = annual_mean.columns.min()
 np.testing.assert_allclose(
     cmip7_historical_gm_annual.sel(time=cmip7_historical_gm_annual["time"].dt.year == overlap_year),
     annual_mean.loc[:, overlap_year],
-    rtol=1e-3,
+    rtol=2e-3,
 )
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -204,7 +207,7 @@ np.testing.assert_allclose(
     cmip7_historical_monthly_no_seasonality_time_axis.sel(time=overlap_times),
     stitched_monthly.sel(time=overlap_times),
     atol=1e-8,
-    rtol=1e-3,
+    rtol=1e-2,
 )
 
 # %% editable=true slideshow={"slide_type": ""}

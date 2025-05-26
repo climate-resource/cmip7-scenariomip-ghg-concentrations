@@ -2,6 +2,7 @@
 Main flow
 """
 
+from functools import partial
 from pathlib import Path
 
 from prefect import flow
@@ -9,14 +10,10 @@ from prefect.task_runners import ThreadPoolTaskRunner
 from prefect_dask import DaskTaskRunner
 
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
-    create_wmo_based_annual_mean_file,
-    download_cmip7_historical_ghg_concentrations,
     download_file,
     extract_tar,
-    extract_wmo_data,
-    get_wmo_ghgs,
-    interpolate_annual_mean_to_monthly,
 )
+from cmip7_scenariomip_ghg_generation.wmo_2022_flow import create_scenariomip_ghgs_wmo_2022_based
 
 
 def create_scenariomip_ghgs_flow(  # noqa: PLR0913
@@ -79,19 +76,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     :
         Generated paths
     """
-    # Download some data
-    # Crunch GHG whatever
-    # Crunch next thing
-
-    downloaded_cmip7_historical_ghgs_futures = {
-        ghg: download_cmip7_historical_ghg_concentrations.submit(
-            ghg,
-            source_id=cmip7_historical_ghg_concentration_source_id,
-            root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-        )
-        for ghg in ghgs
-    }
-
+    # Used in all flows hence here
     downloaded_cmip7_historical_seasonality_lat_gradient_info = download_file.submit(
         cmip7_historical_seasonality_lat_gradient_info_raw_file_url,
         out_path=cmip7_historical_seasonality_lat_gradient_info_raw_file,
@@ -101,44 +86,65 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         extract_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
     )
 
-    ### WMO based
-    extracted_wmo_data_path = extract_wmo_data(raw_data_path=wmo_raw_data_path, out_file=wmo_extracted_data_path)
-    all_wmo_ghgs = get_wmo_ghgs(extracted_wmo_data_path)
-    wmo_based_ghgs = tuple(ghg for ghg in ghgs if ghg in all_wmo_ghgs)
-    wmo_based_global_mean_yearly_file_futures = {
-        ghg: create_wmo_based_annual_mean_file.submit(
-            ghg=ghg,
-            extracted_wmo_data_path=extracted_wmo_data_path,
-            historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-            annual_mean_dir=annual_mean_dir,
-            raw_notebooks_root_dir=raw_notebooks_root_dir,
-            executed_notebooks_dir=executed_notebooks_dir,
-            wait_for=downloaded_cmip7_historical_ghgs_futures[ghg],
-        )
-        for ghg in wmo_based_ghgs
-    }
+    wmo_2022_direct_flow_ghgs = tuple(
+        ghg
+        for ghg in ghgs
+        if ghg
+        in [
+            "ccl4",
+            "cfc11",
+            "cfc12",
+            "cfc113",
+            "cfc114",
+            "cfc115",
+            "ch3br",
+            "ch3ccl3",
+            "ch3cl",
+            "halon1211",
+        ]
+    )
 
-    wmo_based_global_mean_monthly_file_futures = {}
-    for ghg, yearly_future in wmo_based_global_mean_yearly_file_futures.items():
-        wmo_based_global_mean_monthly_file_futures[ghg] = interpolate_annual_mean_to_monthly.submit(
-            ghg=ghg,
-            annual_mean_file=yearly_future,
-            historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-            historical_data_seasonality_lat_gradient_info_root=(
-                cmip7_historical_seasonality_lat_gradient_info_extracted
-            ),
-            monthly_mean_dir=monthly_mean_dir,
-            raw_notebooks_root_dir=raw_notebooks_root_dir,
-            executed_notebooks_dir=executed_notebooks_dir,
-        )
-    # breakpoint()
+    wmo_2022_harmonised_ghgs = tuple(
+        ghg
+        for ghg in ghgs
+        if ghg
+        in [
+            "hcfc141b",
+            "hcfc142b",
+            "hcfc22",
+        ]
+    )
 
-    # # extend seasonality with annual-mean
-    # # extend lat. gradient with emissions
-    # #    - interpolate PCs to monthly before applying
-    # # interpolate annual-mean to monthly
-    #
-    return tuple(v.result() for v in wmo_based_global_mean_monthly_file_futures.values())
+    unsupported_ghgs = set(ghgs) - set(wmo_2022_direct_flow_ghgs) - set(wmo_2022_harmonised_ghgs)
+    if unsupported_ghgs:
+        msg = f"The following GHGs are not supported: {unsupported_ghgs}"
+        raise AssertionError(msg)
+
+    create_wmo_2022_based = partial(
+        create_scenariomip_ghgs_wmo_2022_based,
+        cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
+        cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+        cmip7_historical_seasonality_lat_gradient_info_extracted=cmip7_historical_seasonality_lat_gradient_info_extracted,
+        wmo_raw_data_path=wmo_raw_data_path,
+        wmo_extracted_data_path=wmo_extracted_data_path,
+        annual_mean_dir=annual_mean_dir,
+        monthly_mean_dir=monthly_mean_dir,
+        raw_notebooks_root_dir=raw_notebooks_root_dir,
+        executed_notebooks_dir=executed_notebooks_dir,
+    )
+    wmo_2022_direct_flow_paths = create_wmo_2022_based(
+        ghgs=wmo_2022_direct_flow_ghgs,
+        harmonise=False,
+    )
+    wmo_2022_harmonised_paths = create_wmo_2022_based(
+        ghgs=wmo_2022_harmonised_ghgs,
+        harmonise=True,
+    )
+
+    # written_paths = tuple(
+    #     *wmo_2022_direct_flow_paths
+    #     *wmo_2022_harmonised_paths
+    # )
 
 
 def create_scenariomip_ghgs(  # noqa: PLR0913

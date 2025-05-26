@@ -79,9 +79,10 @@ def get_wmo_ghgs(extracted_data_path: Path) -> tuple[str, ...]:
     return ghgs
 
 
-@task_standard_cache(task_run_name="create-wmo-based-annual-mean-file_{ghg}")
+@task_standard_cache(task_run_name="create-wmo-based-annual-mean-file_{ghg}", refresh_cache=True)
 def create_wmo_based_annual_mean_file(  # noqa: PLR0913
     ghg: str,
+    harmonise: bool,
     extracted_wmo_data_path: Path,
     historical_data_root_dir: Path,
     annual_mean_dir: Path,
@@ -95,6 +96,11 @@ def create_wmo_based_annual_mean_file(  # noqa: PLR0913
     ----------
     ghg
         GHG for which to create the annual-mean
+
+    harmonise
+        Should we harmonise the WMO 2022 data to the historical data?
+
+        If `False`, we check that the data is already harmonised.
 
     extracted_wmo_data_path
         Path in which the WMO data has been extracted
@@ -122,6 +128,7 @@ def create_wmo_based_annual_mean_file(  # noqa: PLR0913
         raw_notebooks_root_dir / "0001_create-wmo-based-annual-mean-file.py",
         parameters={
             "ghg": ghg,
+            "harmonise": harmonise,
             "extracted_wmo_data_path": str(extracted_wmo_data_path),
             "historical_data_root_dir": str(historical_data_root_dir),
             "out_file": str(out_file),

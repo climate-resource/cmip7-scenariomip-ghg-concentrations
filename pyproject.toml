@@ -2,7 +2,7 @@
 authors = [
     { name = "Zebedee Nicholls", email = "zebedee.nicholls@climate-resource.com"},
 ]
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "ipywidgets>=8.1.7,<9",
     "jupyterlab>=4.0.0",
@@ -23,7 +23,7 @@ dependencies = [
     "scipy>=1.15.3,<2",
     "seaborn>=0.13.2,<0.14",
     "typer>=0.15.4,<0.16",
-    "xarray>=2025.4.0,<2026",
+    "xarray>=2025.4.0,<2026", "gradient-aware-harmonisation @ git+https://github.com/climate-resource/gradient-aware-harmonisation.git@f1ab1c5908df755244466f2e4d3e77d63b4a6b19",
 ]
 name = "cmip7_scenariomip_ghg_generation"
 version = "0.1.0"
