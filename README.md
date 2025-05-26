@@ -79,7 +79,6 @@ pixi run python scripts/generate-concentration-files.py --ghg ccl4 --ghg cfc113 
 If you use one core, then we use the default runner
 which gives clearer output. An example command is below
 
-
 ```sh
 pixi run python scripts/generate-concentration-files.py --ghg ccl4 --ghg cfc113 --ghg cfc11 --ghg cfc12 --n-workers 1
 ```
