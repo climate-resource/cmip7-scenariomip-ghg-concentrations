@@ -63,6 +63,8 @@ def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_
             ]
         )
 
+        out_path_full = root_dir / out_path
+        out_path_full.mkdir(exist_ok=True, parents=True)
         pooch.retrieve(
             download_url,
             known_hash=None,  # from ESGF, assume safe
