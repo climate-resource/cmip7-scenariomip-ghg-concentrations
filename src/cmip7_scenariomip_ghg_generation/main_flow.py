@@ -122,7 +122,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     for ghg, yearly_future in wmo_based_global_mean_yearly_file_futures.items():
         wmo_based_global_mean_monthly_file_futures[ghg] = interpolate_annual_mean_to_monthly.submit(
             ghg=ghg,
-            annual_mean_file=yearly_future.result(),
+            annual_mean_file=yearly_future,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted

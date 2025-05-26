@@ -29,7 +29,6 @@ def download_file(url: Path, out_path: Path) -> Path:
     :
         Path in which the file was saved (i.e. `out_path`)
     """
-    print(url)
     pooch.retrieve(
         url,
         known_hash=None,  # from ESGF, assume safe
