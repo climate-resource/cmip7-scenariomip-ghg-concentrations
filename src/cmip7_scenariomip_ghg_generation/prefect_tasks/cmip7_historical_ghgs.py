@@ -69,6 +69,6 @@ def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_
             download_url,
             known_hash=None,  # from ESGF, assume safe
             fname=out_name,
-            path=root_dir / out_path,
+            path=out_path_full,
             progressbar=True,
         )
