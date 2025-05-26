@@ -103,7 +103,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
 
     ### WMO based
     extracted_wmo_data_path = extract_wmo_data(raw_data_path=wmo_raw_data_path, out_file=wmo_extracted_data_path)
-    all_wmo_ghgs = get_wmo_ghgs(extracted_wmo_data_path.result())
+    all_wmo_ghgs = get_wmo_ghgs(extracted_wmo_data_path)
     wmo_based_ghgs = tuple(ghg for ghg in ghgs if ghg in all_wmo_ghgs)
     wmo_based_global_mean_yearly_file_futures = {
         ghg: create_wmo_based_annual_mean_file.submit(
