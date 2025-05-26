@@ -58,11 +58,31 @@ pixi run jupyter lab
 
 ## Creating the files
 
-This documentation is a work in progress, the rough idea will be:
+Under the hood, this uses [prefect](https://docs.prefect.io/v3/get-started)
+to ochestrate the workflow.
 
-- run `pixi run python <some-script.py>`
-    - this will use [prefect](https://docs.prefect.io/v3/get-started)
-      to ochestrate the workflow
+### Specific gases
+
+To run for a specific gas, you can use the `--ghg` flag as shown below.
+
+```sh
+pixi run python scripts/generate-concentration-files.py --ghg ccl4 --ghg cfc113
+```
+
+By default, this uses all your cores.
+You can specifiy fewer cores using the `--n-workers` flag as shown below.
+
+```sh
+pixi run python scripts/generate-concentration-files.py --ghg ccl4 --ghg cfc113 --ghg cfc11 --n-workers 2
+```
+
+If you use one core, then we use the default runner
+which gives clearer output. An example command is below
+
+
+```sh
+pixi run python scripts/generate-concentration-files.py --ghg ccl4 --ghg cfc113 --ghg cfc11 --ghg cfc12 --n-workers 1
+```
 
 ## Development
 
@@ -71,8 +91,8 @@ TODO: update this section as we add:
 - tests
 
 
-Install and run instructions are the same as the above 
-(this is a simple repository, 
+Install and run instructions are the same as the above
+(this is a simple repository,
 without tests etc. so there are no development-only dependencies).
 
 ### Contributing
@@ -83,7 +103,7 @@ TODO: update as we figure out the structure
 
 TODO: update as we figure out the structure
 
-We have a basic `Makefile` which captures key commands in one place 
+We have a basic `Makefile` which captures key commands in one place
 (for more thoughts on why this makes sense, see
 [general principles: automation](https://gitlab.com/znicholls/mullet-rse/-/blob/main/book/general-principles/automation.md)).
 For an introduction to `make`, see
