@@ -110,7 +110,15 @@ this will lead to a new run being done
     ### WMO 2022 stuff
     wmo_raw_data_path = REPO_DATA_DIR / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx"
     # Save as feather as this is an interim product
-    wmo_extracted_data_path = data_interim_root / "wmo-2022" / "extracted-mixing-ratios.feather"
+    wmo_cleaned_data_path = data_interim_root / "wmo-2022" / "cleaned-mixing-ratios.feather"
+
+    ### Western et al. 2024 stuff
+    western_et_al_2024_download_url = "https://zenodo.org/records/10782689/files/Projections.zip?download=1"
+    western_et_al_2024_raw_tar_file = data_raw_root / "western-et-al-2024" / "Projections.zip"
+    western_et_al_2024_extract_path = data_raw_root / "western-et-al-2024" / "projections"
+    western_et_al_2024_extracted_file_of_interest = Path("Projections") / "hcfc_projections_v2.csv"
+    western_et_al_2024_cleaned_data_path = data_interim_root / "western-et-al-2024" / "cleaned-mixing-ratios.feather"
+    western_et_al_2024_extended_data_path = data_interim_root / "western-et-al-2024" / "extended-mixing-ratios.feather"
 
     ### Interim outputs
     annual_mean_dir = data_interim_root / "annual-means"
@@ -128,7 +136,13 @@ this will lead to a new run being done
         cmip7_historical_seasonality_lat_gradient_info_raw_file=cmip7_historical_seasonality_lat_gradient_info_raw_file,
         cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
         wmo_raw_data_path=wmo_raw_data_path,
-        wmo_extracted_data_path=wmo_extracted_data_path,
+        wmo_cleaned_data_path=wmo_cleaned_data_path,
+        western_et_al_2024_download_url=western_et_al_2024_download_url,
+        western_et_al_2024_raw_tar_file=western_et_al_2024_raw_tar_file,
+        western_et_al_2024_extract_path=western_et_al_2024_extract_path,
+        western_et_al_2024_extracted_file_of_interest=western_et_al_2024_extracted_file_of_interest,
+        western_et_al_2024_cleaned_data_path=western_et_al_2024_cleaned_data_path,
+        western_et_al_2024_extended_data_path=western_et_al_2024_extended_data_path,
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
     )

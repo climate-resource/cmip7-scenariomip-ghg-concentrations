@@ -14,6 +14,7 @@ dependencies = [
     "openscm-units>=0.6.3,<0.7",
     "pandas>=2.2.3,<3.0",
     "pandas-indexing>=0.6.3,<0.7",
+    "pandas-openscm>=0.5.1",
     "papermill>=2.6.0,<3",
     "pint-xarray>=0.4,<0.5",
     "pooch>=1.8.2,<2",

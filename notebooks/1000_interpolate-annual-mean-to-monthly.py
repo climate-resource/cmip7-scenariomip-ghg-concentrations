@@ -111,7 +111,9 @@ cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
 cmip7_historical_monthly_no_seasonality_ds = load_file_from_glob(
     f"{ghg}_global-annual-mean_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p
 )
-cmip7_historical_monthly_no_seasonality = next(cmip7_historical_monthly_no_seasonality_ds.data_vars.values())
+cmip7_historical_monthly_no_seasonality = (
+    cmip7_historical_monthly_no_seasonality_ds.to_dataarray().isel(variable=0).drop_vars("variable")
+)
 # cmip7_historical_monthly_no_seasonality
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}

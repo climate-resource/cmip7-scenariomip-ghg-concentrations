@@ -10,10 +10,16 @@ from prefect.task_runners import ThreadPoolTaskRunner
 from prefect_dask import DaskTaskRunner
 
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
+    clean_western_et_al_2024_data,
+    clean_wmo_data,
     download_file,
+    extend_western_et_al_2024_with_wmo_2022,
     extract_tar,
+    extract_zip,
 )
-from cmip7_scenariomip_ghg_generation.wmo_2022_flow import create_scenariomip_ghgs_wmo_2022_based
+from cmip7_scenariomip_ghg_generation.singe_concentration_projection_flow import (
+    create_scenariomip_ghgs_single_concentration_projection,
+)
 
 
 def create_scenariomip_ghgs_flow(  # noqa: PLR0913
@@ -26,7 +32,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     cmip7_historical_seasonality_lat_gradient_info_raw_file: Path,
     cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir: Path,
     wmo_raw_data_path: Path,
-    wmo_extracted_data_path: Path,
+    wmo_cleaned_data_path: Path,
+    western_et_al_2024_download_url: str,
+    western_et_al_2024_raw_tar_file: Path,
+    western_et_al_2024_extract_path: Path,
+    western_et_al_2024_extracted_file_of_interest: Path,
+    western_et_al_2024_cleaned_data_path: Path,
+    western_et_al_2024_extended_data_path: Path,
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
 ) -> tuple[Path, ...]:
@@ -62,8 +74,26 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     wmo_raw_data_path
         Path to raw WMO data
 
-    wmo_extracted_data_path
+    wmo_cleaned_data_url
         Path in which to extract the WMO data
+
+    western_et_al_2024_download_url
+        URL from which to download the raw Western et al. (2024) data
+
+    western_et_al_2024_raw_tar_file
+        Path in which to download the raw Western et al. (2024) data
+
+    western_et_al_2024_extract_path
+        Path in which to extract the raw Western et al. (2024) data
+
+    western_et_al_2024_extracted_file_of_interest
+        File of interest from the extracted Western et al. (2024) data
+
+    western_et_al_2024_cleaned_data_path
+        Path in which to save the cleaned Western et al. (2024) data
+
+    western_et_al_2024_extended_data_path
+        Path in which to save the extended Western et al. (2024) data
 
     annual_mean_dir
         Path in which to save interim annual-mean data
@@ -76,7 +106,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     :
         Generated paths
     """
-    # Used in all flows hence here
+    ### Used in all flows hence here
     downloaded_cmip7_historical_seasonality_lat_gradient_info = download_file.submit(
         cmip7_historical_seasonality_lat_gradient_info_raw_file_url,
         out_path=cmip7_historical_seasonality_lat_gradient_info_raw_file,
@@ -86,7 +116,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         extract_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
     )
 
-    wmo_2022_direct_flow_ghgs = tuple(
+    ### WMO 2022
+    wmo_2022_ghgs = tuple(
         ghg
         for ghg in ghgs
         if ghg
@@ -104,7 +135,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         ]
     )
 
-    wmo_2022_harmonised_ghgs = tuple(
+    ### Western et al. 2024
+    western_2024_ghgs = tuple(
         ghg
         for ghg in ghgs
         if ghg
@@ -115,31 +147,59 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         ]
     )
 
-    unsupported_ghgs = set(ghgs) - set(wmo_2022_direct_flow_ghgs) - set(wmo_2022_harmonised_ghgs)
+    unsupported_ghgs = set(ghgs) - set(wmo_2022_ghgs) - set(western_2024_ghgs)
     if unsupported_ghgs:
         msg = f"The following GHGs are not supported: {unsupported_ghgs}"
         raise AssertionError(msg)
 
-    create_wmo_2022_based = partial(
-        create_scenariomip_ghgs_wmo_2022_based,
+    create_single_concentration_projection = partial(
+        create_scenariomip_ghgs_single_concentration_projection,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         cmip7_historical_seasonality_lat_gradient_info_extracted=cmip7_historical_seasonality_lat_gradient_info_extracted,
-        wmo_raw_data_path=wmo_raw_data_path,
-        wmo_extracted_data_path=wmo_extracted_data_path,
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
     )
-    wmo_2022_direct_flow_paths = create_wmo_2022_based(
-        ghgs=wmo_2022_direct_flow_ghgs,
-        harmonise=False,
+
+    wmo_2022_cleaned = clean_wmo_data(raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path)
+    wmo_2022_paths = create_single_concentration_projection(
+        ghgs=wmo_2022_ghgs,
+        cleaned_data_path=wmo_2022_cleaned,
     )
-    wmo_2022_harmonised_paths = create_wmo_2022_based(
-        ghgs=wmo_2022_harmonised_ghgs,
-        harmonise=True,
+
+    western_et_al_2024_raw_tar_file_downloaded = download_file(
+        url=western_et_al_2024_download_url,
+        out_path=western_et_al_2024_raw_tar_file,
     )
+    western_et_al_2024_extracted = extract_zip.submit(
+        zip_file=western_et_al_2024_raw_tar_file_downloaded,
+        extract_root_dir=western_et_al_2024_extract_path,
+    )
+    western_et_al_2024_cleaned = clean_western_et_al_2024_data(
+        raw_data_path=western_et_al_2024_extracted.result() / western_et_al_2024_extracted_file_of_interest,
+        out_file=western_et_al_2024_cleaned_data_path,
+    )
+    western_et_al_2024_extended = extend_western_et_al_2024_with_wmo_2022(
+        western_et_al_2024_clean=western_et_al_2024_cleaned,
+        wmo_2022_clean=wmo_2022_cleaned,
+        western_et_al_2024_extended=western_et_al_2024_extended_data_path,
+        raw_notebooks_root_dir=raw_notebooks_root_dir,
+        executed_notebooks_dir=executed_notebooks_dir,
+    )
+
+    western_et_al_2024_extracted.wait()
+    western_2024_paths = create_single_concentration_projection(
+        ghgs=western_2024_ghgs,
+        cleaned_data_path=clean_western_et_al_2024_data(
+            raw_data_path=western_et_al_2024_extracted.result() / western_et_al_2024_extracted_file_of_interest,
+            out_file=western_et_al_2024_cleaned_data_path,
+        ),
+    )
+
+    # TODO:
+    # - add tracking of sources used throughout the processes
 
     # written_paths = tuple(
     #     *wmo_2022_direct_flow_paths
@@ -159,7 +219,13 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     cmip7_historical_seasonality_lat_gradient_info_raw_file: Path,
     cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir: Path,
     wmo_raw_data_path: Path,
-    wmo_extracted_data_path: Path,
+    wmo_cleaned_data_path: Path,
+    western_et_al_2024_download_url: str,
+    western_et_al_2024_raw_tar_file: Path,
+    western_et_al_2024_extract_path: Path,
+    western_et_al_2024_extracted_file_of_interest: Path,
+    western_et_al_2024_cleaned_data_path: Path,
+    western_et_al_2024_extended_data_path: Path,
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
 ) -> tuple[Path, ...]:
@@ -203,8 +269,26 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     wmo_raw_data_path
         Path to the raw WMO data
 
-    wmo_extracted_data_path
+    wmo_cleaned_data_path
         Path in which to save the extracted WMO data
+
+    western_et_al_2024_download_url
+        URL from which to download the raw Western et al. (2024) data
+
+    western_et_al_2024_raw_tar_file
+        Path in which to download the raw Western et al. (2024) data
+
+    western_et_al_2024_extract_path
+        Path in which to extract the raw Western et al. (2024) data
+
+    western_et_al_2024_extracted_file_of_interest
+        File of interest from the extracted Western et al. (2024) data
+
+    western_et_al_2024_cleaned_data_path
+        Path in which to save the cleaned Western et al. (2024) data
+
+    western_et_al_2024_extended_data_path
+        Path in which to save the extended Western et al. (2024) data
 
     annual_mean_dir
         Path in which to save interim annual-mean data
@@ -232,7 +316,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         task_runner=task_runner,
     )(create_scenariomip_ghgs_flow)
 
-    run_id_flow(
+    return run_id_flow(
         ghgs=ghgs,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
@@ -242,7 +326,13 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         cmip7_historical_seasonality_lat_gradient_info_raw_file=cmip7_historical_seasonality_lat_gradient_info_raw_file,
         cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
         wmo_raw_data_path=wmo_raw_data_path,
-        wmo_extracted_data_path=wmo_extracted_data_path,
+        wmo_cleaned_data_path=wmo_cleaned_data_path,
+        western_et_al_2024_download_url=western_et_al_2024_download_url,
+        western_et_al_2024_raw_tar_file=western_et_al_2024_raw_tar_file,
+        western_et_al_2024_extract_path=western_et_al_2024_extract_path,
+        western_et_al_2024_extracted_file_of_interest=western_et_al_2024_extracted_file_of_interest,
+        western_et_al_2024_cleaned_data_path=western_et_al_2024_cleaned_data_path,
+        western_et_al_2024_extended_data_path=western_et_al_2024_extended_data_path,
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
     )
