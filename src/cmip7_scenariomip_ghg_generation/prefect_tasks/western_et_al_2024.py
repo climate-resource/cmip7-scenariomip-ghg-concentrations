@@ -56,23 +56,53 @@ def clean_western_et_al_2024_data(raw_data_path: Path, out_file: Path) -> Path:
     return out_file
 
 
-@task_standard_cache(task_run_name="extend-western-et-al-2024-with-wmo-2022")
-def extend_western_et_al_2024_with_wmo_2022(
+@task_standard_cache(task_run_name="extend-western-et-al-2024_{ghg}")
+def extend_western_et_al_2024(
+    ghg: str,
     western_et_al_2024_clean: Path,
     wmo_2022_clean: Path,
-    western_et_al_2024_extended: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> Path:
+    """
+    Extend Western et al. (2024) data
+
+    Parameters
+    ----------
+    ghg
+        GHG we're working on
+
+    western_et_al_2024_clean
+        Path to clean Western et al. (2024) data
+
+    wmo_2022_clean
+        Path to clean WMO (2022) data
+
+        Used for comparing to how WMO (2022) did their extensions
+
+    raw_notebooks_root_dir
+        Directory in which to copy raw notebooks
+
+    executed_notebooks_dir
+        Directory in which to write executed notebooks
+
+
+    Returns
+    -------
+    :
+        Path to the file with extended data
+    """
+    out_file = western_et_al_2024_clean.parent / f"western-et-al-2024_{ghg}_extended.feather"
     run_notebook(
-        raw_notebooks_root_dir / "0001_extend-western-et-al-2024-with-wmo-2022.py",
+        raw_notebooks_root_dir / "0001_extend-western-et-al-2024.py",
         parameters={
+            "ghg": ghg,
             "western_et_al_2024_clean_path": str(western_et_al_2024_clean),
             "wmo_2022_clean_path": str(wmo_2022_clean),
-            "western_et_al_2024_extended_path": str(western_et_al_2024_extended),
+            "out_file": str(out_file),
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity="only",
     )
 
-    return western_et_al_2024_extended
+    return out_file

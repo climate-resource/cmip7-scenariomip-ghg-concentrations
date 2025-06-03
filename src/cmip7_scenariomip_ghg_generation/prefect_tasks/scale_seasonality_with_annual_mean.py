@@ -1,5 +1,5 @@
 """
-Convert annual-means to monthly-means
+Scale future seasonality with anual-mean
 """
 
 from __future__ import annotations
@@ -10,18 +10,18 @@ from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
 from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
 
 
-@task_standard_cache(task_run_name="interpolate-annual-mean-to-monthly_{ghg}")
-def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
+@task_standard_cache(task_run_name="scale-seasonality-based-on-annual-mean_{ghg}")
+def scale_seasonality_based_on_annual_mean(  # noqa: PLR0913
     ghg: str,
     annual_mean_file: Path,
     historical_data_root_dir: Path,
     historical_data_seasonality_lat_gradient_info_root: Path,
-    monthly_mean_dir: Path,
+    seasonality_dir: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> Path:
     """
-    Interpolate annual-mean data to monthly
+    Scale seasonality based on annual-mean
 
     Parameters
     ----------
@@ -37,8 +37,8 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     historical_data_seasonality_lat_gradient_info_root
         Root path in which the seasonality and lat. gradient info was extracted
 
-    monthly_mean_dir
-        Directory in which to write the monthly-mean file
+    seasonality_dir
+        Directory in which to write the seasonality file
 
     raw_notebooks_root_dir
         Directory in which the raw notebooks live
@@ -51,16 +51,18 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     :
         Written path
     """
-    if "annual" not in annual_mean_file.name:
+    if "annual-mean" not in annual_mean_file.name:
         raise AssertionError(annual_mean_file.name)
 
     if not annual_mean_file.name.endswith(".feather"):
         raise AssertionError(annual_mean_file.name)
 
-    out_file = monthly_mean_dir / annual_mean_file.name.replace("annual", "monthly").replace(".feather", ".nc")
+    out_file = seasonality_dir / annual_mean_file.name.replace("annual-mean", "seasonality-all-years").replace(
+        ".feather", ".nc"
+    )
 
     run_notebook(
-        raw_notebooks_root_dir / "1000_interpolate-annual-mean-to-monthly.py",
+        raw_notebooks_root_dir / "1010_scale-seasonality-based-on-annual-mean.py",
         parameters={
             "ghg": ghg,
             "annual_mean_file": str(annual_mean_file),

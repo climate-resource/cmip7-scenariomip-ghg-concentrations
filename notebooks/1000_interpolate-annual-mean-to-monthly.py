@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import openscm_units
 import pandas as pd
-import pandas_indexing as pix  # noqa: F401
+import pandas_indexing as pix
 import pint_xarray  # noqa: F401
 import xarray as xr
 
@@ -46,7 +46,9 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import convert_year_month_t
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "ccl4"
-annual_mean_file: str = "../output-bundles/dev-test/data/interim/annual-means/wmo-based_ccl4_annual-mean.feather"
+annual_mean_file: str = (
+    "../output-bundles/dev-test/data/interim/annual-means/single-concentration-projection_ccl4_annual-mean.feather"
+)
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
@@ -141,11 +143,11 @@ cmip7_historical_gm_annual_df = pd.DataFrame(
     cmip7_historical_gm_annual.values[np.newaxis, :],
     columns=cmip7_historical_gm_annual["time"].dt.year.values,
     index=pd.MultiIndex.from_tuples([(ghg, cmip7_historical_gm_annual.attrs["units"])], names=["ghg", "unit"]),
-)
+).rename_axis(columns=annual_mean.columns.name)
 # cmip7_historical_gm_annual_df
 
 # %% editable=true slideshow={"slide_type": ""}
-stitched = pd.concat([cmip7_historical_gm_annual_df, annual_mean.loc[:, overlap_year + 1 :]], axis="columns")
+stitched = pix.concat([cmip7_historical_gm_annual_df, annual_mean.loc[:, overlap_year + 1 :]], axis="columns")
 stitched.T.plot()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}

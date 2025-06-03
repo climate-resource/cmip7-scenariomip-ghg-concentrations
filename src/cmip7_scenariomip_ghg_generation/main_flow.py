@@ -13,11 +13,11 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_western_et_al_2024_data,
     clean_wmo_data,
     download_file,
-    extend_western_et_al_2024_with_wmo_2022,
+    extend_western_et_al_2024,
     extract_tar,
     extract_zip,
 )
-from cmip7_scenariomip_ghg_generation.singe_concentration_projection_flow import (
+from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
     create_scenariomip_ghgs_single_concentration_projection,
 )
 
@@ -38,9 +38,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     western_et_al_2024_extract_path: Path,
     western_et_al_2024_extracted_file_of_interest: Path,
     western_et_al_2024_cleaned_data_path: Path,
-    western_et_al_2024_extended_data_path: Path,
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
+    seasonality_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -92,14 +92,14 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     western_et_al_2024_cleaned_data_path
         Path in which to save the cleaned Western et al. (2024) data
 
-    western_et_al_2024_extended_data_path
-        Path in which to save the extended Western et al. (2024) data
-
     annual_mean_dir
         Path in which to save interim annual-mean data
 
     monthly_mean_dir
         Path in which to save interim monthly-mean data
+
+    seasonality_dir
+        Path in which to save interim seasonality data
 
     Returns
     -------
@@ -136,7 +136,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     )
 
     ### Western et al. 2024
-    western_2024_ghgs = tuple(
+    western_et_al_2024_ghgs = tuple(
         ghg
         for ghg in ghgs
         if ghg
@@ -147,7 +147,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         ]
     )
 
-    unsupported_ghgs = set(ghgs) - set(wmo_2022_ghgs) - set(western_2024_ghgs)
+    unsupported_ghgs = set(ghgs) - set(wmo_2022_ghgs) - set(western_et_al_2024_ghgs)
     if unsupported_ghgs:
         msg = f"The following GHGs are not supported: {unsupported_ghgs}"
         raise AssertionError(msg)
@@ -159,6 +159,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         cmip7_historical_seasonality_lat_gradient_info_extracted=cmip7_historical_seasonality_lat_gradient_info_extracted,
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
+        seasonality_dir=seasonality_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
     )
@@ -181,22 +182,25 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         raw_data_path=western_et_al_2024_extracted.result() / western_et_al_2024_extracted_file_of_interest,
         out_file=western_et_al_2024_cleaned_data_path,
     )
-    western_et_al_2024_extended = extend_western_et_al_2024_with_wmo_2022(
-        western_et_al_2024_clean=western_et_al_2024_cleaned,
-        wmo_2022_clean=wmo_2022_cleaned,
-        western_et_al_2024_extended=western_et_al_2024_extended_data_path,
-        raw_notebooks_root_dir=raw_notebooks_root_dir,
-        executed_notebooks_dir=executed_notebooks_dir,
-    )
 
-    western_et_al_2024_extracted.wait()
-    western_2024_paths = create_single_concentration_projection(
-        ghgs=western_2024_ghgs,
-        cleaned_data_path=clean_western_et_al_2024_data(
-            raw_data_path=western_et_al_2024_extracted.result() / western_et_al_2024_extracted_file_of_interest,
-            out_file=western_et_al_2024_cleaned_data_path,
-        ),
-    )
+    western_2024_paths = []
+    for ghg in western_et_al_2024_ghgs:
+        western_et_al_2024_extended_ghg = extend_western_et_al_2024.submit(
+            ghg=ghg,
+            western_et_al_2024_clean=western_et_al_2024_cleaned,
+            wmo_2022_clean=wmo_2022_cleaned,
+            raw_notebooks_root_dir=raw_notebooks_root_dir,
+            executed_notebooks_dir=executed_notebooks_dir,
+        )
+
+        western_2024_paths.extend(
+            create_single_concentration_projection(
+                ghgs=[ghg],
+                cleaned_data_path=western_et_al_2024_extended_ghg,
+            )
+        )
+
+    return western_2024_paths
 
     # TODO:
     # - add tracking of sources used throughout the processes
@@ -225,9 +229,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     western_et_al_2024_extract_path: Path,
     western_et_al_2024_extracted_file_of_interest: Path,
     western_et_al_2024_cleaned_data_path: Path,
-    western_et_al_2024_extended_data_path: Path,
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
+    seasonality_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -287,14 +291,14 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     western_et_al_2024_cleaned_data_path
         Path in which to save the cleaned Western et al. (2024) data
 
-    western_et_al_2024_extended_data_path
-        Path in which to save the extended Western et al. (2024) data
-
     annual_mean_dir
         Path in which to save interim annual-mean data
 
     monthly_mean_dir
         Path in which to save interim monthly-mean data
+
+    seasonality_dir
+        Path in which to save interim seasonality data
 
     Returns
     -------
@@ -332,7 +336,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         western_et_al_2024_extract_path=western_et_al_2024_extract_path,
         western_et_al_2024_extracted_file_of_interest=western_et_al_2024_extracted_file_of_interest,
         western_et_al_2024_cleaned_data_path=western_et_al_2024_cleaned_data_path,
-        western_et_al_2024_extended_data_path=western_et_al_2024_extended_data_path,
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
+        seasonality_dir=seasonality_dir,
     )

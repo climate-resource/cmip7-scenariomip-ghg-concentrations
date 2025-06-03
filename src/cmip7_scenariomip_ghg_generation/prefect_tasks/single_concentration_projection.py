@@ -50,7 +50,7 @@ def create_single_concentration_projection_annual_mean_file(  # noqa: PLR0913
     out_file = annual_mean_dir / f"single-concentration-projection_{ghg}_annual-mean.feather"
 
     run_notebook(
-        raw_notebooks_root_dir / "0001_create-single-concentration-projection-annual-mean-file.py",
+        raw_notebooks_root_dir / "0010_create-single-concentration-projection-annual-mean-file.py",
         parameters={
             "ghg": ghg,
             "cleaned_data_path": str(cleaned_data_path),
