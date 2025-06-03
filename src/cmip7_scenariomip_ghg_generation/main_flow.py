@@ -17,6 +17,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     extract_tar,
     extract_zip,
 )
+from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
     create_scenariomip_ghgs_single_concentration_projection,
 )
@@ -24,6 +25,7 @@ from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow impor
 
 def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     ghgs: tuple[str, ...],
+    scenario_infos: tuple[ScenarioInfo, ...],
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     cmip7_historical_ghg_concentration_source_id: str,
@@ -43,6 +45,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
+    esgf_ready_root_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -51,6 +54,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     ----------
     ghgs
         Greenhouse gases for which to create output files
+
+    scenario_infos
+        Scenario information
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -109,6 +115,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
 
+    esgf_ready_root_dir
+        Path to use as the root for writing ESGF-ready data
+
     Returns
     -------
     :
@@ -162,6 +171,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
 
     create_single_concentration_projection = partial(
         create_scenariomip_ghgs_single_concentration_projection,
+        scenario_infos=scenario_infos,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         cmip7_historical_seasonality_lat_gradient_info_extracted=cmip7_historical_seasonality_lat_gradient_info_extracted,
@@ -170,6 +180,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
+        esgf_ready_root_dir=esgf_ready_root_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
     )
@@ -223,6 +234,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
 
 def create_scenariomip_ghgs(  # noqa: PLR0913
     ghgs: tuple[str, ...],
+    scenario_infos: tuple[ScenarioInfo, ...],
     run_id: str,
     n_workers: int,
     raw_notebooks_root_dir: Path,
@@ -244,6 +256,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
+    esgf_ready_root_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -254,6 +267,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     ----------
     ghgs
         Greenhouse gases for which to create output files
+
+    scenario_infos
+        Scenario information
 
     run_id
         Run ID to use with the [create_scenariomip_ghgs][] flow
@@ -318,6 +334,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
 
+    esgf_ready_root_dir
+        Path to use as the root for writing ESGF-ready data
+
     Returns
     -------
     :
@@ -340,6 +359,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     return run_id_flow(
         ghgs=ghgs,
+        scenario_infos=scenario_infos,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
@@ -359,4 +379,5 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
+        esgf_ready_root_dir=esgf_ready_root_dir,
     )

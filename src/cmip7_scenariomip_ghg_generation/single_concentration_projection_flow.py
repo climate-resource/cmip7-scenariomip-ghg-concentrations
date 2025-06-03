@@ -7,16 +7,19 @@ from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     calculate_inverse_emissions,
+    create_esgf_files,
     create_single_concentration_projection_annual_mean_file,
     download_cmip7_historical_ghg_concentrations,
     interpolate_annual_mean_to_monthly,
     scale_lat_gradient_based_on_emissions,
     scale_seasonality_based_on_annual_mean,
 )
+from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 
 def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     ghgs: tuple[str, ...],
+    scenario_infos: tuple[ScenarioInfo, ...],
     cleaned_data_path: Path,
     cmip7_historical_ghg_concentration_source_id: str,
     cmip7_historical_ghg_concentration_data_root_dir: Path,
@@ -26,6 +29,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
+    esgf_ready_root_dir: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> tuple[Path, ...]:
@@ -63,6 +67,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
+
+    esgf_ready_root_dir
+        Path to use as the root for writing ESGF-ready data
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -152,11 +159,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         )
         for ghg, inverse_emmissions_file in inverse_emissions_file_futures.items()
     }
-    res = tuple(v.result() for v in lat_gradient_file_futures.values())
-    return res
 
-    full_grid_futures = {
-        ghg: create_full_grid.submit(
+    esgf_ready_futures = {
+        ghg: create_esgf_files.submit(
             ghg=ghg,
             model=si.model,
             scenario=si.scenario,
@@ -164,14 +169,12 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             global_mean_monthly_file=global_mean_monthly_file_futures[ghg],
             seasonality_file=seasonality_file_futures[ghg],
             lat_gradient_file=lat_gradient_file_futures[ghg],
-            full_grid_dir=full_grid_dir,
+            esgf_ready_root_dir=esgf_ready_root_dir,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
         )
-        for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_info)
+        for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
     }
 
-    # Trigger execution
-    tuple(v.result() for v in full_grid_futures.values())
-
-    # TODO: return written paths
+    esgf_written_paths = tuple(v for future in esgf_ready_futures.values() for v in future.result())
+    return esgf_written_paths

@@ -9,6 +9,7 @@ from typing import Annotated
 import typer
 
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
+from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 REPO_ROOT_DIR = Path(__file__).parents[1]
 OUTPUT_BUNDLES_ROOT_DIR = REPO_ROOT_DIR / "output-bundles"
@@ -86,6 +87,18 @@ this will lead to a new run being done
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
     """
     ghgs = tuple(ghg)
+    scenario_infos = (
+        ScenarioInfo(
+            cmip_scenario_name="vllo",
+            model="REMIND-MAGPIE",
+            scenario="Very Low Overshoot",
+        ),
+        ScenarioInfo(
+            cmip_scenario_name="m",
+            model="MESSAGE",
+            scenario="Medium",
+        ),
+    )
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
@@ -128,9 +141,11 @@ this will lead to a new run being done
 
     ### Final outputs
     inverse_emission_dir = data_processed_root / "inverse-emissions"
+    esgf_ready_root_dir = data_processed_root / "esgf-ready"
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
+        scenario_infos=scenario_infos,
         run_id=run_id,
         n_workers=n_workers,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
@@ -152,6 +167,7 @@ this will lead to a new run being done
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
+        esgf_ready_root_dir=esgf_ready_root_dir,
     )
 
 

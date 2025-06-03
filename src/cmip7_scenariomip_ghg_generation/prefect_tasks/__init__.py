@@ -8,6 +8,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.annual_mean_to_monthly impor
 from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import (
     download_cmip7_historical_ghg_concentrations,
 )
+from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import create_esgf_files
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extraction import extract_tar, extract_zip
 from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import calculate_inverse_emissions
@@ -30,6 +31,7 @@ __all__ = [
     "calculate_inverse_emissions",
     "clean_western_et_al_2024_data",
     "clean_wmo_data",
+    "create_esgf_files",
     "create_single_concentration_projection_annual_mean_file",
     "download_cmip7_historical_ghg_concentrations",
     "download_file",
