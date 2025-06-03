@@ -124,6 +124,7 @@ this will lead to a new run being done
     annual_mean_dir = data_interim_root / "annual-means"
     monthly_mean_dir = data_interim_root / "monthly-means"
     seasonality_dir = data_interim_root / "seasonality"
+    lat_gradient_dir = data_interim_root / "latitudinal-gradient"
 
     ### Final outputs
     inverse_emission_dir = data_processed_root / "inverse-emissions"
@@ -150,6 +151,7 @@ this will lead to a new run being done
         monthly_mean_dir=monthly_mean_dir,
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
+        lat_gradient_dir=lat_gradient_dir,
     )
 
 

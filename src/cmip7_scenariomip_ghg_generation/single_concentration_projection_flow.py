@@ -10,6 +10,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     create_single_concentration_projection_annual_mean_file,
     download_cmip7_historical_ghg_concentrations,
     interpolate_annual_mean_to_monthly,
+    scale_lat_gradient_based_on_emissions,
     scale_seasonality_based_on_annual_mean,
 )
 
@@ -24,6 +25,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     monthly_mean_dir: Path,
     seasonality_dir: Path,
     inverse_emission_dir: Path,
+    lat_gradient_dir: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> tuple[Path, ...]:
@@ -58,6 +60,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     inverse_emission_dir
         Path in which to save inverse emissions data
+
+    lat_gradient_dir
+        Path in which to save interim latitudinal gradient data
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -132,29 +137,23 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         )
         for ghg, monthly_future in global_mean_monthly_file_futures.items()
     }
-    res = tuple(v.result() for v in inverse_emissions_file_futures.values())
-    return res
 
-    # TODO: assertion that emissions are same for all scenarios
-    # (doesn't make sense to have same concentration projections but different lat. gradient)
     lat_gradient_file_futures = {
-        ghg: scale_lat_gradient_based_on_total_emissions.submit(
+        ghg: scale_lat_gradient_based_on_emissions.submit(
             ghg=ghg,
-            model=si.model,
-            scenario=si.scenario,
-            cmip_scenario_name=si.cmip_scenario_name,
-            # Use annual emissions, then interpolate to monthly in the notebook too
-            ghg_future_emissions=si.emissions_file,
+            annual_mean_emissions_file=inverse_emmissions_file,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted
             ),
-            lat_gradient_dir=lat_gradient_dir,
+            out_file=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info.nc",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
         )
-        for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_info)
+        for ghg, inverse_emmissions_file in inverse_emissions_file_futures.items()
     }
+    res = tuple(v.result() for v in lat_gradient_file_futures.values())
+    return res
 
     full_grid_futures = {
         ghg: create_full_grid.submit(

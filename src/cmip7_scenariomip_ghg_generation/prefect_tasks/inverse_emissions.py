@@ -10,7 +10,10 @@ from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
 from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
 
 
-@task_standard_cache(task_run_name="calculate-inverse-emissions_{ghg}")
+@task_standard_cache(
+    task_run_name="calculate-inverse-emissions_{ghg}",
+    # refresh_cache=True,
+)
 def calculate_inverse_emissions(
     ghg: str,
     monthly_mean_file: Path,

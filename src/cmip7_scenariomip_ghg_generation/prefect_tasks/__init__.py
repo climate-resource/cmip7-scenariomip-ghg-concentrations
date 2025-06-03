@@ -11,6 +11,9 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extraction import extract_tar, extract_zip
 from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import calculate_inverse_emissions
+from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
+    scale_lat_gradient_based_on_emissions,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_seasonality_with_annual_mean import (
     scale_seasonality_based_on_annual_mean,
 )
@@ -34,5 +37,6 @@ __all__ = [
     "extract_tar",
     "extract_zip",
     "interpolate_annual_mean_to_monthly",
+    "scale_lat_gradient_based_on_emissions",
     "scale_seasonality_based_on_annual_mean",
 ]

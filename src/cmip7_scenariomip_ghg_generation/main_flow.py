@@ -42,6 +42,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     monthly_mean_dir: Path,
     seasonality_dir: Path,
     inverse_emission_dir: Path,
+    lat_gradient_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -105,6 +106,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     inverse_emission_dir
         Path in which to save inverse emissions data
 
+    lat_gradient_dir
+        Path in which to save interim latitudinal gradient data
+
     Returns
     -------
     :
@@ -165,6 +169,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         monthly_mean_dir=monthly_mean_dir,
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
+        lat_gradient_dir=lat_gradient_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
     )
@@ -238,6 +243,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     monthly_mean_dir: Path,
     seasonality_dir: Path,
     inverse_emission_dir: Path,
+    lat_gradient_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -309,6 +315,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     inverse_emission_dir
         Path in which to save inverse emissions data
 
+    lat_gradient_dir
+        Path in which to save interim latitudinal gradient data
+
     Returns
     -------
     :
@@ -349,4 +358,5 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         monthly_mean_dir=monthly_mean_dir,
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
+        lat_gradient_dir=lat_gradient_dir,
     )

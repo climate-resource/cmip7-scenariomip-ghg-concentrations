@@ -53,7 +53,9 @@ historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
-out_file: str = "../output-bundles/dev-test/data/interim/monthly-means/wmo-based_ccl4_monthly-mean.nc"
+out_file: str = (
+    "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_ccl4_monthly-mean.nc"
+)
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -167,7 +169,7 @@ stitched_monthly = interpolate_annual_mean_to_monthly(
     algorithm=LaiKaplanInterpolator(
         get_wall_control_points_y_from_interval_ys=get_wall_control_points_y_linear_with_flat_override_on_left,
         progress_bar=True,
-        min_val=openscm_units.unit_registry.Quantity(0, "ppt"),
+        min_val=openscm_units.unit_registry.Quantity(0, stitched_units),
     ),
     unit_registry=openscm_units.unit_registry,
 ).pint.dequantify()
@@ -225,7 +227,7 @@ ax.grid()
 # ## Prepare output
 
 # %% editable=true slideshow={"slide_type": ""}
-out = stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(annual_mean.loc[:, overlap_year + 1 :].columns))
+out = stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(annual_mean.loc[:, overlap_year:].columns))
 out.name = ghg
 out
 
