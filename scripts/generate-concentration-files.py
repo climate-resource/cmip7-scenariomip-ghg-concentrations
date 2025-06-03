@@ -95,6 +95,7 @@ this will lead to a new run being done
     data_root = output_bundle_root_dir / "data"
     data_raw_root = data_root / "raw"
     data_interim_root = data_root / "interim"
+    data_processed_root = data_root / "processed"
 
     executed_notebooks_dir = output_bundle_root_dir / "notebooks-executed"
 
@@ -124,6 +125,9 @@ this will lead to a new run being done
     monthly_mean_dir = data_interim_root / "monthly-means"
     seasonality_dir = data_interim_root / "seasonality"
 
+    ### Final outputs
+    inverse_emission_dir = data_processed_root / "inverse-emissions"
+
     create_scenariomip_ghgs(
         ghgs=ghgs,
         run_id=run_id,
@@ -145,6 +149,7 @@ this will lead to a new run being done
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
         seasonality_dir=seasonality_dir,
+        inverse_emission_dir=inverse_emission_dir,
     )
 
 

@@ -6,6 +6,7 @@ import itertools
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
+    calculate_inverse_emissions,
     create_single_concentration_projection_annual_mean_file,
     download_cmip7_historical_ghg_concentrations,
     interpolate_annual_mean_to_monthly,
@@ -22,6 +23,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
     seasonality_dir: Path,
+    inverse_emission_dir: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> tuple[Path, ...]:
@@ -53,6 +55,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     seasonality_dir
         Path in which to save interim seasonality data
+
+    inverse_emission_dir
+        Path in which to save inverse emissions data
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -102,7 +107,6 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         for ghg, yearly_future in global_mean_yearly_file_futures.items()
     }
 
-    # Seasonality is pure scaling, no intercept
     seasonality_file_futures = {
         ghg: scale_seasonality_based_on_annual_mean.submit(
             ghg=ghg,
@@ -117,7 +121,18 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         )
         for ghg, yearly_future in global_mean_yearly_file_futures.items()
     }
-    res = tuple(v.result() for v in seasonality_file_futures.values())
+
+    inverse_emissions_file_futures = {
+        ghg: calculate_inverse_emissions.submit(
+            ghg=ghg,
+            monthly_mean_file=monthly_future,
+            inverse_emission_dir=inverse_emission_dir,
+            raw_notebooks_root_dir=raw_notebooks_root_dir,
+            executed_notebooks_dir=executed_notebooks_dir,
+        )
+        for ghg, monthly_future in global_mean_monthly_file_futures.items()
+    }
+    res = tuple(v.result() for v in inverse_emissions_file_futures.values())
     return res
 
     # TODO: assertion that emissions are same for all scenarios

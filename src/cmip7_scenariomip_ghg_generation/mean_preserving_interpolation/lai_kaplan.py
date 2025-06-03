@@ -14,6 +14,7 @@ from typing import Protocol, TypeVar, cast, overload
 import attrs.validators
 import numpy as np
 import pint
+import pint.testing
 from attrs import define, field
 from numpy.polynomial import Polynomial
 
@@ -901,6 +902,11 @@ class LaiKaplanInterpolator:
     Relative tolerance for deciding whether the output value means are close to the input means
     """
 
+    rtol_uniform_steps: float = 1e-7
+    """
+    Relative tolerance for deciding whether the input steps are uniform
+    """
+
     progress_bar: bool = True
     """
     Whether to show a progress bar while filling the output array or not
@@ -944,9 +950,9 @@ class LaiKaplanInterpolator:
 
         x_steps = x_bounds_in[1:] - x_bounds_in[:-1]
         x_step = x_steps[0]
-        if not np.equal(x_steps, x_step).all():
-            msg = f"Non-uniform spacing in x {x_steps=}"
-            raise NotImplementedError(msg)
+        pint.testing.assert_allclose(
+            x_step, x_steps, rtol=self.rtol_uniform_steps, msg="Non-uniform spacing in x_bounds_in"
+        )
 
         delta = x_step / 2.0
         intervals_internal_x = (x_bounds_in[1:] + x_bounds_in[:-1]) / 2.0
@@ -1219,7 +1225,7 @@ class LaiKaplanInterpolator:
             control_points_y[3 / 2 : n_lai_kaplan + 1 + 1] - control_points_y[1 / 2 : n_lai_kaplan + 1]  # type: ignore # mypy confused by hacky slicing
         ) / (2 * delta)
 
-        # TODO: Can't see how to do calculate the result with vectors,
+        # TODO: Can't see how to calculate the result with vectors,
         # maybe someone else can.
         y_out_m = np.nan * np.zeros(x_bounds_out.size - 1)
         iterh = range(y_out_m.size)

@@ -25,15 +25,19 @@ from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan i
 N_MONTHS_PER_YEAR: int = 12
 """Number of months in a year"""
 
+DEFAULT_ALGORITHM = LaiKaplanInterpolator(
+    get_wall_control_points_y_from_interval_ys=get_wall_control_points_y_linear_with_flat_override_on_left,
+    progress_bar=True,
+    min_val=openscm_units.unit_registry.Quantity(0, "ppt"),
+)
+
 
 def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     values: npt.NDArray[float[Any]],
     values_units: str,
     years: npt.NDArray[int[Any]],
     years_units="yr",
-    algorithm: MeanPreservingInterpolationAlgorithmLike = LaiKaplanInterpolator(
-        get_wall_control_points_y_from_interval_ys=get_wall_control_points_y_linear_with_flat_override_on_left,
-    ),
+    algorithm: MeanPreservingInterpolationAlgorithmLike = DEFAULT_ALGORITHM,
     month_rounding: int = 4,
     verify_output_is_mean_preserving: bool = True,
     unit_registry: pint.UnitRegistry = openscm_units.unit_registry,
