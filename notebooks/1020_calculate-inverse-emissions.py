@@ -192,7 +192,7 @@ for i in range(years.size - 1):
 fig, ax = plt.subplots()
 
 ax.plot(years, run_res, label="Re-run")
-ax.plot((x_bounds_in[1:] + x_bounds_in[:-1]) / 2.0, y_in, label="input")
+ax.plot((x_bounds_in[1:] + x_bounds_in[:-1]) / 2.0, y_in, label="input", alpha=0.5)
 ax.xaxis.set_units(ur.yr)
 ax.legend()
 # ax.set_xlim([2025, 2030])

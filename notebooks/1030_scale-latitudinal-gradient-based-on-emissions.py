@@ -151,7 +151,9 @@ if pc["eof"].shape != (1,):
 
 # %%
 delta_E = (
-    annual_mean_emissions_emms_units.subtract(annual_mean_emissions_emms_units[last_hist_year], axis="rows")
+    annual_mean_emissions_emms_units.loc[:, last_hist_year:].subtract(
+        annual_mean_emissions_emms_units[last_hist_year], axis="rows"
+    )
 ).pix.assign(variable="change_in_emissions")
 delta_E
 

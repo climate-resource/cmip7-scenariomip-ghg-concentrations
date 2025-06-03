@@ -227,7 +227,7 @@ ax.grid()
 # ## Prepare output
 
 # %% editable=true slideshow={"slide_type": ""}
-out = stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(annual_mean.loc[:, overlap_year:].columns))
+out = stitched_monthly
 out.name = ghg
 out
 
