@@ -7,7 +7,6 @@ from pathlib import Path
 
 from prefect import flow
 from prefect.task_runners import ThreadPoolTaskRunner
-from prefect_dask import DaskTaskRunner
 
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_western_et_al_2024_data,
@@ -239,7 +238,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
             )
         )
 
-    return tuple(v for future in (*wmo_2022_paths, *western_2024_paths_l) for v in future.result())
+    # Make sure all results are crunched before returning
+    for future in (*wmo_2022_paths, *western_2024_paths_l):
+        future.wait(timeout=30 * 60)
 
 
 def create_scenariomip_ghgs(  # noqa: PLR0913
@@ -368,11 +369,16 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     if n_workers == 1:
         task_runner = ThreadPoolTaskRunner(max_workers=1)
     else:
-        task_runner = DaskTaskRunner(
-            # address=  # can be used to specify an already running cluster
-            cluster_kwargs={"n_workers": n_workers}
-            # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
-        )
+        # Apparently this is not truly parallel,
+        # but maybe it still works well enough for us
+        # given that many of our tasks spin up their own process anyway ?
+        # Docs: https://docs.prefect.io/v3/develop/task-runners
+        task_runner = ThreadPoolTaskRunner(max_workers=n_workers)
+        # task_runner = DaskTaskRunner(
+        #     # address=  # can be used to specify an already running cluster
+        #     cluster_kwargs={"n_workers": n_workers}
+        #     # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
+        # )
 
     run_id_flow = flow(
         name=f"scenariomip-ghgs_{run_id}",
