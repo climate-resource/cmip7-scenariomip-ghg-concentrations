@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -46,7 +46,7 @@ historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
 out_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/single-concentration-projection_ccl4_seasonality-mean.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/single-concentration-projection_ccl4_seasonality-all-years.nc"
 )
 
 
@@ -172,7 +172,7 @@ out_years = np.setdiff1d(annual_mean.columns, cmip7_historical_gm_monthly["time"
 # out_years
 
 # %% editable=true slideshow={"slide_type": ""}
-out = seasonality.sel(year=out_years)
+out = seasonality.sel(year=out_years).pint.dequantify()
 out.name = f"{ghg}_seasonality_all_months"
 # out
 

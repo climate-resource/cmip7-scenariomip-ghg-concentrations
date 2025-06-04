@@ -66,6 +66,10 @@ def create_esgf_files(  # noqa: PLR0913
     run_notebook(
         raw_notebooks_root_dir / "1100_create-esgf-files.py",
         parameters={
+            "esgf_version": esgf_version,
+            "esgf_institution_id": esgf_institution_id,
+            "input4mips_cvs_source": input4mips_cvs_source,
+            "doi": doi,
             "ghg": ghg,
             "cmip_scenario_name": cmip_scenario_name,
             "model": model,

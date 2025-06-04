@@ -3,33 +3,37 @@ authors = [
     { name = "Zebedee Nicholls", email = "zebedee.nicholls@climate-resource.com"},
 ]
 requires-python = ">=3.11,<3.12"
-dependencies = [
-    "ipywidgets>=8.1.7,<9",
-    "jupyterlab>=4.0.0",
-    "jupytext>=1.15.2",
-    "matplotlib>=3.10.3,<4",
-    "nc-time-axis>=1.4.1,<2",
-    "netcdf4>=1.7.2,<2",
-    "openpyxl>=3.1.5,<4",
-    "openscm-units>=0.6.3,<0.7",
-    "pandas>=2.2.3,<3.0",
-    "pandas-indexing>=0.6.3,<0.7",
-    "pandas-openscm>=0.5.1",
-    "papermill>=2.6.0,<3",
-    "pint-xarray>=0.4,<0.5",
-    "pooch>=1.8.2,<2",
-    "pre-commit>=3.3.1",
-    "prefect[dask]>=3.4.3,<4",
-    "pyarrow>=20.0.0,<21",
-    "scipy>=1.15.3,<2",
-    "seaborn>=0.13.2,<0.14",
-    "typer>=0.15.4,<0.16",
-    "xarray>=2025.4.0,<2026", "gradient-aware-harmonisation @ git+https://github.com/climate-resource/gradient-aware-harmonisation.git@f1ab1c5908df755244466f2e4d3e77d63b4a6b19",
-]
 name = "cmip7_scenariomip_ghg_generation"
 version = "0.1.0"
 description = "Generation of GHG concentration inputs (i.e. forcings) for CMIP7's ScenarioMIP."
 readme = "README.md"
+dependencies = [
+    "input4mips-validation>=0.19",
+    "ipywidgets>=8.1.7",
+    "jupyterlab>=4.0.0",
+    "jupytext>=1.15.2",
+    "gradient-aware-harmonisation @ git+https://github.com/climate-resource/gradient-aware-harmonisation.git@f1ab1c5908df755244466f2e4d3e77d63b4a6b19",
+    "matplotlib>=3.10.3",
+    "nc-time-axis>=1.4.1",
+    "ncdata==0.1.1",
+    "netcdf4>=1.7.2",
+    "openpyxl>=3.1.5",
+    "openscm-units>=0.6.3",
+    "pandas>=2.2.3",
+    "pandas-indexing>=0.6.3",
+    "pandas-openscm>=0.5.1",
+    "papermill>=2.6.0",
+    "pint-xarray>=0.4",
+    "pooch>=1.8.2",
+    "pre-commit>=3.3.1",
+    "prefect[dask]>=3.4.0",
+    "pyarrow>=20.0.0",
+    "scipy>=1.15.0",
+    "scitools-iris==3.8.1",
+    "seaborn>=0.13.2",
+    "typer>=0.10.0",
+    "xarray==2024.7.0",
+]
 
 [tool.pixi.project]
 channels = [
@@ -40,12 +44,15 @@ platforms = [
     "osx-arm64",
     "linux-64",
     "linux-aarch64",
-    "win-64",
+    # "win-64",
 ]
 
 [tool.pixi.tasks]
 
 [tool.pixi.dependencies]
+pyproj = ">=3.7.1,<4"
+cf-units = ">=3.3.0,<4"
+numpy = "<2.0"
 
 [tool.pixi.pypi-dependencies]
 cmip7_scenariomip_ghg_generation = { path = ".", editable = true }
