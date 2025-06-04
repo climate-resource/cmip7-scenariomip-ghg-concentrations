@@ -7,10 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
 
 
-@task_standard_cache(task_run_name="scale-lat-gradient-based-on-emissions_{ghg}_{annual_mean_emissions_file.stem}")
+@task_path_cache(
+    task_run_name="scale-lat-gradient-based-on-emissions_{ghg}_{annual_mean_emissions_file.stem}",
+)
 def scale_lat_gradient_based_on_emissions(  # noqa: PLR0913
     ghg: str,
     annual_mean_emissions_file: Path,

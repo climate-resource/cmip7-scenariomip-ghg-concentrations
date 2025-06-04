@@ -26,6 +26,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.western_et_al_2024 import (
     extend_western_et_al_2024,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.wmo_2022 import clean_wmo_data
+from cmip7_scenariomip_ghg_generation.prefect_tasks.zenodo import get_doi
 
 __all__ = [
     "calculate_inverse_emissions",
@@ -38,6 +39,7 @@ __all__ = [
     "extend_western_et_al_2024",
     "extract_tar",
     "extract_zip",
+    "get_doi",
     "interpolate_annual_mean_to_monthly",
     "scale_lat_gradient_based_on_emissions",
     "scale_seasonality_based_on_annual_mean",

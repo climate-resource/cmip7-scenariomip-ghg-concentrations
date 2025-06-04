@@ -16,6 +16,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     extend_western_et_al_2024,
     extract_tar,
     extract_zip,
+    get_doi,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -46,6 +47,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_version: str,
+    esgf_institution_id: str,
+    input4mips_cvs_source: str,
 ) -> tuple[Path, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -118,6 +122,15 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
+    esgf_version
+        Version to include in the files for ESGF
+
+    esgf_institution_id
+        Institution ID to include in the files for ESGF
+
+    input4mips_cvs_source
+        Source from which to get the input4MIPs CVs
+
     Returns
     -------
     :
@@ -132,6 +145,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         tar_file=downloaded_cmip7_historical_seasonality_lat_gradient_info,
         extract_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
     )
+    doi = get_doi.submit()
 
     ### WMO 2022
     wmo_2022_ghgs = tuple(
@@ -183,6 +197,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         esgf_ready_root_dir=esgf_ready_root_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
+        esgf_version=esgf_version,
+        esgf_institution_id=esgf_institution_id,
+        input4mips_cvs_source=input4mips_cvs_source,
+        doi=doi,
     )
 
     wmo_2022_cleaned = clean_wmo_data(raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path)
@@ -204,7 +222,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         out_file=western_et_al_2024_cleaned_data_path,
     )
 
-    western_2024_paths = []
+    western_2024_paths_l = []
     for ghg in western_et_al_2024_ghgs:
         western_et_al_2024_extended_ghg = extend_western_et_al_2024.submit(
             ghg=ghg,
@@ -214,22 +232,14 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
             executed_notebooks_dir=executed_notebooks_dir,
         )
 
-        western_2024_paths.extend(
+        western_2024_paths_l.extend(
             create_single_concentration_projection(
                 ghgs=[ghg],
                 cleaned_data_path=western_et_al_2024_extended_ghg,
             )
         )
 
-    return western_2024_paths
-
-    # TODO:
-    # - add tracking of sources used throughout the processes
-
-    # written_paths = tuple(
-    #     *wmo_2022_direct_flow_paths
-    #     *wmo_2022_harmonised_paths
-    # )
+    return tuple(v for future in (*wmo_2022_paths, *western_2024_paths_l) for v in future.result())
 
 
 def create_scenariomip_ghgs(  # noqa: PLR0913
@@ -257,6 +267,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_version: str,
+    esgf_institution_id: str,
+    input4mips_cvs_source: str,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -337,6 +350,15 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
+    esgf_version
+        Version to include in the files for ESGF
+
+    esgf_institution_id
+        Institution ID to include in the files for ESGF
+
+    input4mips_cvs_source
+        Source from which to get the input4MIPs CVs
+
     Returns
     -------
     :
@@ -380,4 +402,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
+        esgf_version=esgf_version,
+        esgf_institution_id=esgf_institution_id,
+        input4mips_cvs_source=input4mips_cvs_source,
     )

@@ -7,10 +7,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
 
 
-@task_standard_cache(
+@task_path_cache(
     task_run_name="interpolate-annual-mean-to-monthly_{ghg}",
     # refresh_cache=True,
 )
@@ -19,7 +19,7 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     annual_mean_file: Path,
     historical_data_root_dir: Path,
     historical_data_seasonality_lat_gradient_info_root: Path,
-    monthly_mean_dir: Path,
+    out_file: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> Path:
@@ -40,8 +40,8 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     historical_data_seasonality_lat_gradient_info_root
         Root path in which the seasonality and lat. gradient info was extracted
 
-    monthly_mean_dir
-        Directory in which to write the monthly-mean file
+    out_file
+        File in which to write the monthly-mean file
 
     raw_notebooks_root_dir
         Directory in which the raw notebooks live
@@ -54,14 +54,6 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     :
         Written path
     """
-    if "annual" not in annual_mean_file.name:
-        raise AssertionError(annual_mean_file.name)
-
-    if not annual_mean_file.name.endswith(".feather"):
-        raise AssertionError(annual_mean_file.name)
-
-    out_file = monthly_mean_dir / annual_mean_file.name.replace("annual", "monthly").replace(".feather", ".nc")
-
     run_notebook(
         raw_notebooks_root_dir / "1000_interpolate-annual-mean-to-monthly.py",
         parameters={

@@ -30,6 +30,10 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_version: str,
+    esgf_institution_id: str,
+    input4mips_cvs_source: str,
+    doi: str,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> tuple[Path, ...]:
@@ -71,6 +75,18 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
+    esgf_version
+        Version to include in the files for ESGF
+
+    esgf_institution_id
+        Institution ID to include in the files for ESGF
+
+    input4mips_cvs_source
+        Source from which to get the input4MIPs CVs
+
+    doi
+        DOI to include in the files for ESGF
+
     raw_notebooks_root_dir
         Root directory for raw notebooks
 
@@ -87,6 +103,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             ghg,
             source_id=cmip7_historical_ghg_concentration_source_id,
             root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+            checklist_file=cmip7_historical_ghg_concentration_data_root_dir
+            / f"{ghg}_{cmip7_historical_ghg_concentration_source_id}.chk",
         )
         for ghg in ghgs
     }
@@ -96,7 +114,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             ghg=ghg,
             cleaned_data_path=cleaned_data_path,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-            annual_mean_dir=annual_mean_dir,
+            out_file=annual_mean_dir / f"single-concentration-projection_{ghg}_annual-mean.feather",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
             wait_for=[cleaned_data_path, downloaded_cmip7_historical_ghgs_futures[ghg]],
@@ -112,7 +130,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted
             ),
-            monthly_mean_dir=monthly_mean_dir,
+            out_file=monthly_mean_dir / f"single-concentration-projection_{ghg}_monthly-mean.nc",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
         )
@@ -127,7 +145,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted
             ),
-            seasonality_dir=seasonality_dir,
+            out_file=seasonality_dir / f"single-concentration-projection_{ghg}_seasonality-all-time.nc",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
         )
@@ -138,7 +156,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         ghg: calculate_inverse_emissions.submit(
             ghg=ghg,
             monthly_mean_file=monthly_future,
-            inverse_emission_dir=inverse_emission_dir,
+            out_file=inverse_emission_dir / f"single-concentration-projection_{ghg}_inverse-emissions.feather",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
         )
@@ -163,18 +181,23 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     esgf_ready_futures = {
         ghg: create_esgf_files.submit(
             ghg=ghg,
+            cmip_scenario_name=si.cmip_scenario_name,
+            esgf_version=esgf_version,
+            esgf_institution_id=esgf_institution_id,
+            input4mips_cvs_source=input4mips_cvs_source,
+            doi=doi,
             model=si.model,
             scenario=si.scenario,
-            cmip_scenario_name=si.cmip_scenario_name,
             global_mean_monthly_file=global_mean_monthly_file_futures[ghg],
             seasonality_file=seasonality_file_futures[ghg],
             lat_gradient_file=lat_gradient_file_futures[ghg],
             esgf_ready_root_dir=esgf_ready_root_dir,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
+            checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
         )
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
     }
 
-    esgf_written_paths = tuple(v for future in esgf_ready_futures.values() for v in future.result())
+    esgf_written_paths = tuple(future for future in esgf_ready_futures.values())
     return esgf_written_paths

@@ -8,11 +8,15 @@ from pathlib import Path
 
 import pooch
 
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import create_hash_dict, task_path_cache, write_hash_dict_to_file
 
 
-@task_standard_cache(task_run_name="download-cmip7-historical-ghg-concentrations_{ghg}_{source_id}")
-def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_dir: Path) -> None:
+@task_path_cache(
+    task_run_name="download-cmip7-historical-ghg-concentrations_{ghg}_{source_id}",
+)
+def download_cmip7_historical_ghg_concentrations(
+    ghg: str, source_id: str, root_dir: Path, checklist_file: Path
+) -> None:
     """
     Download CMIP7 historical GHG concentration data
 
@@ -26,6 +30,9 @@ def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_
 
     root_dir
         Root directory for saving the data
+
+    checklist_file
+        File in which to write a checklist of downloaded files
     """
     if source_id == "CR-CMIP-1-0-0":
         pub_date = "v20250228"
@@ -72,3 +79,9 @@ def download_cmip7_historical_ghg_concentrations(ghg: str, source_id: str, root_
             path=out_path_full,
             progressbar=True,
         )
+
+    write_hash_dict_to_file(
+        hash_dict=create_hash_dict(root_dir.rglob(f"**/{source_id}/**/{ghg}/**/*.nc")),
+        checklist_file=checklist_file,
+        relative_to=root_dir,
+    )

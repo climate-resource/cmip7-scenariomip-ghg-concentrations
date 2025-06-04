@@ -68,9 +68,7 @@ ur.setup_matplotlib(enable=True)
 # ### Monthly-mean file
 
 # %%
-monthly_mean = xr.load_dataarray(
-    monthly_mean_file_p, decode_times=xr.coders.CFDatetimeCoder(use_cftime=True)
-).pint.quantify(unit_registry=ur)
+monthly_mean = xr.load_dataarray(monthly_mean_file_p, use_cftime=True).pint.quantify(unit_registry=ur)
 monthly_mean
 
 # %% [markdown]

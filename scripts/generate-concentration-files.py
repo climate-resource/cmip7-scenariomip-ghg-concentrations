@@ -79,6 +79,14 @@ this will lead to a new run being done
 (i.e. there will be no caching)."""
         ),
     ] = "dev-test",
+    esgf_version: Annotated[
+        str,
+        typer.Option(help="""Version to use when writing the files for ESGF"""),
+    ] = "0.0.1",
+    input4mips_cvs_source: Annotated[
+        str,
+        typer.Option(help="""Source for the input4MIPs CVs"""),
+    ] = "gh:74f25f1",
     n_workers: Annotated[
         int, typer.Option(help="Number of workers to use for parallel work")
     ] = multiprocessing.cpu_count(),
@@ -86,6 +94,9 @@ this will lead to a new run being done
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
     """
+    # # TODO: activate this
+    # load_dotenv()
+
     ghgs = tuple(ghg)
     scenario_infos = (
         ScenarioInfo(
@@ -99,9 +110,12 @@ this will lead to a new run being done
             scenario="Medium",
         ),
     )
+
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
+    esgf_institution_id = "CR"
+
     raw_notebooks_root_dir = REPO_ROOT_DIR / "notebooks"
 
     output_bundle_root_dir = OUTPUT_BUNDLES_ROOT_DIR / run_id
@@ -168,6 +182,9 @@ this will lead to a new run being done
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
+        esgf_version=esgf_version,
+        esgf_institution_id=esgf_institution_id,
+        input4mips_cvs_source=input4mips_cvs_source,
     )
 
 

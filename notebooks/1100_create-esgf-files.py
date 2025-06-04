@@ -62,12 +62,12 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
+ghg: str = "ccl4"
+cmip_scenario_name: str = "vllo"
 esgf_version: str = "0.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
 doi: str = "dev-test-doi"
-ghg: str = "ccl4"
-cmip_scenario_name: str = "vllo"
 model: str = "REMIND-MAGPIE"
 scenario: str = "Very Low Overshoot"
 global_mean_monthly_file: str = (
@@ -392,7 +392,7 @@ raw_cvs_loader = get_raw_cvs_loader(input4mips_cvs_source, force_download=True)
 # %%
 cvs = load_cvs_known_loader(raw_cvs_loader)
 if source_id not in cvs.source_id_entries.source_ids:
-    raise AssertionError
+    raise AssertionError(source_id)
 
 # %% [markdown]
 # ### Set up time ranges

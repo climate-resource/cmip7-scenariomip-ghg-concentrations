@@ -119,6 +119,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bb/61/78c7b3851add1481b048b5fdc29067397a1784e2910592bc81bb3f608635/fsspec-2025.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/80/e4/bf70051e8011a8e989d313e819ed962ac0a790af400a9f7b10c2f3395fa7/gcages-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cb/99/f8ad15b4414489be553f323109fd279ba98f48bc9b38b648f2f6c0628f17/globalwarmingpotentials-0.11.1-py2.py3-none-any.whl
       - pypi: git+https://github.com/climate-resource/gradient-aware-harmonisation.git?rev=f1ab1c5908df755244466f2e4d3e77d63b4a6b19#f1ab1c5908df755244466f2e4d3e77d63b4a6b19
       - pypi: https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl
@@ -398,6 +399,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bb/61/78c7b3851add1481b048b5fdc29067397a1784e2910592bc81bb3f608635/fsspec-2025.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/80/e4/bf70051e8011a8e989d313e819ed962ac0a790af400a9f7b10c2f3395fa7/gcages-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cb/99/f8ad15b4414489be553f323109fd279ba98f48bc9b38b648f2f6c0628f17/globalwarmingpotentials-0.11.1-py2.py3-none-any.whl
       - pypi: git+https://github.com/climate-resource/gradient-aware-harmonisation.git?rev=f1ab1c5908df755244466f2e4d3e77d63b4a6b19#f1ab1c5908df755244466f2e4d3e77d63b4a6b19
       - pypi: https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl
@@ -669,6 +671,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bb/61/78c7b3851add1481b048b5fdc29067397a1784e2910592bc81bb3f608635/fsspec-2025.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/80/e4/bf70051e8011a8e989d313e819ed962ac0a790af400a9f7b10c2f3395fa7/gcages-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cb/99/f8ad15b4414489be553f323109fd279ba98f48bc9b38b648f2f6c0628f17/globalwarmingpotentials-0.11.1-py2.py3-none-any.whl
       - pypi: git+https://github.com/climate-resource/gradient-aware-harmonisation.git?rev=f1ab1c5908df755244466f2e4d3e77d63b4a6b19#f1ab1c5908df755244466f2e4d3e77d63b4a6b19
       - pypi: https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl
@@ -940,6 +943,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/cf/58/8acf1b3e91c58313ce5cb67df61001fc9dcd21be4fadb76c1a2d540e09ed/fqdn-1.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bb/61/78c7b3851add1481b048b5fdc29067397a1784e2910592bc81bb3f608635/fsspec-2025.5.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/80/e4/bf70051e8011a8e989d313e819ed962ac0a790af400a9f7b10c2f3395fa7/gcages-0.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/cb/99/f8ad15b4414489be553f323109fd279ba98f48bc9b38b648f2f6c0628f17/globalwarmingpotentials-0.11.1-py2.py3-none-any.whl
       - pypi: git+https://github.com/climate-resource/gradient-aware-harmonisation.git?rev=f1ab1c5908df755244466f2e4d3e77d63b4a6b19#f1ab1c5908df755244466f2e4d3e77d63b4a6b19
       - pypi: https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl
@@ -1942,7 +1946,7 @@ packages:
 - pypi: .
   name: cmip7-scenariomip-ghg-generation
   version: 0.1.0
-  sha256: e079ddb5629fcea904203d765999eea338d242ac3f3801352300da11bd7dcd00
+  sha256: 757f6646e2715e7814aaf2bde0a5ac0145c5b4021ad8e30f7827af8c2bd7f1f8
   requires_dist:
   - input4mips-validation>=0.19
   - ipywidgets>=8.1.7
@@ -1969,6 +1973,7 @@ packages:
   - seaborn>=0.13.2
   - typer>=0.10.0
   - xarray==2024.7.0
+  - gcages>=0.6.0,<0.7
   requires_python: '>=3.11,<3.12'
   editable: true
 - pypi: https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl
@@ -2685,6 +2690,164 @@ packages:
   version: 1.0.0
   sha256: 929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216
   requires_python: '>=2.6,!=3.0.*,!=3.1.*,!=3.2.*'
+- pypi: https://files.pythonhosted.org/packages/80/e4/bf70051e8011a8e989d313e819ed962ac0a790af400a9f7b10c2f3395fa7/gcages-0.6.0-py3-none-any.whl
+  name: gcages
+  version: 0.6.0
+  sha256: e32c366a4133daa92782362a3c793d196efc5a4e00cf4a5aaf578073041fad0c
+  requires_dist:
+  - backports-strenum>=1.3.1 ; python_full_version < '3.11'
+  - numpy>=1.25.0
+  - pandas>=2.2.0
+  - pandas-openscm>=0.4.1
+  - aneris-iamc>=0.4.2 ; python_full_version >= '3.10' and extra == 'ar6'
+  - openscm-runner>=0.13.0 ; extra == 'ar6'
+  - pandas-indexing[units]>=0.6.3 ; extra == 'ar6'
+  - pymagicc>=2.1.5 ; extra == 'ar6'
+  - scipy>=1.13.0 ; extra == 'ar6'
+  - scmdata>=0.17.0,<0.18 ; extra == 'ar6'
+  - silicone>=1.3.0 ; extra == 'ar6'
+  - xarray<2025 ; extra == 'ar6'
+  - pandas-indexing>=0.6.3 ; extra == 'cmip7-scenariomip'
+  - tqdm>=4.0.0 ; extra == 'progress'
+  - gcages[ar6] ; extra == 'full'
+  - gcages[cmip7-scenariomip] ; extra == 'full'
+  - gcages[progress] ; extra == 'full'
+  - attrs==24.3.0 ; extra == 'locked'
+  - backports-strenum==1.3.1 ; python_full_version < '3.11' and extra == 'locked'
+  - numpy==2.0.2 ; extra == 'locked'
+  - pandas==2.2.3 ; extra == 'locked'
+  - pandas-openscm==0.4.1 ; extra == 'locked'
+  - python-dateutil==2.9.0.post0 ; extra == 'locked'
+  - pytz==2025.2 ; extra == 'locked'
+  - six==1.17.0 ; extra == 'locked'
+  - tzdata==2025.2 ; extra == 'locked'
+  - aneris-iamc==0.4.2 ; python_full_version >= '3.10' and extra == 'ar6-locked'
+  - attrs==24.3.0 ; extra == 'ar6-locked'
+  - certifi==2024.12.14 ; extra == 'ar6-locked'
+  - cftime==1.6.4.post1 ; extra == 'ar6-locked'
+  - charset-normalizer==3.4.1 ; extra == 'ar6-locked'
+  - colorama==0.4.6 ; extra == 'ar6-locked'
+  - contourpy==1.3.0 ; extra == 'ar6-locked'
+  - cycler==0.12.1 ; extra == 'ar6-locked'
+  - deprecated==1.2.18 ; extra == 'ar6-locked'
+  - et-xmlfile==2.0.0 ; extra == 'ar6-locked'
+  - f90nml==1.4.5 ; extra == 'ar6-locked'
+  - flexcache==0.3 ; extra == 'ar6-locked'
+  - flexparser==0.4 ; extra == 'ar6-locked'
+  - fonttools==4.57.0 ; extra == 'ar6-locked'
+  - globalwarmingpotentials==0.11.1 ; extra == 'ar6-locked'
+  - iam-units==2023.9.12 ; extra == 'ar6-locked'
+  - idna==3.10 ; extra == 'ar6-locked'
+  - importlib-metadata==8.7.0 ; extra == 'ar6-locked'
+  - importlib-resources==6.5.2 ; python_full_version < '3.10' and extra == 'ar6-locked'
+  - kiwisolver==1.4.7 ; extra == 'ar6-locked'
+  - matplotlib==3.9.4 ; extra == 'ar6-locked'
+  - numpy==2.0.2 ; extra == 'ar6-locked'
+  - openpyxl==3.1.5 ; extra == 'ar6-locked'
+  - openscm-runner==0.13.0 ; extra == 'ar6-locked'
+  - openscm-units==0.6.3 ; extra == 'ar6-locked'
+  - packaging==24.2 ; extra == 'ar6-locked'
+  - pandas==2.2.3 ; extra == 'ar6-locked'
+  - pandas-datapackage-reader==0.18.0 ; extra == 'ar6-locked'
+  - pandas-indexing==0.6.3 ; extra == 'ar6-locked'
+  - pandas-indexing[units]==0.6.3 ; extra == 'ar6-locked'
+  - pillow==11.2.1 ; extra == 'ar6-locked'
+  - pint==0.24.4 ; extra == 'ar6-locked'
+  - pint-pandas==0.7.1 ; extra == 'ar6-locked'
+  - platformdirs==4.3.6 ; extra == 'ar6-locked'
+  - ply==3.11 ; python_full_version >= '3.10' and extra == 'ar6-locked'
+  - pyam-iamc==1.2.0 ; extra == 'ar6-locked'
+  - pycountry==24.6.1 ; python_full_version >= '3.10' and extra == 'ar6-locked'
+  - pymagicc==2.1.5 ; extra == 'ar6-locked'
+  - pyomo==6.9.2 ; python_full_version >= '3.10' and extra == 'ar6-locked'
+  - pyparsing==3.2.3 ; extra == 'ar6-locked'
+  - python-dateutil==2.9.0.post0 ; extra == 'ar6-locked'
+  - python-dotenv==1.1.0 ; extra == 'ar6-locked'
+  - pytz==2025.2 ; extra == 'ar6-locked'
+  - pyyaml==6.0.2 ; extra == 'ar6-locked'
+  - requests==2.32.3 ; extra == 'ar6-locked'
+  - scipy==1.13.1 ; extra == 'ar6-locked'
+  - scmdata==0.17.0 ; extra == 'ar6-locked'
+  - seaborn==0.13.2 ; extra == 'ar6-locked'
+  - setuptools==75.6.0 ; extra == 'ar6-locked'
+  - setuptools-scm==8.3.1 ; extra == 'ar6-locked'
+  - silicone==1.3.0 ; extra == 'ar6-locked'
+  - six==1.17.0 ; extra == 'ar6-locked'
+  - tomli==2.2.1 ; python_full_version < '3.11' and extra == 'ar6-locked'
+  - tqdm==4.67.1 ; extra == 'ar6-locked'
+  - typing-extensions==4.13.2 ; extra == 'ar6-locked'
+  - tzdata==2025.2 ; extra == 'ar6-locked'
+  - urllib3==2.3.0 ; extra == 'ar6-locked'
+  - versioneer==0.29 ; extra == 'ar6-locked'
+  - wrapt==1.17.2 ; extra == 'ar6-locked'
+  - xarray==2024.7.0 ; extra == 'ar6-locked'
+  - xlrd==2.0.1 ; extra == 'ar6-locked'
+  - zipp==3.21.0 ; extra == 'ar6-locked'
+  - colorama==0.4.6 ; extra == 'progress-locked'
+  - tqdm==4.67.1 ; extra == 'progress-locked'
+  - aneris-iamc==0.4.2 ; python_full_version >= '3.10' and extra == 'full-locked'
+  - attrs==24.3.0 ; extra == 'full-locked'
+  - certifi==2024.12.14 ; extra == 'full-locked'
+  - cftime==1.6.4.post1 ; extra == 'full-locked'
+  - charset-normalizer==3.4.1 ; extra == 'full-locked'
+  - colorama==0.4.6 ; extra == 'full-locked'
+  - contourpy==1.3.0 ; extra == 'full-locked'
+  - cycler==0.12.1 ; extra == 'full-locked'
+  - deprecated==1.2.18 ; extra == 'full-locked'
+  - et-xmlfile==2.0.0 ; extra == 'full-locked'
+  - f90nml==1.4.5 ; extra == 'full-locked'
+  - flexcache==0.3 ; extra == 'full-locked'
+  - flexparser==0.4 ; extra == 'full-locked'
+  - fonttools==4.57.0 ; extra == 'full-locked'
+  - globalwarmingpotentials==0.11.1 ; extra == 'full-locked'
+  - iam-units==2023.9.12 ; extra == 'full-locked'
+  - idna==3.10 ; extra == 'full-locked'
+  - importlib-metadata==8.7.0 ; extra == 'full-locked'
+  - importlib-resources==6.5.2 ; python_full_version < '3.10' and extra == 'full-locked'
+  - kiwisolver==1.4.7 ; extra == 'full-locked'
+  - matplotlib==3.9.4 ; extra == 'full-locked'
+  - numpy==2.0.2 ; extra == 'full-locked'
+  - openpyxl==3.1.5 ; extra == 'full-locked'
+  - openscm-runner==0.13.0 ; extra == 'full-locked'
+  - openscm-units==0.6.3 ; extra == 'full-locked'
+  - packaging==24.2 ; extra == 'full-locked'
+  - pandas==2.2.3 ; extra == 'full-locked'
+  - pandas-datapackage-reader==0.18.0 ; extra == 'full-locked'
+  - pandas-indexing==0.6.3 ; extra == 'full-locked'
+  - pandas-indexing[units]==0.6.3 ; extra == 'full-locked'
+  - pillow==11.2.1 ; extra == 'full-locked'
+  - pint==0.24.4 ; extra == 'full-locked'
+  - pint-pandas==0.7.1 ; extra == 'full-locked'
+  - platformdirs==4.3.6 ; extra == 'full-locked'
+  - ply==3.11 ; python_full_version >= '3.10' and extra == 'full-locked'
+  - pyam-iamc==1.2.0 ; extra == 'full-locked'
+  - pycountry==24.6.1 ; python_full_version >= '3.10' and extra == 'full-locked'
+  - pymagicc==2.1.5 ; extra == 'full-locked'
+  - pyomo==6.9.2 ; python_full_version >= '3.10' and extra == 'full-locked'
+  - pyparsing==3.2.3 ; extra == 'full-locked'
+  - python-dateutil==2.9.0.post0 ; extra == 'full-locked'
+  - python-dotenv==1.1.0 ; extra == 'full-locked'
+  - pytz==2025.2 ; extra == 'full-locked'
+  - pyyaml==6.0.2 ; extra == 'full-locked'
+  - requests==2.32.3 ; extra == 'full-locked'
+  - scipy==1.13.1 ; extra == 'full-locked'
+  - scmdata==0.17.0 ; extra == 'full-locked'
+  - seaborn==0.13.2 ; extra == 'full-locked'
+  - setuptools==75.6.0 ; extra == 'full-locked'
+  - setuptools-scm==8.3.1 ; extra == 'full-locked'
+  - silicone==1.3.0 ; extra == 'full-locked'
+  - six==1.17.0 ; extra == 'full-locked'
+  - tomli==2.2.1 ; python_full_version < '3.11' and extra == 'full-locked'
+  - tqdm==4.67.1 ; extra == 'full-locked'
+  - typing-extensions==4.13.2 ; extra == 'full-locked'
+  - tzdata==2025.2 ; extra == 'full-locked'
+  - urllib3==2.3.0 ; extra == 'full-locked'
+  - versioneer==0.29 ; extra == 'full-locked'
+  - wrapt==1.17.2 ; extra == 'full-locked'
+  - xarray==2024.7.0 ; extra == 'full-locked'
+  - xlrd==2.0.1 ; extra == 'full-locked'
+  - zipp==3.21.0 ; extra == 'full-locked'
+  requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/cb/99/f8ad15b4414489be553f323109fd279ba98f48bc9b38b648f2f6c0628f17/globalwarmingpotentials-0.11.1-py2.py3-none-any.whl
   name: globalwarmingpotentials
   version: 0.11.1

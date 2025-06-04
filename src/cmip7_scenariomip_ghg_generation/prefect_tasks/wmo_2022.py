@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
 
 
-@task_standard_cache(task_run_name="clean-wmo-data_{raw_data_path}")
+@task_path_cache(task_run_name="clean-wmo-data_{raw_data_path}")
 def clean_wmo_data(raw_data_path: Path, out_file: Path) -> Path:
     """
     Clean the WMO data from its raw format

@@ -7,15 +7,18 @@ from __future__ import annotations
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
 
 
-@task_standard_cache(task_run_name="create-single-concentration-projection-annual-mean-file_{ghg}")
+@task_path_cache(
+    task_run_name="create-single-concentration-projection-annual-mean-file_{ghg}",
+    # refresh_cache=True,
+)
 def create_single_concentration_projection_annual_mean_file(  # noqa: PLR0913
     ghg: str,
     cleaned_data_path: Path,
     historical_data_root_dir: Path,
-    annual_mean_dir: Path,
+    out_file: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
 ) -> Path:
@@ -33,8 +36,8 @@ def create_single_concentration_projection_annual_mean_file(  # noqa: PLR0913
     historical_data_root_dir
         Root path in which the historical data was downloaded
 
-    annual_mean_dir
-        Directory in which to write the annual-mean file
+    out_file
+        Path in which to write the annual-mean file
 
     raw_notebooks_root_dir
         Directory in which the raw notebooks live
@@ -47,8 +50,6 @@ def create_single_concentration_projection_annual_mean_file(  # noqa: PLR0913
     :
         Written path
     """
-    out_file = annual_mean_dir / f"single-concentration-projection_{ghg}_annual-mean.feather"
-
     run_notebook(
         raw_notebooks_root_dir / "0010_create-single-concentration-projection-annual-mean-file.py",
         parameters={
