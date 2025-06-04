@@ -4,6 +4,7 @@ A collection of helpers for working with [prefect](https://docs.prefect.io/v3/ge
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from functools import partial
@@ -36,6 +37,11 @@ class PathHashes(CachePolicy):
     If any path does not exist, then an invalid key is returned.
     If the path exists and is a file,
     then its hash is used to create the cache key.
+    """
+
+    parameters_ignore: tuple[str, ...] | None = None
+    """
+    Parameters to ignore when checking paths
     """
 
     def compute_key(
@@ -78,11 +84,20 @@ class PathHashes(CachePolicy):
             return None
 
         hash_l = []
+
         for parameter in sorted(inputs.keys()):
+            if self.parameters_ignore is not None and parameter in self.parameters_ignore:
+                # Ignore the parameter
+                continue
+
             value = inputs[parameter]
+
             if isinstance(value, Path):
                 if not value.exists():
-                    return None
+                    # Return key that will be invalid soon
+                    # (turns out that using None doesn't work
+                    # if you're combining multiple caching strategies)
+                    return str(dt.datetime.utcnow().timestamp())
 
                 if value.is_file():
                     hash_l.append(get_file_hash(value))

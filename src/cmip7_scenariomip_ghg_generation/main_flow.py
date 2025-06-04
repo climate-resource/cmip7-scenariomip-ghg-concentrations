@@ -208,7 +208,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         cleaned_data_path=wmo_2022_cleaned,
     )
 
-    western_et_al_2024_raw_tar_file_downloaded = download_file(
+    western_et_al_2024_raw_tar_file_downloaded = download_file.submit(
         url=western_et_al_2024_download_url,
         out_path=western_et_al_2024_raw_tar_file,
     )
@@ -216,8 +216,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         zip_file=western_et_al_2024_raw_tar_file_downloaded,
         extract_root_dir=western_et_al_2024_extract_path,
     )
-    western_et_al_2024_cleaned = clean_western_et_al_2024_data(
-        raw_data_path=western_et_al_2024_extracted.result() / western_et_al_2024_extracted_file_of_interest,
+
+    western_et_al_2024_cleaned = clean_western_et_al_2024_data.submit(
+        root_extraction_dir=western_et_al_2024_extracted,
+        file_to_clean=western_et_al_2024_extracted_file_of_interest,
         out_file=western_et_al_2024_cleaned_data_path,
     )
 

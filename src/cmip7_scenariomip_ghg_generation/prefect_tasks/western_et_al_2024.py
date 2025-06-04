@@ -7,20 +7,32 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from prefect import task
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashes, task_path_cache
 
 
-@task_path_cache(task_run_name="clean-western-et-al-2024-data_{raw_data_path}")
-def clean_western_et_al_2024_data(raw_data_path: Path, out_file: Path) -> Path:
+@task(
+    task_run_name="clean-western-et-al-2024-data_{file_to_clean}",
+    persist_result=True,
+    cache_policy=PathHashes(parameters_ignore=("file_to_clean",)),
+)
+def clean_western_et_al_2024_data(
+    root_extraction_dir: Path,
+    file_to_clean: Path,
+    out_file: Path,
+) -> Path:
     """
     Clean the Western et al., 2024 data from its raw format
 
     Parameters
     ----------
-    raw_data_path
-        Path to the raw data
+    root_extraction_dir
+        Root directory in which the Western et al. (2024) data was unpacked
+
+    file_to_clean
+        File, relative to `root_extraction_dir`, to clean
 
     out_file
         Path in which to save the extracted data
@@ -30,7 +42,7 @@ def clean_western_et_al_2024_data(raw_data_path: Path, out_file: Path) -> Path:
     :
         Path to the cleaned data
     """
-    raw = pd.read_csv(raw_data_path, skiprows=1)
+    raw = pd.read_csv(root_extraction_dir / file_to_clean, skiprows=1)
 
     column_renaming = {}
     for c in raw.columns:
