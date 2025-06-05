@@ -15,7 +15,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import (
 
 
 @task_standard_path_cache(
-    task_run_name="create-esgf-files_{ghg}_{cmip_scenario_name}_{model}_{scenario}",
+    task_run_name="create-esgf-files_{ghg}_{cmip_scenario_name}",
     parameters_output=("checklist_file",),
 )
 def create_esgf_files(  # noqa: PLR0913

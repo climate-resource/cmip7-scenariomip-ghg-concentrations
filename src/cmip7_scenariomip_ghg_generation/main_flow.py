@@ -210,9 +210,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         clean_wmo_data, raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path
     )
 
-    wmo_2022_paths = []
+    wmo_2022_paths_l = []
     if wmo_2022_ghgs:
-        wmo_2022_paths.extend(
+        wmo_2022_paths_l.extend(
             create_single_concentration_projection(
                 ghgs=wmo_2022_ghgs,
                 cleaned_data_path=wmo_2022_cleaned,
@@ -257,9 +257,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
                 )
             )
 
-    # Make sure all results are crunched before returning
-    for future in (*wmo_2022_paths, *western_2024_paths_l):
-        future.wait(timeout=30 * 60)
+    # Return all crunched paths
+    res = tuple((*wmo_2022_paths_l, *western_2024_paths_l))
+
+    return res
 
 
 def create_scenariomip_ghgs(  # noqa: PLR0913
@@ -398,8 +399,14 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     elif runner == "dask":
         task_runner = DaskTaskRunner(
+            cluster_class="distributed.LocalCluster",
             # address=  # can be used to specify an already running cluster
-            cluster_kwargs={"n_workers": n_workers}
+            cluster_kwargs={
+                "n_workers": n_workers,
+                "threads_per_worker": 1,
+                "processes": True,
+                "asynchronous": True,
+            },
             # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
         )
 
@@ -408,6 +415,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         # but maybe it still works well enough for us
         # given that many of our tasks spin up their own process anyway ?
         # Docs: https://docs.prefect.io/v3/develop/task-runners
+        print("Warning: This may crash due to the threads fighting with each other when writing netCDF")
         task_runner = ThreadPoolTaskRunner(max_workers=n_workers)
 
     run_id_flow = flow(

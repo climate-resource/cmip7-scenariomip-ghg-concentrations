@@ -12,7 +12,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_
 
 @task_standard_path_cache(
     task_run_name="scale-seasonality-based-on-annual-mean_{ghg}",
-    parameters_output=("checklist_file",),
+    parameters_output=("out_file",),
     # refresh_cache=True,
 )
 def scale_seasonality_based_on_annual_mean(  # noqa: PLR0913

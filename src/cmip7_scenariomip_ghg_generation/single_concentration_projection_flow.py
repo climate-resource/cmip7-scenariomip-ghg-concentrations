@@ -112,7 +112,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     }
 
     global_mean_yearly_file_futures = {
-        ghg: create_single_concentration_projection_annual_mean_file.submit(
+        ghg: submit_output_aware(
+            create_single_concentration_projection_annual_mean_file,
             ghg=ghg,
             cleaned_data_path=cleaned_data_path,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
@@ -125,7 +126,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     }
 
     global_mean_monthly_file_futures = {
-        ghg: interpolate_annual_mean_to_monthly.submit(
+        ghg: submit_output_aware(
+            interpolate_annual_mean_to_monthly,
             ghg=ghg,
             annual_mean_file=yearly_future,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
@@ -140,7 +142,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     }
 
     seasonality_file_futures = {
-        ghg: scale_seasonality_based_on_annual_mean.submit(
+        ghg: submit_output_aware(
+            scale_seasonality_based_on_annual_mean,
             ghg=ghg,
             annual_mean_file=yearly_future,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
@@ -155,7 +158,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     }
 
     inverse_emissions_file_futures = {
-        ghg: calculate_inverse_emissions.submit(
+        ghg: submit_output_aware(
+            calculate_inverse_emissions,
             ghg=ghg,
             monthly_mean_file=monthly_future,
             out_file=inverse_emission_dir / f"single-concentration-projection_{ghg}_inverse-emissions.feather",
@@ -166,7 +170,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     }
 
     lat_gradient_file_futures = {
-        ghg: scale_lat_gradient_based_on_emissions.submit(
+        ghg: submit_output_aware(
+            scale_lat_gradient_based_on_emissions,
             ghg=ghg,
             annual_mean_emissions_file=inverse_emmissions_file,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
@@ -181,7 +186,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     }
 
     esgf_ready_futures = {
-        ghg: create_esgf_files.submit(
+        ghg: submit_output_aware(
+            create_esgf_files,
             ghg=ghg,
             cmip_scenario_name=si.cmip_scenario_name,
             esgf_version=esgf_version,

@@ -287,7 +287,7 @@ def submit_output_aware(
                 msg = (
                     f"{parameter}. "
                     "For this to work, the output parameters must be kwargs. "
-                    f"{parameter=} {kwargs=} {args=}"
+                    f"{task.name=} {parameter=} {kwargs=} {args=}"
                 )
                 raise KeyError(msg)
 
