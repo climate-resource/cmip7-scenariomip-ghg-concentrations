@@ -6,6 +6,7 @@ import multiprocessing
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
 
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
@@ -65,7 +66,7 @@ ALL_GHGS = [
 ]
 
 
-def main(
+def main(  # noqa: PLR0913
     ghg: Annotated[list[str], typer.Option(help="GHG to process")] = ALL_GHGS,
     run_id: Annotated[
         str,
@@ -90,6 +91,13 @@ this will lead to a new run being done
     n_workers: Annotated[
         int, typer.Option(help="Number of workers to use for parallel work")
     ] = multiprocessing.cpu_count(),
+    runner: Annotated[
+        str,
+        typer.Option(
+            click_type=click.Choice(["thread", "dask"]),
+            help="Number of workers to use for parallel work",
+        ),
+    ] = "thread",
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
@@ -162,6 +170,7 @@ this will lead to a new run being done
         scenario_infos=scenario_infos,
         run_id=run_id,
         n_workers=n_workers,
+        runner=runner,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,

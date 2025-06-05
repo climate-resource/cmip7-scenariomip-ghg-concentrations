@@ -7,7 +7,9 @@ from pathlib import Path
 
 from prefect import flow
 from prefect.task_runners import ThreadPoolTaskRunner
+from prefect_dask import DaskTaskRunner
 
+from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_western_et_al_2024_data,
     clean_wmo_data,
@@ -136,11 +138,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         Generated paths
     """
     ### Used in all flows hence here
-    downloaded_cmip7_historical_seasonality_lat_gradient_info = download_file.submit(
+    downloaded_cmip7_historical_seasonality_lat_gradient_info = submit_output_aware(
+        download_file,
         cmip7_historical_seasonality_lat_gradient_info_raw_file_url,
         out_path=cmip7_historical_seasonality_lat_gradient_info_raw_file,
     )
-    cmip7_historical_seasonality_lat_gradient_info_extracted = extract_tar.submit(
+    cmip7_historical_seasonality_lat_gradient_info_extracted = submit_output_aware(
+        extract_tar,
         tar_file=downloaded_cmip7_historical_seasonality_lat_gradient_info,
         extract_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
     )
@@ -202,43 +206,56 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         doi=doi,
     )
 
-    wmo_2022_cleaned = clean_wmo_data(raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path)
-    wmo_2022_paths = create_single_concentration_projection(
-        ghgs=wmo_2022_ghgs,
-        cleaned_data_path=wmo_2022_cleaned,
+    wmo_2022_cleaned = submit_output_aware(
+        clean_wmo_data, raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path
     )
 
-    western_et_al_2024_raw_tar_file_downloaded = download_file.submit(
-        url=western_et_al_2024_download_url,
-        out_path=western_et_al_2024_raw_tar_file,
-    )
-    western_et_al_2024_extracted = extract_zip.submit(
-        zip_file=western_et_al_2024_raw_tar_file_downloaded,
-        extract_root_dir=western_et_al_2024_extract_path,
-    )
-
-    western_et_al_2024_cleaned = clean_western_et_al_2024_data.submit(
-        root_extraction_dir=western_et_al_2024_extracted,
-        file_to_clean=western_et_al_2024_extracted_file_of_interest,
-        out_file=western_et_al_2024_cleaned_data_path,
-    )
-
-    western_2024_paths_l = []
-    for ghg in western_et_al_2024_ghgs:
-        western_et_al_2024_extended_ghg = extend_western_et_al_2024.submit(
-            ghg=ghg,
-            western_et_al_2024_clean=western_et_al_2024_cleaned,
-            wmo_2022_clean=wmo_2022_cleaned,
-            raw_notebooks_root_dir=raw_notebooks_root_dir,
-            executed_notebooks_dir=executed_notebooks_dir,
-        )
-
-        western_2024_paths_l.extend(
+    wmo_2022_paths = []
+    if wmo_2022_ghgs:
+        wmo_2022_paths.extend(
             create_single_concentration_projection(
-                ghgs=[ghg],
-                cleaned_data_path=western_et_al_2024_extended_ghg,
+                ghgs=wmo_2022_ghgs,
+                cleaned_data_path=wmo_2022_cleaned,
             )
         )
+
+    western_2024_paths_l = []
+    if western_et_al_2024_ghgs:
+        western_et_al_2024_raw_tar_file_downloaded = submit_output_aware(
+            download_file,
+            url=western_et_al_2024_download_url,
+            out_path=western_et_al_2024_raw_tar_file,
+        )
+
+        western_et_al_2024_extracted = submit_output_aware(
+            extract_zip,
+            zip_file=western_et_al_2024_raw_tar_file_downloaded,
+            extract_root_dir=western_et_al_2024_extract_path,
+        )
+        western_et_al_2024_cleaned = submit_output_aware(
+            clean_western_et_al_2024_data,
+            root_extraction_dir=western_et_al_2024_extracted,
+            file_to_clean=western_et_al_2024_extracted_file_of_interest,
+            out_file=western_et_al_2024_cleaned_data_path,
+        )
+
+        for ghg in western_et_al_2024_ghgs:
+            western_et_al_2024_extended_ghg = submit_output_aware(
+                extend_western_et_al_2024,
+                ghg=ghg,
+                western_et_al_2024_clean=western_et_al_2024_cleaned,
+                out_file=western_et_al_2024_cleaned_data_path.parent / f"western-et-al-2024_{ghg}_extended.feather",
+                wmo_2022_clean=wmo_2022_cleaned,
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+            )
+
+            western_2024_paths_l.extend(
+                create_single_concentration_projection(
+                    ghgs=[ghg],
+                    cleaned_data_path=western_et_al_2024_extended_ghg,
+                )
+            )
 
     # Make sure all results are crunched before returning
     for future in (*wmo_2022_paths, *western_2024_paths_l):
@@ -250,6 +267,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     scenario_infos: tuple[ScenarioInfo, ...],
     run_id: str,
     n_workers: int,
+    runner: str,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     cmip7_historical_ghg_concentration_source_id: str,
@@ -292,6 +310,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     n_workers
         Number of workers to use with parallel processing
+
+    runner
+        Runner to use
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -369,18 +390,25 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     """
     # A bit of trickery here to inject the run ID at runtime
     if n_workers == 1:
-        task_runner = ThreadPoolTaskRunner(max_workers=1)
+        if runner == "dask":
+            task_runner = DaskTaskRunner(cluster_kwargs={"n_workers": n_workers})
+
+        else:
+            task_runner = ThreadPoolTaskRunner(max_workers=1)
+
+    elif runner == "dask":
+        task_runner = DaskTaskRunner(
+            # address=  # can be used to specify an already running cluster
+            cluster_kwargs={"n_workers": n_workers}
+            # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
+        )
+
     else:
         # Apparently this is not truly parallel,
         # but maybe it still works well enough for us
         # given that many of our tasks spin up their own process anyway ?
         # Docs: https://docs.prefect.io/v3/develop/task-runners
         task_runner = ThreadPoolTaskRunner(max_workers=n_workers)
-        # task_runner = DaskTaskRunner(
-        #     # address=  # can be used to specify an already running cluster
-        #     cluster_kwargs={"n_workers": n_workers}
-        #     # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
-        # )
 
     run_id_flow = flow(
         name=f"scenariomip-ghgs_{run_id}",

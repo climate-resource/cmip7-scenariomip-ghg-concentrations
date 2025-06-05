@@ -10,13 +10,16 @@ import pandas as pd
 from prefect import task
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashes, task_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP, task_standard_path_cache
 
 
 @task(
     task_run_name="clean-western-et-al-2024-data_{file_to_clean}",
     persist_result=True,
-    cache_policy=PathHashes(parameters_ignore=("file_to_clean",)),
+    cache_policy=PathHashesCP(
+        parameters_ignore=("file_to_clean",),
+        parameters_output=("out_file",),
+    ),
 )
 def clean_western_et_al_2024_data(
     root_extraction_dir: Path,
@@ -68,10 +71,14 @@ def clean_western_et_al_2024_data(
     return out_file
 
 
-@task_path_cache(task_run_name="extend-western-et-al-2024_{ghg}")
-def extend_western_et_al_2024(
+@task_standard_path_cache(
+    task_run_name="extend-western-et-al-2024_{ghg}",
+    parameters_output=("out_file",),
+)
+def extend_western_et_al_2024(  # noqa: PLR0913
     ghg: str,
     western_et_al_2024_clean: Path,
+    out_file: Path,
     wmo_2022_clean: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
@@ -86,6 +93,9 @@ def extend_western_et_al_2024(
 
     western_et_al_2024_clean
         Path to clean Western et al. (2024) data
+
+    out_file
+        Path in which to write the outpu
 
     wmo_2022_clean
         Path to clean WMO (2022) data
@@ -104,7 +114,6 @@ def extend_western_et_al_2024(
     :
         Path to the file with extended data
     """
-    out_file = western_et_al_2024_clean.parent / f"western-et-al-2024_{ghg}_extended.feather"
     run_notebook(
         raw_notebooks_root_dir / "0001_extend-western-et-al-2024.py",
         parameters={

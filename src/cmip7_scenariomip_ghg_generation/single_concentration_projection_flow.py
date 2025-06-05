@@ -5,6 +5,7 @@ Tasks for gases which only have a single concentration projection
 import itertools
 from pathlib import Path
 
+from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     calculate_inverse_emissions,
     create_esgf_files,
@@ -99,7 +100,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         Generated paths
     """
     downloaded_cmip7_historical_ghgs_futures = {
-        ghg: download_cmip7_historical_ghg_concentrations.submit(
+        ghg: submit_output_aware(
+            download_cmip7_historical_ghg_concentrations,
             ghg,
             source_id=cmip7_historical_ghg_concentration_source_id,
             root_dir=cmip7_historical_ghg_concentration_data_root_dir,

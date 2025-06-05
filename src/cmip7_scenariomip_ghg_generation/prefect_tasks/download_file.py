@@ -8,11 +8,12 @@ from pathlib import Path
 
 import pooch
 
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_cache
 
 
-@task_path_cache(
+@task_standard_path_cache(
     task_run_name="download-file_{url}_{out_path}",
+    parameters_output=("out_path",),
 )
 def download_file(url: Path, out_path: Path) -> Path:
     """

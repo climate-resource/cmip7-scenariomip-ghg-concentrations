@@ -7,11 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_cache
 
 
-@task_path_cache(
+@task_standard_path_cache(
     task_run_name="calculate-inverse-emissions_{ghg}",
+    parameters_output=("out_file",),
     # refresh_cache=True,
 )
 def calculate_inverse_emissions(

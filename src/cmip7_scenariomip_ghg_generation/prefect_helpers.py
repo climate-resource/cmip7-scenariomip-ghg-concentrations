@@ -5,32 +5,49 @@ A collection of helpers for working with [prefect](https://docs.prefect.io/v3/ge
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Coroutine, Iterable
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from gcages.hashing import get_file_hash
-from prefect import task
+from prefect import Task, task
 from prefect.cache_policies import INPUTS, TASK_SOURCE, CachePolicy
 from prefect.context import TaskRunContext
+from prefect.futures import PrefectFuture
+from prefect.locking.filesystem import FileSystemLockManager
+from prefect.settings import PREFECT_HOME
+from prefect.states import State
+from prefect.transactions import IsolationLevel
 
-task_standard_cache = partial(
+R = TypeVar("R")
+P = ParamSpec("P")
+
+task_basic_cache = partial(
     task,
     persist_result=True,
-    cache_policy=INPUTS + TASK_SOURCE,
+    cache_policy=(INPUTS + TASK_SOURCE).configure(
+        # Ensure that only one task can run for this cache key at a time.
+        # (Don't get two tasks doing the same work)
+        # See https://docs-3.prefect.io/v3/develop/task-caching#cache-isolation
+        isolation_level=IsolationLevel.SERIALIZABLE,
+        lock_manager=FileSystemLockManager(lock_files_directory=PREFECT_HOME.value() / "locks"),
+    ),
     # Uncomment the line below to force a refresh of the cache
     # (can also use the PREFECT_TASKS_REFRESH_CACHE env variable to do the same)
     # refresh_cache=True,
 )
 """
 A convenience to help us avoid redefining the same caching policy over and over
+
+Note that this cache does not handle missing output paths well.
+For that, use [submit_output_aware][].
 """
 
 
 @dataclass
-class PathHashes(CachePolicy):
+class PathHashesCP(CachePolicy):
     """
     Policy for computing a cache key based on the path hashes in the callable's inputs
 
@@ -44,6 +61,22 @@ class PathHashes(CachePolicy):
     Parameters to ignore when checking paths
     """
 
+    parameters_output: tuple[str, ...] | None = None
+    """
+    Parameters to treat as output
+
+    These aren't included in the generated cache key
+    because they don't always exist at the time the cache key is evaluated.
+    In other words, including them results in the following undesirable behaviour.
+
+    1. The cache key is generated without the output file existing
+    1. The task runs
+    1. The output is generated
+    1. On the next run, the cache key is generated with the output file's hash too
+    1. Hence the key is different from the first run and the cache misses
+    1. So the task runs again (unnecessarily)
+    """
+
     def compute_key(
         self,
         task_ctx: TaskRunContext,
@@ -53,13 +86,6 @@ class PathHashes(CachePolicy):
     ) -> str | None:
         """
         Compute cache key
-
-        Note: this caching strategy causes things to be run at least twice
-        because the output file hashes can't be predicted in advance
-        (therefore things have to run once, then run again to create the cache key
-        but this hash key isn't in the database so the function runs once more
-        before the cache key can actually work,
-        there is probably a way around this but I haven't found it yet).
 
         Parameters
         ----------
@@ -78,7 +104,7 @@ class PathHashes(CachePolicy):
         Returns
         -------
         :
-            Hash if available otherwise `None` if the cache is clearly invalid
+            Hash if available otherwise `None` if the key cannot be calculated
         """
         if not task_ctx:
             return None
@@ -90,15 +116,36 @@ class PathHashes(CachePolicy):
                 # Ignore the parameter
                 continue
 
+            if self.parameters_output is not None and parameter in self.parameters_output:
+                # Don't include the value when calculating the hash key
+                continue
+
             value = inputs[parameter]
 
             if isinstance(value, Path):
                 if not value.exists():
-                    # Return key that will be invalid soon
+                    # Return key that will cause a cache miss
                     # (turns out that using None doesn't work
-                    # if you're combining multiple caching strategies)
+                    # if you're combining multiple caching strategies
+                    # because it is just dropped).
                     return str(dt.datetime.utcnow().timestamp())
 
+                    # Note for devs:
+                    # This pattern might not be quite right,
+                    # because things can end up being run twice
+                    # if the value doesn't exist at cache key calculation time.
+                    # (Although, as far as I can tell,
+                    # the cache key is computed after other tasks have finished
+                    # so this might not actually be a problem.)
+                    # However, in that case there is no way
+                    # to produce a stable cache key
+                    # so this might be the best we can do.
+                    # Maybe using transactions or clever waits would fix it,
+                    # but I can't figure that out how right now.
+                    # Transaction docs for reference:
+                    # https://docs-3.prefect.io/v3/develop/transactions#idempotency
+
+                # Add hash of file values that haven't been ignored
                 if value.is_file():
                     hash_l.append(get_file_hash(value))
 
@@ -108,20 +155,148 @@ class PathHashes(CachePolicy):
             return "static-key"
 
         # All files exist, return concatenated hashes as the hash key
-        return "_".join(hash_l)
+        key = "_".join(hash_l)
+
+        return key
 
 
-task_path_cache = partial(
-    task,
-    persist_result=True,
-    cache_policy=INPUTS + TASK_SOURCE + PathHashes(),
-    # Uncomment the line below to force a refresh of the cache
-    # (can also use the PREFECT_TASKS_REFRESH_CACHE env variable to do the same)
-    # refresh_cache=True,
-)
-"""
-A convenience to help us avoid redefining the same caching policy over and over
-"""
+def task_standard_path_cache(
+    parameters_ignore: tuple[str, ...] | None = None,
+    parameters_output: tuple[str, ...] | None = None,
+    **kwargs: Any,
+) -> Task:
+    """
+    Get a task with standard path caching
+
+    Parameters
+    ----------
+    parameters_ignore
+        Parameters to ignore when checking if paths exist or have changed
+
+    parameters_output
+        Parameters to treat as output files
+
+        These aren't included in the generated cache key,
+        but the cache is invalid if these files don't exist
+    **kwargs
+        Passed to [prefect.task.Task][]
+
+    Returns
+    -------
+    :
+        Initialised task
+    """
+    return task(
+        persist_result=True,
+        cache_policy=INPUTS
+        + TASK_SOURCE
+        + PathHashesCP(
+            parameters_ignore=parameters_ignore,
+            parameters_output=parameters_output,
+        ),
+        **kwargs,
+    )
+
+
+def submit_output_aware(
+    task: Task[P, R] | Task[P, Coroutine[Any, Any, R]],
+    *args: P.args,
+    **kwargs: P.kwargs,
+) -> PrefectFuture[R] | State[R]:
+    """
+    Submit to a task, being aware of whether the output exists or not
+
+    If the output does not exist,
+    then the task is updated to force a refresh of the cache.
+
+    This function relies on the task's cache policy
+    including a [PathHashesCP][] instance.
+    In other words, your task definition should look something like
+
+    ```python
+    from prefect import task
+
+    @task(
+        ...
+        cache_policy=... + PathHashesCP(
+            parameters_output=("out_path",)
+        ),
+        ...
+    )
+    def my_task(url: Path, para_a: float, out_path: Path) -> Path:
+        ...
+    ````
+
+    Parameters
+    ----------
+    task
+        Task to submit to
+
+    *args
+        Arguments to pass to the task
+
+    **kwargs
+        Keyword arguments to pass to the task
+
+    Returns
+    -------
+    :
+        Result of calling [task.submit][] with `args` and `kwargs`
+
+    Notes
+    -----
+    This behaviour isn't native to prefect.
+    I can sort of see why, it relies on re-running a task just based
+    on whether the output exists or not.
+    In contrast, prefect's normal logic is:
+    if a task has been run with the same inputs and same source,
+    it should give the same output
+    and outputs should not disappear because of behaviour outside the workflows.
+
+    This is fair enough, but to get more 'Make'-like behaviour
+    (where re-execution is triggered simply by deleting a file),
+    I wanted something like this.
+    Despite the relatively simple solution, this took a surprising amount of thinking.
+    Maybe one day we split this out into its own package
+    or make a PR back into prefect with the relevant pieces.
+    """
+    if isinstance(task.cache_policy, PathHashesCP):
+        phcp = task.cache_policy
+
+    elif hasattr(task.cache_policy, "policies"):
+        for policy in task.cache_policy.policies:
+            if isinstance(policy, PathHashesCP):
+                phcp = policy
+                break
+        else:
+            msg = f"No instance of `PathHashesCP` in the tasks's cache policies. {task.cache_policy=}"
+            raise AssertionError(msg)
+    else:
+        msg = (
+            "task's cache policy is not and does not contain "
+            "an instance of `PathHashesCP` in the tasks's cache policies. "
+            f"{task.cache_policy=}"
+        )
+        raise AssertionError(msg)
+
+    parameters_output = phcp.parameters_output
+    task_updated = task
+    if parameters_output is not None:
+        for parameter in parameters_output:
+            if parameter not in kwargs:
+                msg = (
+                    f"{parameter}. "
+                    "For this to work, the output parameters must be kwargs. "
+                    f"{parameter=} {kwargs=} {args=}"
+                )
+                raise KeyError(msg)
+
+            if not kwargs[parameter].exists():
+                # Output doesn't exist, force cache to refresh
+                task_updated = task_updated.with_options(refresh_cache=True)
+                break
+
+    return task_updated.submit(*args, **kwargs)
 
 
 def create_hash_dict(

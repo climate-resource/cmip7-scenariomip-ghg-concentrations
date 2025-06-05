@@ -7,11 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_cache
 
 
-@task_path_cache(
+@task_standard_path_cache(
     task_run_name="create-single-concentration-projection-annual-mean-file_{ghg}",
+    parameters_output=("out_file",),
     # refresh_cache=True,
 )
 def create_single_concentration_projection_annual_mean_file(  # noqa: PLR0913

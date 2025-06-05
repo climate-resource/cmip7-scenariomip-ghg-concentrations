@@ -4,10 +4,10 @@ Zenodo related tasks
 
 from __future__ import annotations
 
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_basic_cache
 
 
-@task_standard_cache(task_run_name="get-doi")
+@task_basic_cache(task_run_name="get-doi")
 def get_doi() -> str:
     """
     Get DOI from Zenodo
