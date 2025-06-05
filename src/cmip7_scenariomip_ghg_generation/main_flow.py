@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 
 from prefect import flow
+from prefect.futures import wait
 from prefect.task_runners import ThreadPoolTaskRunner
 from prefect_dask import DaskTaskRunner
 
@@ -257,8 +258,12 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
                 )
             )
 
-    # Return all crunched paths
-    res = tuple((*wmo_2022_paths_l, *western_2024_paths_l))
+    # Ensure all paths finish
+    done, not_done = wait((*wmo_2022_paths_l, *western_2024_paths_l), timeout=30 * 60)
+    if not_done:
+        raise AssertionError
+
+    res = tuple(v for future in done for v in future.result())
 
     return res
 
@@ -405,7 +410,6 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
                 "n_workers": n_workers,
                 "threads_per_worker": 1,
                 "processes": True,
-                "asynchronous": True,
             },
             # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
         )
