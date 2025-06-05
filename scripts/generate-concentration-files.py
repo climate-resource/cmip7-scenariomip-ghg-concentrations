@@ -8,13 +8,14 @@ from typing import Annotated
 
 import click
 import typer
+from pandas_openscm.io import load_timeseries_csv
 
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 REPO_ROOT_DIR = Path(__file__).parents[1]
 OUTPUT_BUNDLES_ROOT_DIR = REPO_ROOT_DIR / "output-bundles"
-REPO_DATA_DIR = REPO_ROOT_DIR / "data" / "raw"
+REPO_RAW_DATA_DIR = REPO_ROOT_DIR / "data" / "raw"
 
 ALL_GHGS = [
     "c2f6",
@@ -67,6 +68,9 @@ ALL_GHGS = [
 
 
 def main(  # noqa: PLR0913
+    scenario_file: Annotated[Path, typer.Option(help="Scenario file to use")] = (
+        REPO_RAW_DATA_DIR / "input-scenarios" / "0009-zn_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv"
+    ),
     ghg: Annotated[list[str], typer.Option(help="GHG to process")] = ALL_GHGS,
     run_id: Annotated[
         str,
@@ -106,6 +110,12 @@ this will lead to a new run being done
     # load_dotenv()
 
     ghgs = tuple(ghg)
+    # These are the markers
+    assert False, "Add guess for all markers"
+    markers = (
+        ("REMIND-MAgPIE 3.5-4.10", "SSP1 - Very Low Emissions", "vllo"),
+        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
+    )
     scenario_infos = (
         ScenarioInfo(
             cmip_scenario_name="vllo",
@@ -144,7 +154,7 @@ this will lead to a new run being done
     cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir = data_raw_root / "historical-ghg-data-interim"
 
     ### WMO 2022 stuff
-    wmo_raw_data_path = REPO_DATA_DIR / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx"
+    wmo_raw_data_path = REPO_RAW_DATA_DIR / "wmo-2022" / "MixingRatiosCMIP7_20250210.xlsx"
     # Save as feather as this is an interim product
     wmo_cleaned_data_path = data_interim_root / "wmo-2022" / "cleaned-mixing-ratios.feather"
 
@@ -164,6 +174,51 @@ this will lead to a new run being done
     ### Final outputs
     inverse_emission_dir = data_processed_root / "inverse-emissions"
     esgf_ready_root_dir = data_processed_root / "esgf-ready"
+
+    ### Scenario processing and set up
+    scenario_batch_id = scenario_file.name.split("_harmonised-emissions-up-to-silicone.py")[0]
+    all_emissions = load_timeseries_csv(
+        scenario_file,
+        index_columns=["model", "scenario", "region", "variable", "unit"],
+        out_columns_type=int,
+        out_columns_name="year",
+    )
+
+    history_loc = all_emissions.index.get_level_values("scenario") == "historical"
+    history = all_emissions.loc[history_loc]
+    scenarios = all_emissions.loc[~history_loc]
+    all_model_scenarios = scenarios.index.droplevel(
+        all_emissions.index.names.difference(["model", "scenario"])
+    ).drop_duplicates()
+    # Early step in workflow, break the scenario information into individual files
+    # for easier running and parsing and caching
+    scenario_infos = [
+        ScenarioInfo(
+            cmip_scenario_name=None,
+            model=model,
+            scenario=scenario,
+        )
+        for model, scenario in all_model_scenarios.reorder_levels(["model", "scenario"])
+    ]
+    for model, scenario, cmip_scenario_name in markers:
+        for i, si in enumerate(scenario_infos):
+            if si.model == model and si.scenario == scenario:
+                break
+
+        else:
+            msg = f"{model=} {scenario=} not found in input model-scenario options"
+            raise AssertionError(msg)
+
+        si.cmip_scenario_name = cmip_scenario_name
+        # Double check
+        if (
+            scenario_infos[i].cmip_scenario_name != cmip_scenario_name
+            or scenario_infos[i].model != model
+            or scenario_infos[i].scenario != scenario
+        ):
+            raise AssertionError
+
+    assert False, "Use scenario info in next steps"
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
