@@ -385,8 +385,11 @@ non_input4mips_metadata_common
 # ### Grab the CVs
 
 # %%
-# Force downloads while we are experimenting
-raw_cvs_loader = get_raw_cvs_loader(input4mips_cvs_source, force_download=True)
+raw_cvs_loader = get_raw_cvs_loader(
+    input4mips_cvs_source,
+    # # Can force updates if you need using this
+    # force_download=True,
+)
 # raw_cvs_loader
 
 # %%
