@@ -27,3 +27,14 @@ class ScenarioInfo:
     """
     Scenario name according to the IAM
     """
+
+    def to_file_stem(self) -> str:
+        """
+        Get the file stem to use for this scenario information
+
+        Returns
+        -------
+        :
+            File stem
+        """
+        return f"{self.scenario}_{self.model}".replace(" ", "_").replace(".", "-")

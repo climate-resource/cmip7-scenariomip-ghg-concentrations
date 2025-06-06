@@ -32,7 +32,7 @@ dependencies = [
     "scitools-iris==3.8.1",
     "seaborn>=0.13.2",
     "typer>=0.10.0",
-    "xarray==2024.7.0", "gcages>=0.6.0,<0.7",
+    "xarray==2024.7.0", "gcages>=0.6.0,<0.7", "pymagicc>=2.1.5,<3", "openscm-runner>=0.13.0,<0.14",
 ]
 
 [tool.pixi.project]

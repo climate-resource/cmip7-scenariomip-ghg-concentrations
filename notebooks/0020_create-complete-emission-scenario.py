@@ -35,7 +35,6 @@ import pandas_indexing as pix
 import pandas_openscm
 import seaborn as sns
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
-from pandas_openscm.io import load_timeseries_csv
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Parameters
@@ -44,9 +43,9 @@ from pandas_openscm.io import load_timeseries_csv
 model: str = "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12"
 scenario: str = "SSP2 - Low Emissions"
 scenario_file: str = "../output-bundles/dev-test/data/interim/input-emissions/0009-zn_0003_0003_0002/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.feather"  # noqa: E501
-inverse_emissions_file: str = "../output-bundles/dev-test/data/processed/inverse-emissions/single-concentration-projection_inverse-emissions.feather"  # noqa: E501
+inverse_emissions_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_inverse-emissions.feather"  # noqa: E501
 history_file: str = "../output-bundles/dev-test/data/interim/input-emissions/0009-zn_0003_0003_0002/historical.feather"
-out_file: str = "../output-bundles/dev-test/data/processed/complete-emissions/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.csv"  # noqa: E501
+out_file: str = "../output-bundles/dev-test/data/interim/complete-emissions/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.feather"  # noqa: E501
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -71,14 +70,6 @@ Q = openscm_units.unit_registry.Quantity
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### History
-
-# %%
-ltc = partial(
-    load_timeseries_csv,
-    index_columns=["model", "scenario", "region", "variable", "unit"],
-    out_columns_type=int,
-    out_columns_name="year",
-)
 
 # %%
 history = pd.read_feather(history_file_p)
@@ -380,4 +371,4 @@ if complete_emissions.isnull().any().any():
 
 # %%
 out_file_p.parent.mkdir(exist_ok=True, parents=True)
-complete_emissions.to_csv(out_file)
+complete_emissions.to_feather(out_file_p)

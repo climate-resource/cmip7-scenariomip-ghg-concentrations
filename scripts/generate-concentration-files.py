@@ -98,6 +98,13 @@ this will lead to a new run being done
 (i.e. there will be no caching)."""
         ),
     ] = "dev-test",
+    magicc_version_to_run: Annotated[list[str], typer.Option(help="MAGICC version to run")] = [
+        "MAGICCv7.6.0a3",
+        "MAGICCv7.5.3",
+    ],
+    n_magicc_workers: Annotated[int, typer.Option(help="Number of MAGICC workers to use when running")] = 1,
+    magicc_root_folder: Annotated[Path, typer.Option(help="Root folder for MAGICC versions")] = REPO_ROOT_DIR
+    / "magicc",
     esgf_version: Annotated[
         str,
         typer.Option(help="""Version to use when writing the files for ESGF"""),
@@ -124,6 +131,7 @@ this will lead to a new run being done
     # load_dotenv()
 
     ghgs = tuple(ghg)
+    magicc_versions_to_run = tuple(magicc_version_to_run)
 
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
@@ -181,10 +189,11 @@ this will lead to a new run being done
     seasonality_dir = data_interim_root / "seasonality"
     lat_gradient_dir = data_interim_root / "latitudinal-gradient"
     emissions_split_dir = data_interim_root / "input-emissions" / emissions_batch_id
+    inverse_emission_dir = data_interim_root / "inverse-emissions"
+    emissions_complete_dir = data_interim_root / "complete-emissions"
+    magicc_output_dir = data_interim_root / "magicc-output"
 
     ### Final outputs
-    inverse_emission_dir = data_processed_root / "inverse-emissions"
-    emissions_complete_dir = data_processed_root / "complete-emissions"
     esgf_ready_root_dir = data_processed_root / "esgf-ready"
 
     ### Scenario processing and set up
@@ -276,6 +285,10 @@ this will lead to a new run being done
         lat_gradient_dir=lat_gradient_dir,
         emissions_split_dir=emissions_split_dir,
         emissions_complete_dir=emissions_complete_dir,
+        magicc_versions_to_run=magicc_versions_to_run,
+        magicc_root_folder=magicc_root_folder,
+        magicc_output_dir=magicc_output_dir,
+        n_magicc_workers=n_magicc_workers,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,

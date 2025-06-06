@@ -15,12 +15,15 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_wmo_data,
     compile_inverse_emissions,
+    download_cmip7_historical_ghg_concentrations,
     download_file,
     extend_western_et_al_2024,
     extract_tar,
     get_doi,
+    get_magicc_version_info,
     get_western_et_al_2024_clean,
     make_complete_scenario,
+    run_magicc,
     split_input_emissions_into_individual_files,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -29,7 +32,7 @@ from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow impor
 )
 
 
-def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913
+def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     ghgs: tuple[str, ...],
     emissions_file: Path,
     scenario_infos: tuple[ScenarioInfo, ...],
@@ -54,6 +57,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913
     lat_gradient_dir: Path,
     emissions_split_dir: Path,
     emissions_complete_dir: Path,
+    magicc_versions_to_run: tuple[str, ...],
+    magicc_root_folder: Path,
+    n_magicc_workers: int,
+    magicc_output_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -135,6 +142,18 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913
 
     emissions_complete_dir
         Path in which to write the complete emissions scenarios
+
+    magicc_versions_to_run
+        MAGICC versions to run
+
+    magicc_root_folder
+        Root folder for MAGICC versions
+
+    n_magicc_workers
+        Number of MAGICC workers to use when running MAGICC
+
+    magicc_output_dir
+        Path in which to write the MAGICC output
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
@@ -349,29 +368,62 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913
                 scenario_file=scenario_file,
                 inverse_emissions_file=inverse_emissions_file,
                 history_file=scenario_files_d_res["historical"],
-                out_file=emissions_complete_dir / scenario_file.name.replace(".feather", ".csv"),
+                out_file=emissions_complete_dir / f"{scenario_info.to_file_stem()}.feather",
                 raw_notebooks_root_dir=raw_notebooks_root_dir,
                 executed_notebooks_dir=executed_notebooks_dir,
             )
             for scenario_info, scenario_file in scenario_files_d_res.items()
             if scenario_info != "historical"
         }
-        for v in complete_scenario_files_d.values():
+
+        magicc_versions_info_d = {
+            version: get_magicc_version_info.submit(version=version, root_folder=magicc_root_folder)
+            for version in magicc_versions_to_run
+        }
+        # Have to block here to get the result for the next step
+        magicc_versions_info_d_res = {key: value.result() for key, value in magicc_versions_info_d.items()}
+
+        magicc_output_files_d = {
+            (scenario_info, mi.version): submit_output_aware(
+                run_magicc,
+                scenario_info=scenario_info,
+                complete_file=complete_file,
+                magicc_version=mi.version,
+                magicc_exe=mi.executable,
+                magicc_prob_distribution=mi.probabilistic_distribution,
+                n_magicc_workers=n_magicc_workers,
+                out_file=magicc_output_dir
+                / f"{scenario_info.to_file_stem()}_magicc-{mi.version.replace('.', '-')}_results.feather",
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+            )
+            for scenario_info, complete_file in complete_scenario_files_d.items()
+            for mi in magicc_versions_info_d_res.values()
+        }
+        for v in magicc_output_files_d.values():
             v.wait()
+
+        downloaded_cmip7_historical_ghgs_futures = {
+            ghg: submit_output_aware(
+                download_cmip7_historical_ghg_concentrations,
+                ghg,
+                source_id=cmip7_historical_ghg_concentration_source_id,
+                root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                checklist_file=cmip7_historical_ghg_concentration_data_root_dir
+                / f"{ghg}_{cmip7_historical_ghg_concentration_source_id}.chk",
+            )
+            for ghg in magicc_based_ghgs
+        }
+
+        # For each GHG and marker scenario:
+        # - harmonise
+        # - get monthly
+        # - get future seasonality
+        # - get future latitudinal gradient
+        # - write ESGF files
         # breakpoint()
-
-        # Interpolate to annual,
-        # do scaling-based infilling
-        # (should have all the history from what we get from the historical repo)
-        # and join with history in one step to make complete scenarios.
-
-        # Run with gcages using user-specified number of workers
-
-        # Harmonise conc projections,
-        # interpolate annual to monthly,
-        # do future seasonality,
-        # do future latitudinal gradient,
-        # put it all back together.
+        # for ghg, si_marker in zip(magicc_based_ghgs, scenario_infos_markers):
+        #     breakpoint()
 
     if equivalence_ghgs:
         raise NotImplementedError(equivalence_ghgs)
@@ -431,6 +483,10 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     lat_gradient_dir: Path,
     emissions_split_dir: Path,
     emissions_complete_dir: Path,
+    magicc_versions_to_run: tuple[str, ...],
+    magicc_root_folder: Path,
+    n_magicc_workers: int,
+    magicc_output_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -524,6 +580,18 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     emissions_complete_dir
         Path in which to write the complete emissions scenarios
 
+    magicc_versions_to_run
+        MAGICC versions to run
+
+    magicc_root_folder
+        Root folder for MAGICC versions
+
+    n_magicc_workers
+        Number of MAGICC workers to use when running MAGICC
+
+    magicc_output_dir
+        Path in which to write the MAGICC output
+
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
@@ -599,6 +667,10 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         lat_gradient_dir=lat_gradient_dir,
         emissions_split_dir=emissions_split_dir,
         emissions_complete_dir=emissions_complete_dir,
+        magicc_versions_to_run=magicc_versions_to_run,
+        magicc_root_folder=magicc_root_folder,
+        n_magicc_workers=n_magicc_workers,
+        magicc_output_dir=magicc_output_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
