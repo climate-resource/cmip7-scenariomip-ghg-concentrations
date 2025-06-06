@@ -6,7 +6,8 @@ from functools import partial
 from pathlib import Path
 
 from prefect import flow
-from prefect.futures import wait
+from prefect.futures import PrefectFuture, wait
+from prefect.states import Completed
 from prefect.task_runners import ThreadPoolTaskRunner
 from prefect_dask import DaskTaskRunner
 
@@ -28,7 +29,7 @@ from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow impor
 )
 
 
-def create_scenariomip_ghgs_flow(  # noqa: PLR0913
+def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913
     ghgs: tuple[str, ...],
     emissions_file: Path,
     scenario_infos: tuple[ScenarioInfo, ...],
@@ -57,7 +58,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
-) -> tuple[Path, ...]:
+) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
 
@@ -151,6 +152,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     -------
     :
         Generated paths
+
+        If any task failed, the future with the failure is returned instead
     """
     ### Used in all flows hence here
     downloaded_cmip7_historical_seasonality_lat_gradient_info = submit_output_aware(
@@ -176,7 +179,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         "ch3br",
         "ch3ccl3",
         "ch3cl",
+        "halon1202",
         "halon1211",
+        "halon1301",
+        "halon2402",
     }
     wmo_2022_ghgs = tuple(ghg for ghg in ghgs if ghg in all_wmo_2022_ghgs)
 
@@ -207,8 +213,6 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
             "ch4",
             "chcl3",
             "co2",
-            "halon1301",
-            "halon2402",
             "hfc125",
             "hfc134a",
             "hfc143a",
@@ -343,6 +347,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
                 make_complete_scenario,
                 scenario_info=scenario_info,
                 scenario_file=scenario_file,
+                inverse_emissions_file=inverse_emissions_file,
                 history_file=scenario_files_d_res["historical"],
                 out_file=emissions_complete_dir / scenario_file.name.replace(".feather", ".csv"),
                 raw_notebooks_root_dir=raw_notebooks_root_dir,
@@ -376,13 +381,24 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         (
             v.esgf_ready_files_future
             for v in (*wmo_2022_futures.values(), *western_2024_futures.values(), *magicc_based_futures.values())
+            # Urgh this bloody halon1202 business
+            if v.esgf_ready_files_future is not None
         ),
         timeout=30 * 60,
     )
     if not_done:
         raise AssertionError
 
-    res = tuple(v for future in done for v in future.result())
+    res_l = []
+    for future in done:
+        if future.state != Completed:
+            # return the failed future rather than the result
+            res_l.append(future)
+
+        else:
+            res_l.extend(future.result())
+
+    res = tuple(res_l)
 
     return res
 

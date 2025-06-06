@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -102,23 +102,27 @@ def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
 
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_annual_ds = load_file_from_glob(f"*{ghg}_*gm_1750-*.nc", historical_data_root_dir_p)
-cmip7_historical_gm_annual = cmip7_historical_gm_annual_ds[ghg]
+if ghg != "halon1202":
+    # No idea why Malte didn't include halon1202 in historical, but there it is
+    cmip7_historical_gm_annual_ds = load_file_from_glob(f"*{ghg}_*gm_1750-*.nc", historical_data_root_dir_p)
+    cmip7_historical_gm_annual = cmip7_historical_gm_annual_ds[ghg]
 # cmip7_historical_gm_annual
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_monthly_ds = load_file_from_glob(f"*{ghg}_*gm_175001-*.nc", historical_data_root_dir_p)
-cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
-# cmip7_historical_gm_monthly
+if ghg != "halon1202":
+    cmip7_historical_gm_monthly_ds = load_file_from_glob(f"*{ghg}_*gm_175001-*.nc", historical_data_root_dir_p)
+    cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
+    # cmip7_historical_gm_monthly
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_monthly_no_seasonality_ds = load_file_from_glob(
-    f"{ghg}_global-annual-mean_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p
-)
-cmip7_historical_monthly_no_seasonality = (
-    cmip7_historical_monthly_no_seasonality_ds.to_dataarray().isel(variable=0).drop_vars("variable")
-)
-# cmip7_historical_monthly_no_seasonality
+if ghg != "halon1202":
+    cmip7_historical_monthly_no_seasonality_ds = load_file_from_glob(
+        f"{ghg}_global-annual-mean_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p
+    )
+    cmip7_historical_monthly_no_seasonality = (
+        cmip7_historical_monthly_no_seasonality_ds.to_dataarray().isel(variable=0).drop_vars("variable")
+    )
+    # cmip7_historical_monthly_no_seasonality
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Stitch history and projections
@@ -131,25 +135,31 @@ overlap_year = annual_mean.columns.min()
 # overlap_year
 
 # %% editable=true slideshow={"slide_type": ""}
-np.testing.assert_allclose(
-    cmip7_historical_gm_annual.sel(time=cmip7_historical_gm_annual["time"].dt.year == overlap_year),
-    annual_mean.loc[:, overlap_year],
-    rtol=2e-3,
-)
+if ghg != "halon1202":
+    np.testing.assert_allclose(
+        cmip7_historical_gm_annual.sel(time=cmip7_historical_gm_annual["time"].dt.year == overlap_year),
+        annual_mean.loc[:, overlap_year],
+        rtol=2e-3,
+    )
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Stitch
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_annual_df = pd.DataFrame(
-    cmip7_historical_gm_annual.values[np.newaxis, :],
-    columns=cmip7_historical_gm_annual["time"].dt.year.values,
-    index=pd.MultiIndex.from_tuples([(ghg, cmip7_historical_gm_annual.attrs["units"])], names=["ghg", "unit"]),
-).rename_axis(columns=annual_mean.columns.name)
-# cmip7_historical_gm_annual_df
+if ghg != "halon1202":
+    cmip7_historical_gm_annual_df = pd.DataFrame(
+        cmip7_historical_gm_annual.values[np.newaxis, :],
+        columns=cmip7_historical_gm_annual["time"].dt.year.values,
+        index=pd.MultiIndex.from_tuples([(ghg, cmip7_historical_gm_annual.attrs["units"])], names=["ghg", "unit"]),
+    ).rename_axis(columns=annual_mean.columns.name)
+    # cmip7_historical_gm_annual_df
 
 # %% editable=true slideshow={"slide_type": ""}
-stitched = pix.concat([cmip7_historical_gm_annual_df, annual_mean.loc[:, overlap_year + 1 :]], axis="columns")
+if ghg != "halon1202":
+    stitched = pix.concat([cmip7_historical_gm_annual_df, annual_mean.loc[:, overlap_year + 1 :]], axis="columns")
+else:
+    stitched = annual_mean
+
 stitched.T.plot()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -179,42 +189,49 @@ stitched_monthly
 # ## Check interpolation
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_monthly_no_seasonality_time_axis = convert_year_month_to_time(
-    cmip7_historical_monthly_no_seasonality,
-    day=15,
-)
-# cmip7_historical_monthly_no_seasonality_time_axis
-
-# %% editable=true slideshow={"slide_type": ""}
-fig, ax = plt.subplots()
-
-years_to_plot = np.arange(overlap_year - 4, overlap_year + 1)
-cmip7_historical_gm_monthly.sel(
-    time=cmip7_historical_gm_monthly["time"].dt.year.isin(np.arange(overlap_year - 4, overlap_year + 1))
-).plot.scatter(ax=ax, label="CMIP7 hist incl. seasonality", alpha=0.6)
-cmip7_historical_monthly_no_seasonality_time_axis.sel(
-    time=cmip7_historical_monthly_no_seasonality_time_axis["time"].dt.year.isin(
-        np.arange(overlap_year - 4, overlap_year + 1)
+if ghg != "halon1202":
+    cmip7_historical_monthly_no_seasonality_time_axis = convert_year_month_to_time(
+        cmip7_historical_monthly_no_seasonality,
+        day=15,
     )
-).plot.scatter(ax=ax, label="CMIP7 hist excl. seasonality", alpha=0.6)
-
-years_to_plot = np.arange(overlap_year - 4, overlap_year + 5)
-stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(years_to_plot)).plot.scatter(
-    ax=ax, label="Stitched monthly", alpha=0.3
-)
-
-ax.grid()
-ax.legend()
+    # cmip7_historical_monthly_no_seasonality_time_axis
 
 # %% editable=true slideshow={"slide_type": ""}
-overlap_times = np.intersect1d(cmip7_historical_monthly_no_seasonality_time_axis["time"], stitched_monthly["time"])
+if ghg != "halon1202":
+    fig, ax = plt.subplots()
 
-np.testing.assert_allclose(
-    cmip7_historical_monthly_no_seasonality_time_axis.sel(time=overlap_times),
-    stitched_monthly.sel(time=overlap_times),
-    atol=1e-8,
-    rtol=1e-2,
-)
+    years_to_plot = np.arange(overlap_year - 4, overlap_year + 1)
+
+    cmip7_historical_gm_monthly.sel(
+        time=cmip7_historical_gm_monthly["time"].dt.year.isin(np.arange(overlap_year - 4, overlap_year + 1))
+    ).plot.scatter(ax=ax, label="CMIP7 hist incl. seasonality", alpha=0.6)
+    cmip7_historical_monthly_no_seasonality_time_axis.sel(
+        time=cmip7_historical_monthly_no_seasonality_time_axis["time"].dt.year.isin(
+            np.arange(overlap_year - 4, overlap_year + 1)
+        )
+    ).plot.scatter(ax=ax, label="CMIP7 hist excl. seasonality", alpha=0.6)
+
+    years_to_plot = np.arange(overlap_year - 4, overlap_year + 5)
+    stitched_monthly.sel(time=stitched_monthly["time"].dt.year.isin(years_to_plot)).plot.scatter(
+        ax=ax, label="Stitched monthly", alpha=0.3
+    )
+
+    ax.grid()
+    ax.legend()
+
+# %% editable=true slideshow={"slide_type": ""}
+if ghg != "halon1202":
+    overlap_times = np.intersect1d(cmip7_historical_monthly_no_seasonality_time_axis["time"], stitched_monthly["time"])
+
+    np.testing.assert_allclose(
+        # Check overlap except for the last 6 months,
+        # where there can be differences because we now have data for 2023
+        # rather than using an extrapolation.
+        cmip7_historical_monthly_no_seasonality_time_axis.sel(time=overlap_times).isel(time=slice(-6, 0, None)),
+        stitched_monthly.sel(time=overlap_times).isel(time=slice(-6, 0, None)),
+        atol=1e-8,
+        rtol=1e-2,
+    )
 
 # %% editable=true slideshow={"slide_type": ""}
 fig, ax = plt.subplots()

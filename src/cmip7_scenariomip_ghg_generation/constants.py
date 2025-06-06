@@ -37,6 +37,7 @@ HALOGEN_TAUS = {
     "so2f2": Q(36.0, "yr"),
     "cc4f8": Q(3200.0, "yr"),
     "n2o": Q(109.0, "yr"),
+    "halon1202": Q(2.5, "yr"),
     "halon1211": Q(16, "yr"),
     "halon1301": Q(72, "yr"),
     "halon2402": Q(28, "yr"),
@@ -53,6 +54,9 @@ HALOGEN_TAUS = {
 }
 """
 Lifetimes for halogen gases
+
+Table A-5 of WMO 2022
+https://csl.noaa.gov/assessments/ozone/2022/downloads/Annex_2022OzoneAssessment.pdf
 """
 
 HALOGEN_MOLECULAR_MASSES = {
@@ -91,6 +95,7 @@ HALOGEN_MOLECULAR_MASSES = {
     "so2f2": Q(32.07 + 2 * 16.0 + 2 * 19.0, "gSO2F2 / mole"),
     "cc4f8": Q(4 * 12.01 + 8 * 19.0, "gcC4F8 / mole"),
     "n2o": Q(2 * 14.01 + 16.0, "gN2O / mole"),
+    "halon1202": Q(12.01 + 2 * 79.9 + 2 * 19.0, "gHalon1202 / mole"),  # CBr2F2
     "halon1211": Q(12.01 + 79.9 + 35.45 + 2 * 19.0, "gHalon1211 / mole"),  # CBrClF2
     "halon1301": Q(12.01 + 79.9 + 3 * 19.0, "gHalon1301 / mole"),  # CBrF3
     "halon2402": Q(12.01 + 79.9 + 2 * 19.0 + 12.01 + 79.9 + 2 * 19.0, "gHalon2402 / mole"),  # CBrF2CBrF2
@@ -105,6 +110,9 @@ HALOGEN_MOLECULAR_MASSES = {
     "ch3ccl3": Q(12.01 + 3 * 1.0 + 12.01 + 3 * 35.45, "gCH3CCl3 / mole"),
     "ccl4": Q(12.01 + 4 * 35.45, "gCCl4 / mole"),
 }
+"""
+Halogen molecular masses
+"""
 
 VARIABLE_TO_STANDARD_NAME_RENAMING = {
     "co2": "mole_fraction_of_carbon_dioxide_in_air",

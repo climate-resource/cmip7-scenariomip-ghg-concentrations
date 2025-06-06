@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -68,17 +68,20 @@ raw_data_ghg = raw_data_all.loc[pix.isin(ghg=ghg)]
 # ### CMIP7 historical GHG concentrations
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_file_l = list(historical_data_root_dir_p.rglob(f"*{ghg}_*gm_1750-*.nc"))
-if len(cmip7_historical_gm_file_l) != 1:
-    raise AssertionError(cmip7_historical_gm_file_l)
+if ghg != "halon1202":
+    # No idea why Malte didn't include halon1202 in historical, but there it is
+    cmip7_historical_gm_file_l = list(historical_data_root_dir_p.rglob(f"*{ghg}_*gm_1750-*.nc"))
+    if len(cmip7_historical_gm_file_l) != 1:
+        raise AssertionError(cmip7_historical_gm_file_l)
 
-cmip7_historical_gm_file = cmip7_historical_gm_file_l[0]
-# cmip7_historical_gm_file
+    cmip7_historical_gm_file = cmip7_historical_gm_file_l[0]
+    # cmip7_historical_gm_file
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_historical_gm_ds = xr.load_dataset(cmip7_historical_gm_file)
-cmip7_historical_gm = cmip7_historical_gm_ds[ghg]
-# cmip7_historical_gm
+if ghg != "halon1202":
+    cmip7_historical_gm_ds = xr.load_dataset(cmip7_historical_gm_file)
+    cmip7_historical_gm = cmip7_historical_gm_ds[ghg]
+    # cmip7_historical_gm
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Adjust raw data to middle of year
@@ -101,18 +104,28 @@ source_mid_year
 # ## Harmonisation
 
 # %% editable=true slideshow={"slide_type": ""}
-last_history_year = int(cmip7_historical_gm["time"].dt.year.max())
+last_history_year_exp = 2022
+if ghg != "halon1202":
+    last_history_year = int(cmip7_historical_gm["time"].dt.year.max())
+else:
+    last_history_year = last_history_year_exp
+
+if last_history_year != last_history_year_exp:
+    msg = "Please check last historical GHG conc year"
+    raise AssertionError(msg)
+
 last_history_year
 
 # %%
 fig, ax = plt.subplots()
 
-cmm = cmip7_historical_gm.groupby("time.year").mean()
-ax.plot(
-    cmm["year"],
-    cmm.values,
-    label="CMIP7 historical",
-)
+if ghg != "halon1202":
+    cmm = cmip7_historical_gm.groupby("time.year").mean()
+    ax.plot(
+        cmm["year"],
+        cmm.values,
+        label="CMIP7 historical",
+    )
 ax.plot(source_mid_year.columns, source_mid_year.values.squeeze(), label="WMO 2022", linewidth=2, alpha=0.5)
 
 ax.set_xlim([2000, 2050])
@@ -121,11 +134,12 @@ ax.legend()
 ax.set_title(ghg)
 
 # %%
-np.testing.assert_allclose(
-    cmip7_historical_gm.sel(time=cmip7_historical_gm["time"].dt.year == last_history_year),
-    source_mid_year.loc[:, last_history_year],
-    rtol=2e-3,
-)
+if ghg != "halon1202":
+    np.testing.assert_allclose(
+        cmip7_historical_gm.sel(time=cmip7_historical_gm["time"].dt.year == last_history_year),
+        source_mid_year.loc[:, last_history_year],
+        rtol=2e-3,
+    )
 
 harmonised = source_mid_year
 
@@ -135,11 +149,12 @@ fig, ax = plt.subplots()
 
 source_mid_year.pix.assign(label="WMO 2022").pix.project(["label", "ghg", "unit"]).T.plot(ax=ax, linewidth=2, alpha=0.5)
 harmonised.pix.assign(label="harmonised").pix.project(["label", "ghg", "unit"]).T.plot(ax=ax, linewidth=2, alpha=0.5)
-ax.plot(
-    cmm["year"],
-    cmm.values,
-    label="CMIP7 historical",
-)
+if ghg != "halon1202":
+    ax.plot(
+        cmm["year"],
+        cmm.values,
+        label="CMIP7 historical",
+    )
 
 ax.set_xlim([2000, 2100])
 ax.grid()

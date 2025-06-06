@@ -30,7 +30,7 @@ class SingleConcentrationProjectionResult:
     ghg: str
     """Greenhouse gas"""
 
-    esgf_ready_files_future: prefect.futures.PrefectFuture[tuple[Path, ...]]
+    esgf_ready_files_future: prefect.futures.PrefectFuture[tuple[Path, ...]] | None
     """ESGF-ready files future"""
 
     inverse_emissions_file_future: prefect.futures.PrefectFuture[Path]
@@ -128,6 +128,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             / f"{ghg}_{cmip7_historical_ghg_concentration_source_id}.chk",
         )
         for ghg in ghgs
+        # We don't/didn't provide this for some reason,
+        # even though data is there and you need it to run MAGICC
+        if ghg != "halon1202"
     }
 
     global_mean_yearly_file_futures = {
@@ -139,7 +142,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             out_file=annual_mean_dir / f"single-concentration-projection_{ghg}_annual-mean.feather",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
-            wait_for=[cleaned_data_path, downloaded_cmip7_historical_ghgs_futures[ghg]],
+            wait_for=[cleaned_data_path, downloaded_cmip7_historical_ghgs_futures[ghg]]
+            if ghg != "halon1202"
+            else [cleaned_data_path],
         )
         for ghg in ghgs
     }
@@ -174,6 +179,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             executed_notebooks_dir=executed_notebooks_dir,
         )
         for ghg, yearly_future in global_mean_yearly_file_futures.items()
+        if ghg != "halon1202"
     }
 
     inverse_emissions_file_futures = {
@@ -202,6 +208,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             executed_notebooks_dir=executed_notebooks_dir,
         )
         for ghg, inverse_emmissions_file in inverse_emissions_file_futures.items()
+        if ghg != "halon1202"
     }
 
     esgf_ready_futures = {
@@ -224,15 +231,16 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
         )
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
+        if ghg != "halon1202"
     }
 
     res = {
         ghg: SingleConcentrationProjectionResult(
             ghg=ghg,
-            esgf_ready_files_future=esgf_ready_futures[ghg],
+            esgf_ready_files_future=esgf_ready_futures[ghg] if ghg != "halon1202" else None,
             inverse_emissions_file_future=inverse_emissions_file_futures[ghg],
         )
-        for ghg in esgf_ready_futures
+        for ghg in inverse_emissions_file_futures
     }
 
     return res
