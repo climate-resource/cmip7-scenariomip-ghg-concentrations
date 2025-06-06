@@ -15,6 +15,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import (
     calculate_inverse_emissions,
     compile_inverse_emissions,
 )
+from cmip7_scenariomip_ghg_generation.prefect_tasks.make_complete_scenarios import make_complete_scenario
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
     scale_lat_gradient_based_on_emissions,
 )
@@ -50,6 +51,7 @@ __all__ = [
     "get_doi",
     "get_western_et_al_2024_clean",
     "interpolate_annual_mean_to_monthly",
+    "make_complete_scenario",
     "scale_lat_gradient_based_on_emissions",
     "scale_seasonality_based_on_annual_mean",
     "split_input_emissions_into_individual_files",

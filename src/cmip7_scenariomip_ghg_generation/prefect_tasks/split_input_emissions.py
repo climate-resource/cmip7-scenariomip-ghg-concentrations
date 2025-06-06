@@ -68,7 +68,7 @@ def split_input_emissions_into_individual_files(
     for si in tqdm.auto.tqdm(scenario_infos, desc="Saving scenarios into individual scenarios"):
         out_stem = f"{si.scenario}_{si.model}".replace(" ", "_").replace(".", "-")
         out_file = out_dir / f"{out_stem}.feather"
-        msdf = scenarios_d[(si.model, si.scenario)]
+        msdf = scenarios_d[(si.model, si.scenario)].dropna(how="all", axis="columns")
         msdf.to_feather(out_file)
         res[si] = out_file
 

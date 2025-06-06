@@ -184,6 +184,7 @@ this will lead to a new run being done
 
     ### Final outputs
     inverse_emission_dir = data_processed_root / "inverse-emissions"
+    emissions_complete_dir = data_processed_root / "complete-emissions"
     esgf_ready_root_dir = data_processed_root / "esgf-ready"
 
     ### Scenario processing and set up
@@ -274,6 +275,7 @@ this will lead to a new run being done
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
         emissions_split_dir=emissions_split_dir,
+        emissions_complete_dir=emissions_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,

@@ -19,6 +19,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     extract_tar,
     get_doi,
     get_western_et_al_2024_clean,
+    make_complete_scenario,
     split_input_emissions_into_individual_files,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -51,6 +52,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     emissions_split_dir: Path,
+    emissions_complete_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -129,6 +131,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
 
     emissions_split_dir
         Path in which to save the split emissions
+
+    emissions_complete_dir
+        Path in which to write the complete emissions scenarios
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
@@ -330,8 +335,25 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
             scenario_infos=scenario_infos,
             out_dir=emissions_split_dir,
         )
-        inverse_emissions_file.wait()
-        scenario_files_d.wait()
+
+        # Have to wait to ensure that we can use the dictionary in the next step
+        scenario_files_d_res = scenario_files_d.result()
+        complete_scenario_files_d = {
+            scenario_info: submit_output_aware(
+                make_complete_scenario,
+                scenario_info=scenario_info,
+                scenario_file=scenario_file,
+                history_file=scenario_files_d_res["historical"],
+                out_file=emissions_complete_dir / scenario_file.name.replace(".feather", ".csv"),
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+            )
+            for scenario_info, scenario_file in scenario_files_d_res.items()
+            if scenario_info != "historical"
+        }
+        for v in complete_scenario_files_d.values():
+            v.wait()
+        # breakpoint()
 
         # Interpolate to annual,
         # do scaling-based infilling
@@ -392,6 +414,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     emissions_split_dir: Path,
+    emissions_complete_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -482,6 +505,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     emissions_split_dir
         Path in which to save the split emissions
 
+    emissions_complete_dir
+        Path in which to write the complete emissions scenarios
+
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
@@ -556,6 +582,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
         emissions_split_dir=emissions_split_dir,
+        emissions_complete_dir=emissions_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
