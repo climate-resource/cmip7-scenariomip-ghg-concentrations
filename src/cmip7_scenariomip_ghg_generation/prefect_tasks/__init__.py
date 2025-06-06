@@ -21,6 +21,9 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_seasonality_with_annua
 from cmip7_scenariomip_ghg_generation.prefect_tasks.single_concentration_projection import (
     create_single_concentration_projection_annual_mean_file,
 )
+from cmip7_scenariomip_ghg_generation.prefect_tasks.split_input_emissions import (
+    split_input_emissions_into_individual_files,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.western_et_al_2024 import (
     clean_western_et_al_2024_data,
     extend_western_et_al_2024,
@@ -43,4 +46,5 @@ __all__ = [
     "interpolate_annual_mean_to_monthly",
     "scale_lat_gradient_based_on_emissions",
     "scale_seasonality_based_on_annual_mean",
+    "split_input_emissions_into_individual_files",
 ]

@@ -19,6 +19,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     extract_tar,
     extract_zip,
     get_doi,
+    split_input_emissions_into_individual_files,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -28,6 +29,7 @@ from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow impor
 
 def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     ghgs: tuple[str, ...],
+    emissions_file: Path,
     scenario_infos: tuple[ScenarioInfo, ...],
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
@@ -48,6 +50,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
+    emissions_split_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -60,6 +63,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     ----------
     ghgs
         Greenhouse gases for which to create output files
+
+    emissions_file
+        File containing emissions received from the harmonisation team
 
     scenario_infos
         Scenario information
@@ -120,6 +126,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
 
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
+
+    emissions_split_dir
+        Path in which to save the split emissions
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
@@ -182,14 +191,70 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         ]
     )
 
-    unsupported_ghgs = set(ghgs) - set(wmo_2022_ghgs) - set(western_et_al_2024_ghgs)
+    ### Gases that require running MAGICC
+    magicc_based_ghgs = tuple(
+        ghg
+        for ghg in ghgs
+        if ghg
+        in [
+            "c2f6",
+            "c3f8",
+            "c4f10",
+            "c5f12",
+            "c6f14",
+            "c7f16",
+            "c8f18",
+            "cc4f8",
+            "cf4",
+            "ch2cl2",
+            "ch4",
+            "chcl3",
+            "co2",
+            "halon1301",
+            "halon2402",
+            "hfc125",
+            "hfc134a",
+            "hfc143a",
+            "hfc152a",
+            "hfc227ea",
+            "hfc23",
+            "hfc236fa",
+            "hfc245fa",
+            "hfc32",
+            "hfc365mfc",
+            "hfc4310mee",
+            "n2o",
+            "nf3",
+            "sf6",
+            "so2f2",
+        ]
+    )
+
+    ### Equivalence species
+    equivalence_ghgs = tuple(
+        ghg
+        for ghg in ghgs
+        if ghg
+        in [
+            "cfc11eq",
+            "cfc12eq",
+            "hfc134aeq",
+        ]
+    )
+
+    ### Get the markers
+    scenario_infos_markers = tuple(v for v in scenario_infos if v.cmip_scenario_name is not None)
+
+    unsupported_ghgs = (
+        set(ghgs) - set(wmo_2022_ghgs) - set(western_et_al_2024_ghgs) - set(magicc_based_ghgs) - set(equivalence_ghgs)
+    )
     if unsupported_ghgs:
         msg = f"The following GHGs are not supported: {unsupported_ghgs}"
         raise AssertionError(msg)
 
     create_single_concentration_projection = partial(
         create_scenariomip_ghgs_single_concentration_projection,
-        scenario_infos=scenario_infos,
+        scenario_infos=scenario_infos_markers,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         cmip7_historical_seasonality_lat_gradient_info_extracted=cmip7_historical_seasonality_lat_gradient_info_extracted,
@@ -258,6 +323,35 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
                 )
             )
 
+    # Early step in workflow, break the scenario information into individual files
+    # for easier running and parsing and caching
+    if magicc_based_ghgs:
+        # Compile inverse future emissions based on WMO and Western
+
+        scenario_files_d = submit_output_aware(
+            split_input_emissions_into_individual_files,
+            emissions_file=emissions_file,
+            scenario_infos=scenario_infos,
+            out_dir=emissions_split_dir,
+        )
+        scenario_files_d.wait()
+
+        # Interpolate to annual,
+        # do scaling-based infilling
+        # (should have all the history from what we get from the historical repo)
+        # and join with history in one step to make complete scenarios.
+
+        # Run with gcages using user-specified number of workers
+
+        # Harmonise conc projections,
+        # interpolate annual to monthly,
+        # do future seasonality,
+        # do future latitudinal gradient,
+        # put it all back together.
+
+    if equivalence_ghgs:
+        raise NotImplementedError(equivalence_ghgs)
+
     # Ensure all paths finish
     done, not_done = wait((*wmo_2022_paths_l, *western_2024_paths_l), timeout=30 * 60)
     if not_done:
@@ -270,6 +364,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
 
 def create_scenariomip_ghgs(  # noqa: PLR0913
     ghgs: tuple[str, ...],
+    emissions_file: Path,
     scenario_infos: tuple[ScenarioInfo, ...],
     run_id: str,
     n_workers: int,
@@ -293,6 +388,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
+    emissions_split_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -307,6 +403,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     ----------
     ghgs
         Greenhouse gases for which to create output files
+
+    emissions_file
+        File containing emissions received from the harmonisation team
 
     scenario_infos
         Scenario information
@@ -377,6 +476,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
 
+    emissions_split_dir
+        Path in which to save the split emissions
+
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
@@ -429,6 +531,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     return run_id_flow(
         ghgs=ghgs,
+        emissions_file=emissions_file,
         scenario_infos=scenario_infos,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
@@ -449,6 +552,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
+        emissions_split_dir=emissions_split_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,

@@ -2,10 +2,10 @@
 Scenario info class
 """
 
-from attrs import define
+from attrs import frozen
 
 
-@define
+@frozen
 class ScenarioInfo:
     """
     Scenario information

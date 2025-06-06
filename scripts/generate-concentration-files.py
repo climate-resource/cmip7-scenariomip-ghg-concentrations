@@ -8,6 +8,7 @@ from typing import Annotated
 
 import click
 import typer
+from attrs import evolve
 from pandas_openscm.io import load_timeseries_csv
 
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
@@ -67,10 +68,23 @@ ALL_GHGS = [
 ]
 
 
-def main(  # noqa: PLR0913
-    scenario_file: Annotated[Path, typer.Option(help="Scenario file to use")] = (
-        REPO_RAW_DATA_DIR / "input-scenarios" / "0009-zn_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv"
-    ),
+def main(  # noqa: PLR0913, PLR0915
+    emissions_file: Annotated[
+        Path, typer.Option(help="Emissions file received from the emissions harmonisation team")
+    ] = (REPO_RAW_DATA_DIR / "input-scenarios" / "0009-zn_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv"),
+    scenarios_to_run: Annotated[
+        str,
+        typer.Option(
+            click_type=click.Choice(["all", "markers", "custom"]),
+            help="""Scenarios to run
+
+Options:
+
+- all: run all scenarios
+- markers: run only the markers
+- custom: run whatever custom selection is in the script""",
+        ),
+    ] = "markers",
     ghg: Annotated[list[str], typer.Option(help="GHG to process")] = ALL_GHGS,
     run_id: Annotated[
         str,
@@ -91,7 +105,7 @@ this will lead to a new run being done
     input4mips_cvs_source: Annotated[
         str,
         typer.Option(help="""Source for the input4MIPs CVs"""),
-    ] = "gh:74f25f1",
+    ] = "gh:78bc71513711d351987758b077cac3c698355828",
     n_workers: Annotated[
         int, typer.Option(help="Number of workers to use for parallel work")
     ] = multiprocessing.cpu_count(),
@@ -110,28 +124,24 @@ this will lead to a new run being done
     # load_dotenv()
 
     ghgs = tuple(ghg)
-    # These are the markers
-    assert False, "Add guess for all markers"
-    markers = (
-        ("REMIND-MAgPIE 3.5-4.10", "SSP1 - Very Low Emissions", "vllo"),
-        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
-    )
-    scenario_infos = (
-        ScenarioInfo(
-            cmip_scenario_name="vllo",
-            model="REMIND-MAGPIE",
-            scenario="Very Low Overshoot",
-        ),
-        ScenarioInfo(
-            cmip_scenario_name="m",
-            model="MESSAGE",
-            scenario="Medium",
-        ),
-    )
 
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
+    markers = (
+        # (model, scenario, cmip7 experiment name)
+        # Note: these are all still TBC
+        ("REMIND-MAgPIE 3.5-4.10", "SSP1 - Very Low Emissions", "vllo"),
+        ("AIM 3.0", "SSP2 - Low Overshoot", "vlho"),
+        ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
+        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
+        ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
+        ("GCAM 7.1 scenarioMIP", "SSP3 - High Emissions", "h"),
+        ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+    )
+
+    emissions_batch_id = emissions_file.name.split("_harmonised")[0]
+
     esgf_institution_id = "CR"
 
     raw_notebooks_root_dir = REPO_ROOT_DIR / "notebooks"
@@ -170,29 +180,27 @@ this will lead to a new run being done
     monthly_mean_dir = data_interim_root / "monthly-means"
     seasonality_dir = data_interim_root / "seasonality"
     lat_gradient_dir = data_interim_root / "latitudinal-gradient"
+    emissions_split_dir = data_interim_root / "input-emissions" / emissions_batch_id
 
     ### Final outputs
     inverse_emission_dir = data_processed_root / "inverse-emissions"
     esgf_ready_root_dir = data_processed_root / "esgf-ready"
 
     ### Scenario processing and set up
-    scenario_batch_id = scenario_file.name.split("_harmonised-emissions-up-to-silicone.py")[0]
     all_emissions = load_timeseries_csv(
-        scenario_file,
+        emissions_file,
         index_columns=["model", "scenario", "region", "variable", "unit"],
         out_columns_type=int,
         out_columns_name="year",
     )
 
     history_loc = all_emissions.index.get_level_values("scenario") == "historical"
-    history = all_emissions.loc[history_loc]
     scenarios = all_emissions.loc[~history_loc]
     all_model_scenarios = scenarios.index.droplevel(
         all_emissions.index.names.difference(["model", "scenario"])
     ).drop_duplicates()
-    # Early step in workflow, break the scenario information into individual files
-    # for easier running and parsing and caching
-    scenario_infos = [
+
+    scenario_infos_l = [
         ScenarioInfo(
             cmip_scenario_name=None,
             model=model,
@@ -201,7 +209,7 @@ this will lead to a new run being done
         for model, scenario in all_model_scenarios.reorder_levels(["model", "scenario"])
     ]
     for model, scenario, cmip_scenario_name in markers:
-        for i, si in enumerate(scenario_infos):
+        for i, si in enumerate(scenario_infos_l):
             if si.model == model and si.scenario == scenario:
                 break
 
@@ -209,19 +217,39 @@ this will lead to a new run being done
             msg = f"{model=} {scenario=} not found in input model-scenario options"
             raise AssertionError(msg)
 
-        si.cmip_scenario_name = cmip_scenario_name
-        # Double check
-        if (
-            scenario_infos[i].cmip_scenario_name != cmip_scenario_name
-            or scenario_infos[i].model != model
-            or scenario_infos[i].scenario != scenario
-        ):
-            raise AssertionError
+        scenario_infos_l[i] = evolve(si, cmip_scenario_name=cmip_scenario_name)
 
-    assert False, "Use scenario info in next steps"
+    # Double check
+    for model, scenario, cmip_scenario_name in markers:
+        for i, si in enumerate(scenario_infos_l):
+            if si.model == model and si.scenario == scenario:
+                if si.cmip_scenario_name != cmip_scenario_name:
+                    msg = f"{model=} {scenario=} should have {cmip_scenario_name=} but it has {si.cmip_scenario_name=}"
+                    raise AssertionError(msg)
+
+                break
+
+        else:
+            msg = f"{model=} {scenario=} marker not set correctly"
+            raise AssertionError(msg)
+
+    if scenarios_to_run == "all":
+        scenario_infos = tuple(scenario_infos_l)
+
+    elif scenarios_to_run == "markers":
+        scenario_infos = tuple(v for v in scenario_infos_l if v.cmip_scenario_name is not None)
+
+    elif scenarios_to_run == "custom":
+        scenario_infos = tuple(
+            v
+            for v in scenario_infos_l
+            if (v.cmip_scenario_name in ["vllo", "l"])
+            or (v.model == "WITCH 6.0" and v.scenario == "SSP1 - Very Low Emissions")
+        )
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
+        emissions_file=emissions_file,
         scenario_infos=scenario_infos,
         run_id=run_id,
         n_workers=n_workers,
@@ -245,6 +273,7 @@ this will lead to a new run being done
         seasonality_dir=seasonality_dir,
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
+        emissions_split_dir=emissions_split_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
