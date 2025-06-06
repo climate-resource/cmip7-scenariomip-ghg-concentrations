@@ -7,10 +7,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import prefect.futures
 from prefect import task
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP, task_standard_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP, submit_output_aware, task_standard_path_cache
+from cmip7_scenariomip_ghg_generation.prefect_tasks import download_file, extract_zip
 
 
 @task(
@@ -127,3 +129,56 @@ def extend_western_et_al_2024(  # noqa: PLR0913
     )
 
     return out_file
+
+
+def get_western_et_al_2024_clean(
+    western_et_al_2024_download_url: str,
+    western_et_al_2024_raw_tar_file: Path,
+    western_et_al_2024_extract_path: Path,
+    western_et_al_2024_extracted_file_of_interest: Path,
+    out_file: Path,
+) -> prefect.futures.PrefectFuture[Path]:
+    """
+    Get clean Western et al. (2024) data
+
+    Parameters
+    ----------
+    western_et_al_2024_download_url
+        URL from which to download the raw data
+
+    western_et_al_2024_raw_tar_file
+        File in which to save the raw tar file
+
+    western_et_al_2024_extract_path
+        Path in which to extract the data
+
+    western_et_al_2024_extracted_file_of_interest
+        File of interest from the extracted data
+
+    out_file
+        File in which to save the outputs
+
+    Returns
+    -------
+    :
+        Future for the output file
+    """
+    tar_file_downloaded = submit_output_aware(
+        download_file,
+        url=western_et_al_2024_download_url,
+        out_path=western_et_al_2024_raw_tar_file,
+    )
+
+    extracted = submit_output_aware(
+        extract_zip,
+        zip_file=tar_file_downloaded,
+        extract_root_dir=western_et_al_2024_extract_path,
+    )
+    res = submit_output_aware(
+        clean_western_et_al_2024_data,
+        root_extraction_dir=extracted,
+        file_to_clean=western_et_al_2024_extracted_file_of_interest,
+        out_file=out_file,
+    )
+
+    return res

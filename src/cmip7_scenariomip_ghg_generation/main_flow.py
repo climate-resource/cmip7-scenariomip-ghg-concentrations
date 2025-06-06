@@ -12,13 +12,13 @@ from prefect_dask import DaskTaskRunner
 
 from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
-    clean_western_et_al_2024_data,
     clean_wmo_data,
+    compile_inverse_emissions,
     download_file,
     extend_western_et_al_2024,
     extract_tar,
-    extract_zip,
     get_doi,
+    get_western_et_al_2024_clean,
     split_input_emissions_into_individual_files,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -161,35 +161,27 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
     doi = get_doi.submit()
 
     ### WMO 2022
-    wmo_2022_ghgs = tuple(
-        ghg
-        for ghg in ghgs
-        if ghg
-        in [
-            "ccl4",
-            "cfc11",
-            "cfc12",
-            "cfc113",
-            "cfc114",
-            "cfc115",
-            "ch3br",
-            "ch3ccl3",
-            "ch3cl",
-            "halon1211",
-        ]
-    )
+    all_wmo_2022_ghgs = {
+        "ccl4",
+        "cfc11",
+        "cfc12",
+        "cfc113",
+        "cfc114",
+        "cfc115",
+        "ch3br",
+        "ch3ccl3",
+        "ch3cl",
+        "halon1211",
+    }
+    wmo_2022_ghgs = tuple(ghg for ghg in ghgs if ghg in all_wmo_2022_ghgs)
 
     ### Western et al. 2024
-    western_et_al_2024_ghgs = tuple(
-        ghg
-        for ghg in ghgs
-        if ghg
-        in [
-            "hcfc141b",
-            "hcfc142b",
-            "hcfc22",
-        ]
-    )
+    all_western_et_al_2024_ghgs = {
+        "hcfc141b",
+        "hcfc142b",
+        "hcfc22",
+    }
+    western_et_al_2024_ghgs = tuple(ghg for ghg in ghgs if ghg in all_western_et_al_2024_ghgs)
 
     ### Gases that require running MAGICC
     magicc_based_ghgs = tuple(
@@ -242,15 +234,26 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         ]
     )
 
-    ### Get the markers
-    scenario_infos_markers = tuple(v for v in scenario_infos if v.cmip_scenario_name is not None)
-
     unsupported_ghgs = (
         set(ghgs) - set(wmo_2022_ghgs) - set(western_et_al_2024_ghgs) - set(magicc_based_ghgs) - set(equivalence_ghgs)
     )
     if unsupported_ghgs:
         msg = f"The following GHGs are not supported: {unsupported_ghgs}"
         raise AssertionError(msg)
+
+    if magicc_based_ghgs:
+        missing_single_projection_gases = {*all_wmo_2022_ghgs, *all_western_et_al_2024_ghgs} - set(ghgs)
+        if missing_single_projection_gases:
+            cli_args = " ".join(f"--ghg {ghg}" for ghg in missing_single_projection_gases)
+            msg = (
+                "To generate MAGICC-based projections, all WMO 2022 and Western et al. (2024) GHGs must be provided. "
+                f"Missing: {missing_single_projection_gases}. "
+                f"CLI args: {cli_args}"
+            )
+            raise AssertionError(msg)
+
+    ### Get the markers
+    scenario_infos_markers = tuple(v for v in scenario_infos if v.cmip_scenario_name is not None)
 
     create_single_concentration_projection = partial(
         create_scenariomip_ghgs_single_concentration_projection,
@@ -276,32 +279,19 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         clean_wmo_data, raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path
     )
 
-    wmo_2022_paths_l = []
     if wmo_2022_ghgs:
-        wmo_2022_paths_l.extend(
-            create_single_concentration_projection(
-                ghgs=wmo_2022_ghgs,
-                cleaned_data_path=wmo_2022_cleaned,
-            )
+        wmo_2022_futures = create_single_concentration_projection(
+            ghgs=wmo_2022_ghgs,
+            cleaned_data_path=wmo_2022_cleaned,
         )
 
-    western_2024_paths_l = []
+    western_2024_futures = {}
     if western_et_al_2024_ghgs:
-        western_et_al_2024_raw_tar_file_downloaded = submit_output_aware(
-            download_file,
-            url=western_et_al_2024_download_url,
-            out_path=western_et_al_2024_raw_tar_file,
-        )
-
-        western_et_al_2024_extracted = submit_output_aware(
-            extract_zip,
-            zip_file=western_et_al_2024_raw_tar_file_downloaded,
-            extract_root_dir=western_et_al_2024_extract_path,
-        )
-        western_et_al_2024_cleaned = submit_output_aware(
-            clean_western_et_al_2024_data,
-            root_extraction_dir=western_et_al_2024_extracted,
-            file_to_clean=western_et_al_2024_extracted_file_of_interest,
+        western_et_al_2024_cleaned = get_western_et_al_2024_clean(
+            western_et_al_2024_download_url=western_et_al_2024_download_url,
+            western_et_al_2024_raw_tar_file=western_et_al_2024_raw_tar_file,
+            western_et_al_2024_extract_path=western_et_al_2024_extract_path,
+            western_et_al_2024_extracted_file_of_interest=western_et_al_2024_extracted_file_of_interest,
             out_file=western_et_al_2024_cleaned_data_path,
         )
 
@@ -316,17 +306,23 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
                 executed_notebooks_dir=executed_notebooks_dir,
             )
 
-            western_2024_paths_l.extend(
-                create_single_concentration_projection(
+            western_2024_futures = {
+                **western_2024_futures,
+                **create_single_concentration_projection(
                     ghgs=[ghg],
                     cleaned_data_path=western_et_al_2024_extended_ghg,
-                )
-            )
+                ),
+            }
 
-    # Early step in workflow, break the scenario information into individual files
-    # for easier running and parsing and caching
+    magicc_based_futures = {}
     if magicc_based_ghgs:
-        # Compile inverse future emissions based on WMO and Western
+        inverse_emissions_file = submit_output_aware(
+            compile_inverse_emissions,
+            in_files=tuple(
+                v.inverse_emissions_file_future for v in (*wmo_2022_futures.values(), *western_2024_futures.values())
+            ),
+            out_file=inverse_emission_dir / "single-concentration-projection_inverse-emissions.feather",
+        )
 
         scenario_files_d = submit_output_aware(
             split_input_emissions_into_individual_files,
@@ -334,6 +330,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
             scenario_infos=scenario_infos,
             out_dir=emissions_split_dir,
         )
+        inverse_emissions_file.wait()
         scenario_files_d.wait()
 
         # Interpolate to annual,
@@ -353,7 +350,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0913
         raise NotImplementedError(equivalence_ghgs)
 
     # Ensure all paths finish
-    done, not_done = wait((*wmo_2022_paths_l, *western_2024_paths_l), timeout=30 * 60)
+    done, not_done = wait(
+        (
+            v.esgf_ready_files_future
+            for v in (*wmo_2022_futures.values(), *western_2024_futures.values(), *magicc_based_futures.values())
+        ),
+        timeout=30 * 60,
+    )
     if not_done:
         raise AssertionError
 

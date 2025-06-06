@@ -11,7 +11,10 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import
 from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import create_esgf_files
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extraction import extract_tar, extract_zip
-from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import calculate_inverse_emissions
+from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import (
+    calculate_inverse_emissions,
+    compile_inverse_emissions,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
     scale_lat_gradient_based_on_emissions,
 )
@@ -27,6 +30,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.split_input_emissions import
 from cmip7_scenariomip_ghg_generation.prefect_tasks.western_et_al_2024 import (
     clean_western_et_al_2024_data,
     extend_western_et_al_2024,
+    get_western_et_al_2024_clean,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.wmo_2022 import clean_wmo_data
 from cmip7_scenariomip_ghg_generation.prefect_tasks.zenodo import get_doi
@@ -35,6 +39,7 @@ __all__ = [
     "calculate_inverse_emissions",
     "clean_western_et_al_2024_data",
     "clean_wmo_data",
+    "compile_inverse_emissions",
     "create_esgf_files",
     "create_single_concentration_projection_annual_mean_file",
     "download_cmip7_historical_ghg_concentrations",
@@ -43,6 +48,7 @@ __all__ = [
     "extract_tar",
     "extract_zip",
     "get_doi",
+    "get_western_et_al_2024_clean",
     "interpolate_annual_mean_to_monthly",
     "scale_lat_gradient_based_on_emissions",
     "scale_seasonality_based_on_annual_mean",

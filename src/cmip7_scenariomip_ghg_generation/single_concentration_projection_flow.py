@@ -5,6 +5,9 @@ Tasks for gases which only have a single concentration projection
 import itertools
 from pathlib import Path
 
+import prefect.futures
+from attrs import define
+
 from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     calculate_inverse_emissions,
@@ -16,6 +19,22 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     scale_seasonality_based_on_annual_mean,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
+
+
+@define
+class SingleConcentrationProjectionResult:
+    """
+    Result of running [create_scenariomip_ghgs_single_concentration_projection][]
+    """
+
+    ghg: str
+    """Greenhouse gas"""
+
+    esgf_ready_files_future: prefect.futures.PrefectFuture[tuple[Path, ...]]
+    """ESGF-ready files future"""
+
+    inverse_emissions_file_future: prefect.futures.PrefectFuture[Path]
+    """Inverse emissions file future"""
 
 
 def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
@@ -37,7 +56,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     doi: str,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
-) -> tuple[Path, ...]:
+) -> dict[str, SingleConcentrationProjectionResult]:
     """
     Create the ScenarioMIP GHG concentrations for GHGs based on WMO 2022
 
@@ -207,5 +226,13 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
     }
 
-    esgf_written_paths = tuple(future for future in esgf_ready_futures.values())
-    return esgf_written_paths
+    res = {
+        ghg: SingleConcentrationProjectionResult(
+            ghg=ghg,
+            esgf_ready_files_future=esgf_ready_futures[ghg],
+            inverse_emissions_file_future=inverse_emissions_file_futures[ghg],
+        )
+        for ghg in esgf_ready_futures
+    }
+
+    return res
