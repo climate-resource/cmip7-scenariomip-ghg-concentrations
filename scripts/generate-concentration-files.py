@@ -105,6 +105,9 @@ this will lead to a new run being done
     n_magicc_workers: Annotated[int, typer.Option(help="Number of MAGICC workers to use when running")] = 1,
     magicc_root_folder: Annotated[Path, typer.Option(help="Root folder for MAGICC versions")] = REPO_ROOT_DIR
     / "magicc",
+    n_workers_esgf_ready_writing: Annotated[
+        int, typer.Option(help="Number of parallel workers to use for writing ESGF-ready files")
+    ] = 1,
     esgf_version: Annotated[
         str,
         typer.Option(help="""Version to use when writing the files for ESGF"""),
@@ -114,15 +117,18 @@ this will lead to a new run being done
         typer.Option(help="""Source for the input4MIPs CVs"""),
     ] = "gh:78bc71513711d351987758b077cac3c698355828",
     n_workers: Annotated[
-        int, typer.Option(help="Number of workers to use for parallel work")
-    ] = multiprocessing.cpu_count(),
-    runner: Annotated[
-        str,
+        int,
         typer.Option(
-            click_type=click.Choice(["thread", "dask"]),
-            help="Number of workers to use for parallel work",
+            help="""Number of task runner workers to use
+
+Note that these are threaded runners.
+We have tried to set things up
+(with the various other `n-workers-*` options)
+to ensure that jobs that need to be processed in parallel
+are actually handled correctly.
+However, as a result, they also have different worker numbers."""
         ),
-    ] = "thread",
+    ] = multiprocessing.cpu_count(),
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
@@ -263,7 +269,6 @@ this will lead to a new run being done
         scenario_infos=scenario_infos,
         run_id=run_id,
         n_workers=n_workers,
-        runner=runner,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
@@ -289,6 +294,7 @@ this will lead to a new run being done
         magicc_root_folder=magicc_root_folder,
         magicc_output_dir=magicc_output_dir,
         n_magicc_workers=n_magicc_workers,
+        n_workers_esgf_ready_writing=n_workers_esgf_ready_writing,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,

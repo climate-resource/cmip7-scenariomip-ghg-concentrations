@@ -2,6 +2,8 @@
 Main flow
 """
 
+import multiprocessing.pool
+from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 
@@ -9,7 +11,6 @@ from prefect import flow
 from prefect.futures import PrefectFuture, wait
 from prefect.states import Completed
 from prefect.task_runners import ThreadPoolTaskRunner
-from prefect_dask import DaskTaskRunner
 
 from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
@@ -61,6 +62,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     magicc_root_folder: Path,
     n_magicc_workers: int,
     magicc_output_dir: Path,
+    esgf_ready_writing_pool: multiprocessing.pool.Pool | None,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -154,6 +156,11 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     magicc_output_dir
         Path in which to write the MAGICC output
+
+    esgf_ready_writing_pool
+        Parallel pool to use for writing ESGF-ready files
+
+        If `None`, no parallel processing will be used for this step
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
@@ -297,6 +304,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         esgf_ready_root_dir=esgf_ready_root_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
+        esgf_ready_writing_pool=esgf_ready_writing_pool,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,
@@ -461,7 +469,6 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     scenario_infos: tuple[ScenarioInfo, ...],
     run_id: str,
     n_workers: int,
-    runner: str,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     cmip7_historical_ghg_concentration_source_id: str,
@@ -486,6 +493,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     magicc_versions_to_run: tuple[str, ...],
     magicc_root_folder: Path,
     n_magicc_workers: int,
+    n_workers_esgf_ready_writing: int,
     magicc_output_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
@@ -513,9 +521,6 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     n_workers
         Number of workers to use with parallel processing
-
-    runner
-        Runner to use
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -589,6 +594,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     n_magicc_workers
         Number of MAGICC workers to use when running MAGICC
 
+    n_workers_esgf_ready_writing
+        Number of workers to use when writing ESGF-ready files
+
     magicc_output_dir
         Path in which to write the MAGICC output
 
@@ -609,70 +617,75 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     :
         Generated paths
     """
-    # A bit of trickery here to inject the run ID at runtime
+    # A note on this. I tried with the dask runner.
+    # It didn't really behave how I wanted it to.
+    # It seemed to not spin up and shut down workers properly
+    # (sometimes the workers would get killed before the job was actually finished).
+    # So, I got rid of that and now just use the task runner.
+    # This uses threads, which doesn't work for all tasks.
+    # As a result, some tasks are given a process pool
+    # to essentially introduce parallel processing by hand
+    # while also not blocking task submission or causing crashes
+    # (and it can be a bit of trial and error to figure out
+    # which tasks need their own multiprocess pool and which don't).
+    # It's a bit of a hack and fiddly to get the multiprocess pool stuff working
+    # without blocking in the wrong places,
+    # but doing it this way seems to give more stable, predictable behaviour
+    # (and now we have implementations to follow,
+    # the pattern is pretty easy to repeat).
     if n_workers == 1:
-        if runner == "dask":
-            task_runner = DaskTaskRunner(cluster_kwargs={"n_workers": n_workers})
-
-        else:
-            task_runner = ThreadPoolTaskRunner(max_workers=1)
-
-    elif runner == "dask":
-        task_runner = DaskTaskRunner(
-            cluster_class="distributed.LocalCluster",
-            # address=  # can be used to specify an already running cluster
-            cluster_kwargs={
-                "n_workers": n_workers,
-                "threads_per_worker": 1,
-                "processes": True,
-            },
-            # Other cool tricks in https://docs.prefect.io/integrations/prefect-dask
-        )
+        task_runner = ThreadPoolTaskRunner(max_workers=1)
 
     else:
-        # Apparently this is not truly parallel,
-        # but maybe it still works well enough for us
-        # given that many of our tasks spin up their own process anyway ?
-        # Docs: https://docs.prefect.io/v3/develop/task-runners
-        print("Warning: This may crash due to the threads fighting with each other when writing netCDF")
         task_runner = ThreadPoolTaskRunner(max_workers=n_workers)
 
+    # A bit of trickery here to inject the run ID dynamically
     run_id_flow = flow(
         name=f"scenariomip-ghgs_{run_id}",
         task_runner=task_runner,
     )(create_scenariomip_ghgs_flow)
 
-    return run_id_flow(
-        ghgs=ghgs,
-        emissions_file=emissions_file,
-        scenario_infos=scenario_infos,
-        raw_notebooks_root_dir=raw_notebooks_root_dir,
-        executed_notebooks_dir=executed_notebooks_dir,
-        cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
-        cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-        cmip7_historical_seasonality_lat_gradient_info_raw_file_url=cmip7_historical_seasonality_lat_gradient_info_raw_file_url,
-        cmip7_historical_seasonality_lat_gradient_info_raw_file=cmip7_historical_seasonality_lat_gradient_info_raw_file,
-        cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
-        wmo_raw_data_path=wmo_raw_data_path,
-        wmo_cleaned_data_path=wmo_cleaned_data_path,
-        western_et_al_2024_download_url=western_et_al_2024_download_url,
-        western_et_al_2024_raw_tar_file=western_et_al_2024_raw_tar_file,
-        western_et_al_2024_extract_path=western_et_al_2024_extract_path,
-        western_et_al_2024_extracted_file_of_interest=western_et_al_2024_extracted_file_of_interest,
-        western_et_al_2024_cleaned_data_path=western_et_al_2024_cleaned_data_path,
-        annual_mean_dir=annual_mean_dir,
-        monthly_mean_dir=monthly_mean_dir,
-        seasonality_dir=seasonality_dir,
-        inverse_emission_dir=inverse_emission_dir,
-        lat_gradient_dir=lat_gradient_dir,
-        emissions_split_dir=emissions_split_dir,
-        emissions_complete_dir=emissions_complete_dir,
-        magicc_versions_to_run=magicc_versions_to_run,
-        magicc_root_folder=magicc_root_folder,
-        n_magicc_workers=n_magicc_workers,
-        magicc_output_dir=magicc_output_dir,
-        esgf_ready_root_dir=esgf_ready_root_dir,
-        esgf_version=esgf_version,
-        esgf_institution_id=esgf_institution_id,
-        input4mips_cvs_source=input4mips_cvs_source,
+    perw = (
+        multiprocessing.Pool(processes=n_workers_esgf_ready_writing)
+        if n_workers_esgf_ready_writing > 1
+        else nullcontext()
     )
+
+    with perw as pool_esgf_ready_writing:
+        res_flow = run_id_flow(
+            ghgs=ghgs,
+            emissions_file=emissions_file,
+            scenario_infos=scenario_infos,
+            raw_notebooks_root_dir=raw_notebooks_root_dir,
+            executed_notebooks_dir=executed_notebooks_dir,
+            cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
+            cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+            cmip7_historical_seasonality_lat_gradient_info_raw_file_url=cmip7_historical_seasonality_lat_gradient_info_raw_file_url,
+            cmip7_historical_seasonality_lat_gradient_info_raw_file=cmip7_historical_seasonality_lat_gradient_info_raw_file,
+            cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
+            wmo_raw_data_path=wmo_raw_data_path,
+            wmo_cleaned_data_path=wmo_cleaned_data_path,
+            western_et_al_2024_download_url=western_et_al_2024_download_url,
+            western_et_al_2024_raw_tar_file=western_et_al_2024_raw_tar_file,
+            western_et_al_2024_extract_path=western_et_al_2024_extract_path,
+            western_et_al_2024_extracted_file_of_interest=western_et_al_2024_extracted_file_of_interest,
+            western_et_al_2024_cleaned_data_path=western_et_al_2024_cleaned_data_path,
+            annual_mean_dir=annual_mean_dir,
+            monthly_mean_dir=monthly_mean_dir,
+            seasonality_dir=seasonality_dir,
+            inverse_emission_dir=inverse_emission_dir,
+            lat_gradient_dir=lat_gradient_dir,
+            emissions_split_dir=emissions_split_dir,
+            emissions_complete_dir=emissions_complete_dir,
+            magicc_versions_to_run=magicc_versions_to_run,
+            magicc_root_folder=magicc_root_folder,
+            n_magicc_workers=n_magicc_workers,
+            magicc_output_dir=magicc_output_dir,
+            esgf_ready_writing_pool=pool_esgf_ready_writing,
+            esgf_ready_root_dir=esgf_ready_root_dir,
+            esgf_version=esgf_version,
+            esgf_institution_id=esgf_institution_id,
+            input4mips_cvs_source=input4mips_cvs_source,
+        )
+
+    return res_flow

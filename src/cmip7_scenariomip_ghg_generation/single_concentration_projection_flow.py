@@ -3,6 +3,7 @@ Tasks for gases which only have a single concentration projection
 """
 
 import itertools
+import multiprocessing.pool
 from pathlib import Path
 
 import prefect.futures
@@ -49,6 +50,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
+    esgf_ready_writing_pool: multiprocessing.pool.Pool | None,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -91,6 +93,11 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
+
+    esgf_ready_writing_pool
+        Parallel pool to use for writing ESGF-ready files
+
+        If `None`, no parallel processing will be used for this step
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
@@ -229,6 +236,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
             checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
+            pool=esgf_ready_writing_pool,
         )
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
         if ghg != "halon1202"

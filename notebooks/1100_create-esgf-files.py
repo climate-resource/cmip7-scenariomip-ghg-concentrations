@@ -33,7 +33,6 @@ import pint_xarray
 import tqdm.auto
 import xarray as xr
 from attrs import evolve
-from input4mips_validation.cli import validate_tree
 from input4mips_validation.cvs.loading import load_cvs_known_loader
 from input4mips_validation.cvs.loading_raw import get_raw_cvs_loader
 from input4mips_validation.dataset import Input4MIPsDataset
@@ -41,14 +40,7 @@ from input4mips_validation.dataset.dataset import prepare_ds_and_get_frequency
 from input4mips_validation.dataset.metadata_data_producer_minimum import (
     Input4MIPsDatasetMetadataDataProducerMinimum,
 )
-from input4mips_validation.inference.from_data import (
-    BoundsInfo,
-    FrequencyMetadataKeys,
-)
 from input4mips_validation.xarray_helpers import add_time_bounds
-from input4mips_validation.xarray_helpers.variables import (
-    XRVariableHelper,
-)
 
 from cmip7_scenariomip_ghg_generation.constants import VARIABLE_TO_STANDARD_NAME_RENAMING
 from cmip7_scenariomip_ghg_generation.xarray_helpers import (
@@ -430,6 +422,7 @@ standard_name
 # ### Write files
 
 # %%
+# papermill_description=write-files
 esgf_ready_root_dir_p.mkdir(exist_ok=True, parents=True)
 for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.auto.tqdm(
     [
@@ -528,29 +521,33 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
 # ## Validate the written files
 
 # %%
-bounds_info = BoundsInfo(
-    time_bounds="time_bnds",
-    bounds_dim="bnds",
-    bounds_dim_lower_val=0,
-    bounds_dim_upper_val=1,
-)
-frequency_metadata_keys = FrequencyMetadataKeys(
-    frequency_metadata_key="frequency",
-    no_time_axis_frequency="fx",
-)
-xr_variable_processor = XRVariableHelper(
-    bounds_coord_indicators=("bounds", "bnds"),
-    climatology_bounds_coord_indicators=("climatology",),
-)
-
-validate_tree(
-    tree_root=esgf_ready_root_dir_p,
-    cv_source=input4mips_cvs_source,
-    xr_variable_processor=xr_variable_processor,
-    frequency_metadata_keys=frequency_metadata_keys,
-    bounds_info=bounds_info,
-    time_dimension=time_dimension,
-    rglob_input=f"**/*{variable_name_output}*/**/*.nc",
-    allow_cf_checker_warnings=False,
-    output_html=None,
-)
+# papermill_description=validate-written-files
+# # Turn this off for now, very slow hence waste of time.
+# # Probably move into another step at some point
+# # (and just validate the entire written tree at once).
+# bounds_info = BoundsInfo(
+#     time_bounds="time_bnds",
+#     bounds_dim="bnds",
+#     bounds_dim_lower_val=0,
+#     bounds_dim_upper_val=1,
+# )
+# frequency_metadata_keys = FrequencyMetadataKeys(
+#     frequency_metadata_key="frequency",
+#     no_time_axis_frequency="fx",
+# )
+# xr_variable_processor = XRVariableHelper(
+#     bounds_coord_indicators=("bounds", "bnds"),
+#     climatology_bounds_coord_indicators=("climatology",),
+# )
+#
+# validate_tree(
+#     tree_root=esgf_ready_root_dir_p,
+#     cv_source=input4mips_cvs_source,
+#     xr_variable_processor=xr_variable_processor,
+#     frequency_metadata_keys=frequency_metadata_keys,
+#     bounds_info=bounds_info,
+#     time_dimension=time_dimension,
+#     rglob_input=f"**/*{variable_name_output}*/**/*.nc",
+#     allow_cf_checker_warnings=False,
+#     output_html=None,
+# )

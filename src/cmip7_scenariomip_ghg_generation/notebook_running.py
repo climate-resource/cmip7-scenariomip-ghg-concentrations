@@ -4,6 +4,7 @@ Notebook running functionality
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,14 @@ import jupytext
 import papermill
 
 
-def run_notebook(notebook: Path, run_notebooks_dir: Path, parameters: dict[str, Any], identity: str) -> None:
+def run_notebook(  # noqa: PLR0913
+    notebook: Path,
+    run_notebooks_dir: Path,
+    parameters: dict[str, Any],
+    identity: str,
+    verbose: bool = False,
+    progress: bool = False,
+) -> None:
     """
     Run a notebook
 
@@ -32,6 +40,12 @@ def run_notebook(notebook: Path, run_notebooks_dir: Path, parameters: dict[str, 
 
     identity
         Identity to use when creating the output notebook name
+
+    verbose
+        Should a message about the notebook being run be printed?
+
+    progress
+        Should the progress of the execution be shown?
     """
     notebook_jupytext = jupytext.read(notebook)
 
@@ -43,6 +57,13 @@ def run_notebook(notebook: Path, run_notebooks_dir: Path, parameters: dict[str, 
     output_notebook = run_notebooks_dir / f"{notebook.stem}_{identity}.ipynb"
     output_notebook.parent.mkdir(exist_ok=True, parents=True)
 
-    print(f"Executing {notebook.name=} with {parameters=} from {in_notebook=}. " f"Writing to {output_notebook=}")
-    # Execute to specific directory
-    papermill.execute_notebook(in_notebook, output_notebook, parameters=parameters)
+    print(f"Executing, in {os.getpid()=}, {notebook.name=}\n" f"Writing to {output_notebook=}. ")
+    if verbose:
+        print(
+            f"Executing, in {os.getpid()=}, "
+            f"{notebook.name=}\nwith {parameters=}\nfrom {in_notebook=}.\n"
+            f"Writing to {output_notebook=}. "
+        )
+
+    # Execute
+    papermill.execute_notebook(in_notebook, output_notebook, parameters=parameters, progress_bar=progress)
