@@ -29,6 +29,7 @@ from typing import Any
 import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
+import pandas_openscm.db
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
 from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
 
@@ -45,9 +46,8 @@ magicc_version: str = "MAGICCv7.6.0a3"
 magicc_exe: str = "../magicc/magicc-v7.6.0a3/bin/magicc-darwin-arm64"
 magicc_prob_distribution: str = "../magicc/magicc-v7.6.0a3/configs/magicc-ar7-fast-track-drawnset-v0-3-0.json"
 n_magicc_workers: int = 4
-out_file: str = (
-    "../output-bundles/dev-test/data/interim/magicc-output/SSP1_-_Very_Low_Emissions_WITCH_6-0_magicc-results.feather"
-)
+db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
+db_backend_str: str = "feather"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -57,7 +57,11 @@ out_file: str = (
 complete_file_p = Path(complete_file)
 magicc_exe_p = Path(magicc_exe)
 magicc_prob_distribution_p = Path(magicc_prob_distribution)
-out_file_p = Path(out_file)
+db = pandas_openscm.db.OpenSCMDB(
+    backend_data=pandas_openscm.db.DATA_BACKENDS.get_instance(db_backend_str),
+    backend_index=pandas_openscm.db.INDEX_BACKENDS.get_instance(db_backend_str),
+    db_dir=Path(db_dir),
+)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Set up
@@ -160,7 +164,7 @@ output_variables = (
     "Atmospheric Concentrations|HFC245fa",
     "Atmospheric Concentrations|HFC32",
     "Atmospheric Concentrations|HFC365mfc",
-    "Atmospheric Concentrations|HFC4310mee",
+    "Atmospheric Concentrations|HFC4310",
     "Atmospheric Concentrations|NF3",
     "Atmospheric Concentrations|SF6",
     "Atmospheric Concentrations|SO2F2",
@@ -250,7 +254,12 @@ climate_models_cfgs = load_magicc_cfgs(
 )
 
 # %%
-# climate_models_cfgs["MAGICC7"][0]["out_dynamic_vars"]
+badly_converted = [v for v in climate_models_cfgs["MAGICC7"][0]["out_dynamic_vars"] if v.upper() != v]
+if badly_converted:
+    raise AssertionError(badly_converted)
+
+# %%
+climate_models_cfgs["MAGICC7"] = climate_models_cfgs["MAGICC7"][:10]
 
 # %%
 if magicc_version == "MAGICCv7.5.3" and platform.system() == "Darwin" and platform.processor() == "arm":
@@ -271,21 +280,23 @@ res = run_scms(
     verbose=True,
     progress=True,
 )
+res = res.pix.assign(run_mode="magicc-concentration-to-emissions-switch")
 
-res
+# res
 
 # %% [markdown]
-# ### Quick look at plots
+# ### Quick look plots
 
 # %%
 res.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot_plume_after_calculating_quantiles(
-    quantile_over="run_id"
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
 )
 
 # %%
-erfs = res.loc[pix.ismatch(variable="Effective Radiative Forcing**"), 2000:].openscm.groupby_except("run_id").median()
-ax = erfs.pix.project("variable").T.plot()
-ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
+# erfs = res.loc[pix.ismatch(variable="Effective Radiative Forcing**"), 2000:].openscm.groupby_except("run_id").median()
+# ax = erfs.pix.project("variable").T.plot()
+# ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
 
 # %%
 # concs = res.loc[pix.ismatch(variable="Atmospheric Concentrations|*"), 2000:].openscm.groupby_except("run_id").median()
@@ -299,8 +310,14 @@ ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
 # )
 
 # %% [markdown]
-# ## Save
+# ## Save to database
 
 # %%
-out_file_p.parent.mkdir(exist_ok=True, parents=True)
-res.to_feather(out_file_p)
+db.save(
+    res,
+    groupby=["climate_model", "model", "scenario", "variable", "run_mode"],
+    allow_overwrite=True,
+    warn_on_partial_overwrite=False,
+    max_workers=n_magicc_workers,
+    # progress=True,
+)

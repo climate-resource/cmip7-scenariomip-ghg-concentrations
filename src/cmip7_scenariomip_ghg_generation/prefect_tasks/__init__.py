@@ -17,6 +17,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import (
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.magicc_handling import get_magicc_version_info
 from cmip7_scenariomip_ghg_generation.prefect_tasks.make_complete_scenarios import make_complete_scenario
+from cmip7_scenariomip_ghg_generation.prefect_tasks.plotting import plot_marker_overview
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
     scale_lat_gradient_based_on_emissions,
 )
@@ -55,6 +56,7 @@ __all__ = [
     "get_western_et_al_2024_clean",
     "interpolate_annual_mean_to_monthly",
     "make_complete_scenario",
+    "plot_marker_overview",
     "run_magicc",
     "scale_lat_gradient_based_on_emissions",
     "scale_seasonality_based_on_annual_mean",

@@ -225,7 +225,9 @@ Be careful and don't crash your computer."""
     emissions_split_dir = data_interim_root / "input-emissions" / emissions_batch_id
     inverse_emission_dir = data_interim_root / "inverse-emissions"
     emissions_complete_dir = data_interim_root / "complete-emissions"
-    magicc_output_dir = data_interim_root / "magicc-output"
+    magicc_output_db_dir = data_interim_root / "magicc-output" / "db"
+    magicc_db_backend_str = "feather"
+    plot_complete_dir = data_interim_root / "plot-complete"
 
     ### Final outputs
     esgf_ready_root_dir = data_processed_root / "esgf-ready"
@@ -319,7 +321,9 @@ Be careful and don't crash your computer."""
         emissions_complete_dir=emissions_complete_dir,
         magicc_versions_to_run=magicc_versions_to_run,
         magicc_root_folder=magicc_root_folder,
-        magicc_output_dir=magicc_output_dir,
+        magicc_output_db_dir=magicc_output_db_dir,
+        magicc_db_backend_str=magicc_db_backend_str,
+        plot_complete_dir=plot_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,

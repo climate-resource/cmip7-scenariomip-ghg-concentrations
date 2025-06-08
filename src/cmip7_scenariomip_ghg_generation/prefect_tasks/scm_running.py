@@ -4,6 +4,7 @@ Simple climate model (SCM) running
 
 from __future__ import annotations
 
+import datetime as dt
 import multiprocessing
 from pathlib import Path
 
@@ -36,11 +37,13 @@ def run_magicc(  # noqa: PLR0913
     magicc_exe: Path,
     magicc_prob_distribution: Path,
     n_magicc_workers: int,
+    db_dir: Path,
+    db_backend_str: str,
     out_file: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     pool: multiprocessing.pool.Pool | None,
-    res_timeout: int = 10 * 60,
+    res_timeout: int = 100 * 60,
 ) -> Path:
     """
     Run MAGICC
@@ -65,8 +68,17 @@ def run_magicc(  # noqa: PLR0913
     n_magicc_workers
         Number of MAGICC workers to use when running
 
+    db_dir
+        Root directory of the database in which to save the outputs
+
+    db_backend_str
+        String name of the database backend
+
     out_file
-        File in which to write the output
+        Path in which to write a timestamp of the time at which this job was complete
+
+        Used to help with getting the dependencies between tasks
+        and caching right.
 
     raw_notebooks_root_dir
         Directory in which the raw notebooks live
@@ -91,7 +103,7 @@ def run_magicc(  # noqa: PLR0913
         run_notebook,
         maybe_pool=pool,
         notebook=raw_notebooks_root_dir / "0021_run-magicc.py",
-        # verbose=True,
+        verbose=2,
         progress=True,
         parameters={
             "model": scenario_info.model,
@@ -101,13 +113,17 @@ def run_magicc(  # noqa: PLR0913
             "magicc_exe": str(magicc_exe),
             "magicc_prob_distribution": str(magicc_prob_distribution),
             "n_magicc_workers": n_magicc_workers,
-            "out_file": str(out_file),
+            "db_dir": str(db_dir),
+            "db_backend_str": db_backend_str,
         },
         run_notebooks_dir=executed_notebooks_dir,
-        identity=out_file.stem,
+        identity=f"{magicc_version}_{scenario_info.model}_{scenario_info.scenario}",
         logger=get_run_logger(),
         kwargs_to_show_in_logging=("identity",),
         timeout=res_timeout,
     )
+
+    with open(out_file, "w") as fh:
+        fh.write(str(dt.datetime.utcnow()))
 
     return out_file

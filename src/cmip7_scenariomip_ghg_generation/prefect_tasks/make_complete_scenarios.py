@@ -83,6 +83,7 @@ def make_complete_scenario(  # noqa: PLR0913
     """
     call_maybe_in_subprocess(
         run_notebook,
+        maybe_pool=pool,
         notebook=raw_notebooks_root_dir / "0020_create-complete-emission-scenario.py",
         # verbose=True,
         # progress=True,
