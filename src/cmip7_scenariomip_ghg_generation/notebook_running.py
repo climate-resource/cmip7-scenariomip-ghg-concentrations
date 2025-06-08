@@ -5,6 +5,7 @@ Notebook running functionality
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,7 @@ def run_notebook(  # noqa: PLR0913
     run_notebooks_dir: Path,
     parameters: dict[str, Any],
     identity: str,
-    verbose: bool = False,
+    verbose: bool | int = False,
     progress: bool = False,
 ) -> None:
     """
@@ -44,9 +45,17 @@ def run_notebook(  # noqa: PLR0913
     verbose
         Should a message about the notebook being run be printed?
 
+        If an integer, this sets the level of verbosity
+        (higher is more verbose).
+
     progress
         Should the progress of the execution be shown?
     """
+    if isinstance(verbose, bool):
+        verbosity_i = int(verbose)
+    else:
+        verbosity_i = verbose
+
     notebook_jupytext = jupytext.read(notebook)
 
     # Write the .py file as .ipynb
@@ -57,8 +66,13 @@ def run_notebook(  # noqa: PLR0913
     output_notebook = run_notebooks_dir / f"{notebook.stem}_{identity}.ipynb"
     output_notebook.parent.mkdir(exist_ok=True, parents=True)
 
-    print(f"Executing, in {os.getpid()=}, {notebook.name=}\n" f"Writing to {output_notebook=}. ")
-    if verbose:
+    if verbosity_i == 1:
+        print(
+            f"Executing, in {os.getpid()=} and {threading.get_ident()=}, {notebook.name=}\n"
+            f"Writing to {output_notebook=}. "
+        )
+
+    elif verbosity_i == 2:  # noqa: PLR2004
         print(
             f"Executing, in {os.getpid()=}, "
             f"{notebook.name=}\nwith {parameters=}\nfrom {in_notebook=}.\n"

@@ -109,6 +109,7 @@ y_in
 algorithm = evolve(DEFAULT_ALGORITHM)
 
 # %%
+# papermill_description=calculate-high-res-values
 high_res_vals = mean_preserving_interpolation(
     x_bounds_in=x_bounds_in,
     y_in=y_in,

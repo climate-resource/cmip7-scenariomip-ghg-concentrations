@@ -7,16 +7,29 @@ but are needed to run MAGICC.
 
 from __future__ import annotations
 
+import multiprocessing
 from pathlib import Path
 
+from prefect import task
+from prefect.cache_policies import INPUTS
+from prefect.logging import get_run_logger
+
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_cache
+from cmip7_scenariomip_ghg_generation.parallelisation import call_maybe_in_subprocess
+from cmip7_scenariomip_ghg_generation.prefect_helpers import (
+    PathHashesCP,
+)
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 
-@task_standard_path_cache(
+@task(
     task_run_name="make-complete-scenario_{scenario_info.model}_{scenario_info.scenario}",
-    parameters_output=("out_file",),
+    persist_result=True,
+    cache_policy=(INPUTS - "pool" - "res_timeout")
+    # + TASK_SOURCE
+    + PathHashesCP(
+        parameters_output=("out_file",),
+    ),
 )
 def make_complete_scenario(  # noqa: PLR0913
     scenario_info: ScenarioInfo,
@@ -26,6 +39,8 @@ def make_complete_scenario(  # noqa: PLR0913
     out_file: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
+    pool: multiprocessing.pool.Pool | None,
+    res_timeout: int = 10 * 60,
 ) -> Path:
     """
     Make a complete scenario from the relevant input pieces
@@ -53,13 +68,24 @@ def make_complete_scenario(  # noqa: PLR0913
     executed_notebooks_dir
         Directory in which to write the executed notebooks
 
+    pool
+        Parallel processing pool to use for running
+
+        If `None`, no parallel processing is used
+
+    res_timeout
+        Time to wait for parallel results before timing out
+
     Returns
     -------
     :
         Written file
     """
-    run_notebook(
-        raw_notebooks_root_dir / "0020_create-complete-emission-scenario.py",
+    call_maybe_in_subprocess(
+        run_notebook,
+        notebook=raw_notebooks_root_dir / "0020_create-complete-emission-scenario.py",
+        # verbose=True,
+        # progress=True,
         parameters={
             "model": scenario_info.model,
             "scenario": scenario_info.scenario,
@@ -70,6 +96,9 @@ def make_complete_scenario(  # noqa: PLR0913
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity=out_file.stem,
+        logger=get_run_logger(),
+        kwargs_to_show_in_logging=("identity",),
+        timeout=res_timeout,
     )
 
     return out_file

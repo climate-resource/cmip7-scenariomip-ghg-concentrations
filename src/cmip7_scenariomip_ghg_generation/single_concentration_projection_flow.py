@@ -50,7 +50,6 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
-    esgf_ready_writing_pool: multiprocessing.pool.Pool | None,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -58,6 +57,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     doi: str,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
+    pool_multiprocessing: multiprocessing.pool.Pool | None,
 ) -> dict[str, SingleConcentrationProjectionResult]:
     """
     Create the ScenarioMIP GHG concentrations for GHGs based on WMO 2022
@@ -94,11 +94,6 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     lat_gradient_dir
         Path in which to save interim latitudinal gradient data
 
-    esgf_ready_writing_pool
-        Parallel pool to use for writing ESGF-ready files
-
-        If `None`, no parallel processing will be used for this step
-
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
@@ -119,6 +114,11 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     executed_notebooks_dir
         Path in which to write executed notebooks
+
+    pool_multiprocessing
+        Parallel pool to use for multiprocessing
+
+        If `None`, no parallel processing will be used
 
     Returns
     -------
@@ -197,6 +197,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             out_file=inverse_emission_dir / f"single-concentration-projection_{ghg}_inverse-emissions.feather",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
+            pool=pool_multiprocessing,
         )
         for ghg, monthly_future in global_mean_monthly_file_futures.items()
     }
@@ -236,7 +237,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
             checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
-            pool=esgf_ready_writing_pool,
+            pool=pool_multiprocessing,
         )
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
         if ghg != "halon1202"

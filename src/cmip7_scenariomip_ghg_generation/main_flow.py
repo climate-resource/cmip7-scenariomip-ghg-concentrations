@@ -60,13 +60,14 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     emissions_complete_dir: Path,
     magicc_versions_to_run: tuple[str, ...],
     magicc_root_folder: Path,
-    n_magicc_workers: int,
     magicc_output_dir: Path,
-    esgf_ready_writing_pool: multiprocessing.pool.Pool | None,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
+    pool_multiprocessing: multiprocessing.pool.Pool | None,
+    pool_multiprocessing_magicc: multiprocessing.pool.Pool | None,
+    n_workers_per_magicc_notebook: int,
 ) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -151,16 +152,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     magicc_root_folder
         Root folder for MAGICC versions
 
-    n_magicc_workers
-        Number of MAGICC workers to use when running MAGICC
-
     magicc_output_dir
         Path in which to write the MAGICC output
-
-    esgf_ready_writing_pool
-        Parallel pool to use for writing ESGF-ready files
-
-        If `None`, no parallel processing will be used for this step
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
@@ -173,6 +166,19 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     input4mips_cvs_source
         Source from which to get the input4MIPs CVs
+
+    pool_multiprocessing
+        Parallel pool to use for multiprocessing
+
+        If `None`, no parallel processing will be used
+
+    pool_multiprocessing_magicc
+        Parallel pool to use for multiprocessing of MAGICC-related steps
+
+        If `None`, no parallel processing will be used
+
+    n_workers_per_magicc_notebook
+        Number of MAGICC workers to use in each MAGICC-related step/notebook
 
     Returns
     -------
@@ -304,11 +310,11 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         esgf_ready_root_dir=esgf_ready_root_dir,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
-        esgf_ready_writing_pool=esgf_ready_writing_pool,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,
         doi=doi,
+        pool_multiprocessing=pool_multiprocessing,
     )
 
     wmo_2022_cleaned = submit_output_aware(
@@ -367,7 +373,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             out_dir=emissions_split_dir,
         )
 
-        # Have to wait to ensure that we can use the dictionary in the next step
+        # Have to get the result to ensure that we can use the dictionary in the next step
+        # (yes, blocking, but I can't see how to easily avoid this and the time penalty isn't so high)
         scenario_files_d_res = scenario_files_d.result()
         complete_scenario_files_d = {
             scenario_info: submit_output_aware(
@@ -379,6 +386,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 out_file=emissions_complete_dir / f"{scenario_info.to_file_stem()}.feather",
                 raw_notebooks_root_dir=raw_notebooks_root_dir,
                 executed_notebooks_dir=executed_notebooks_dir,
+                pool=pool_multiprocessing,
             )
             for scenario_info, scenario_file in scenario_files_d_res.items()
             if scenario_info != "historical"
@@ -399,11 +407,12 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 magicc_version=mi.version,
                 magicc_exe=mi.executable,
                 magicc_prob_distribution=mi.probabilistic_distribution,
-                n_magicc_workers=n_magicc_workers,
                 out_file=magicc_output_dir
                 / f"{scenario_info.to_file_stem()}_magicc-{mi.version.replace('.', '-')}_results.feather",
                 raw_notebooks_root_dir=raw_notebooks_root_dir,
                 executed_notebooks_dir=executed_notebooks_dir,
+                n_magicc_workers=n_workers_per_magicc_notebook,
+                pool=pool_multiprocessing_magicc,
             )
             for scenario_info, complete_file in complete_scenario_files_d.items()
             for mi in magicc_versions_info_d_res.values()
@@ -468,7 +477,6 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     emissions_file: Path,
     scenario_infos: tuple[ScenarioInfo, ...],
     run_id: str,
-    n_workers: int,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     cmip7_historical_ghg_concentration_source_id: str,
@@ -492,13 +500,15 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     emissions_complete_dir: Path,
     magicc_versions_to_run: tuple[str, ...],
     magicc_root_folder: Path,
-    n_magicc_workers: int,
-    n_workers_esgf_ready_writing: int,
     magicc_output_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
+    n_workers: int,
+    n_workers_multiprocessing: int,
+    n_workers_multiprocessing_magicc: int,
+    n_workers_per_magicc_notebook: int,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -518,9 +528,6 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     run_id
         Run ID to use with the [create_scenariomip_ghgs][] flow
-
-    n_workers
-        Number of workers to use with parallel processing
 
     raw_notebooks_root_dir
         Root directory for raw notebooks
@@ -591,12 +598,6 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     magicc_root_folder
         Root folder for MAGICC versions
 
-    n_magicc_workers
-        Number of MAGICC workers to use when running MAGICC
-
-    n_workers_esgf_ready_writing
-        Number of workers to use when writing ESGF-ready files
-
     magicc_output_dir
         Path in which to write the MAGICC output
 
@@ -612,27 +613,44 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     input4mips_cvs_source
         Source from which to get the input4MIPs CVs
 
+    n_workers
+        Number of (threaded) task runners to use
+
+    n_workers_multiprocessing
+        Number of multiprocessing workers to use for tasks that can be run in parallel
+
+    n_workers_multiprocessing_magicc
+        Number of multiprocessing workers to use for MAGICC-running tasks
+
+    n_workers_per_magicc_notebook
+        Number of MAGICC workers to use per MAGICC-running task
+
     Returns
     -------
     :
         Generated paths
     """
-    # A note on this. I tried with the dask runner.
+    ### A note on parallelisation
+    #
+    # I tried with the dask runner.
     # It didn't really behave how I wanted it to.
     # It seemed to not spin up and shut down workers properly
     # (sometimes the workers would get killed before the job was actually finished).
-    # So, I got rid of that and now just use the task runner.
+    #
+    # So, I got rid of the dask runner and now just use the threaded task runner.
     # This uses threads, which doesn't work for all tasks.
     # As a result, some tasks are given a process pool
     # to essentially introduce parallel processing by hand
     # while also not blocking task submission or causing crashes
-    # (and it can be a bit of trial and error to figure out
+    # (it can be a bit of trial and error to figure out
     # which tasks need their own multiprocess pool and which don't).
+    #
     # It's a bit of a hack and fiddly to get the multiprocess pool stuff working
     # without blocking in the wrong places,
     # but doing it this way seems to give more stable, predictable behaviour
     # (and now we have implementations to follow,
     # the pattern is pretty easy to repeat).
+
     if n_workers == 1:
         task_runner = ThreadPoolTaskRunner(max_workers=1)
 
@@ -645,13 +663,19 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         task_runner=task_runner,
     )(create_scenariomip_ghgs_flow)
 
-    perw = (
-        multiprocessing.Pool(processes=n_workers_esgf_ready_writing)
-        if n_workers_esgf_ready_writing > 1
+    potential_multiprocessing_pool = (
+        multiprocessing.Pool(processes=n_workers_multiprocessing) if n_workers_multiprocessing > 1 else nullcontext()
+    )
+    potential_multiprocessing_pool_magicc = (
+        multiprocessing.Pool(processes=n_workers_multiprocessing_magicc)
+        if n_workers_multiprocessing_magicc > 1
         else nullcontext()
     )
 
-    with perw as pool_esgf_ready_writing:
+    with (
+        potential_multiprocessing_pool as pool_multiprocessing,
+        potential_multiprocessing_pool_magicc as pool_multiprocessing_magicc,
+    ):
         res_flow = run_id_flow(
             ghgs=ghgs,
             emissions_file=emissions_file,
@@ -679,13 +703,14 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             emissions_complete_dir=emissions_complete_dir,
             magicc_versions_to_run=magicc_versions_to_run,
             magicc_root_folder=magicc_root_folder,
-            n_magicc_workers=n_magicc_workers,
             magicc_output_dir=magicc_output_dir,
-            esgf_ready_writing_pool=pool_esgf_ready_writing,
             esgf_ready_root_dir=esgf_ready_root_dir,
             esgf_version=esgf_version,
             esgf_institution_id=esgf_institution_id,
             input4mips_cvs_source=input4mips_cvs_source,
+            pool_multiprocessing=pool_multiprocessing,
+            pool_multiprocessing_magicc=pool_multiprocessing_magicc,
+            n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
         )
 
     return res_flow

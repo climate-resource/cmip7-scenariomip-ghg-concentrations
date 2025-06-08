@@ -5,14 +5,14 @@ Create ESGF files
 from __future__ import annotations
 
 import multiprocessing.pool
-import os
 from pathlib import Path
 
 from prefect import task
-from prefect.cache_policies import INPUTS, TASK_SOURCE
+from prefect.cache_policies import INPUTS
 from prefect.logging import get_run_logger
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
+from cmip7_scenariomip_ghg_generation.parallelisation import call_maybe_in_subprocess
 from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP, create_hash_dict, write_hash_dict_to_file
 
 
@@ -20,7 +20,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP, creat
     task_run_name="create-esgf-files_{ghg}_{cmip_scenario_name}",
     persist_result=True,
     cache_policy=(INPUTS - "pool" - "res_timeout")
-    + TASK_SOURCE
+    # + TASK_SOURCE
     + PathHashesCP(
         parameters_output=("checklist_file",),
     ),
@@ -107,8 +107,12 @@ def create_esgf_files(  # noqa: PLR0913
     :
         Written paths
     """
-    run_notebook_args = (raw_notebooks_root_dir / "1100_create-esgf-files.py",)
-    run_notebook_kwargs = dict(
+    call_maybe_in_subprocess(
+        run_notebook,
+        maybe_pool=pool,
+        notebook=raw_notebooks_root_dir / "1100_create-esgf-files.py",
+        # verbose=True,
+        # progress=True,
         parameters={
             "ghg": ghg,
             "cmip_scenario_name": cmip_scenario_name,
@@ -125,31 +129,10 @@ def create_esgf_files(  # noqa: PLR0913
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{ghg}_{cmip_scenario_name}",
+        logger=get_run_logger(),
+        kwargs_to_show_in_logging=("identity",),
+        timeout=res_timeout,
     )
-
-    if not pool:
-        run_notebook(*run_notebook_args, **run_notebook_kwargs)
-
-    else:
-        logger = get_run_logger()
-
-        logger.info(
-            f"Submitting the ESGF-file writing job for {ghg} {cmip_scenario_name} "
-            f"to the parallel process pool in {os.getpid()=}"
-        )
-
-        # run_notebook_kwargs["verbose"] = True
-        # run_notebook_kwargs["progress"] = True
-        res_async = pool.apply_async(
-            run_notebook,
-            run_notebook_args,
-            run_notebook_kwargs,
-        )
-
-        logger.info(f"Waiting for the ESGF-file writing job for {ghg} {cmip_scenario_name} in {os.getpid()=}")
-        _ = res_async.get(timeout=res_timeout)
-
-        logger.info(f"Finished the ESGF-file writing job for {ghg} {cmip_scenario_name} in {os.getpid()=}")
 
     esgf_ready_files = tuple(esgf_ready_root_dir.rglob(f"**/{ghg}/**/*.nc"))
 

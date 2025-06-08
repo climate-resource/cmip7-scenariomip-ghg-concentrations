@@ -2,7 +2,6 @@
 Generate the concentration files
 """
 
-import multiprocessing
 from pathlib import Path
 from typing import Annotated
 
@@ -102,12 +101,8 @@ this will lead to a new run being done
         "MAGICCv7.6.0a3",
         "MAGICCv7.5.3",
     ],
-    n_magicc_workers: Annotated[int, typer.Option(help="Number of MAGICC workers to use when running")] = 1,
     magicc_root_folder: Annotated[Path, typer.Option(help="Root folder for MAGICC versions")] = REPO_ROOT_DIR
     / "magicc",
-    n_workers_esgf_ready_writing: Annotated[
-        int, typer.Option(help="Number of parallel workers to use for writing ESGF-ready files")
-    ] = 1,
     esgf_version: Annotated[
         str,
         typer.Option(help="""Version to use when writing the files for ESGF"""),
@@ -128,7 +123,40 @@ to ensure that jobs that need to be processed in parallel
 are actually handled correctly.
 However, as a result, they also have different worker numbers."""
         ),
-    ] = multiprocessing.cpu_count(),
+    ] = 1,
+    n_workers_multiprocessing: Annotated[
+        int,
+        typer.Option(
+            help="""Number of multiprocessing workers to use
+
+These are only used for jobs which have been set up to support multiprocessing.
+Not that this does not apply to the MAGICC running multiprocessing,
+because that is more complicated."""
+        ),
+    ] = 1,
+    n_workers_multiprocessing_magicc: Annotated[
+        int,
+        typer.Option(
+            help="""Number of multiprocessing workers to use for the MAGICC running notebooks
+
+Each notebook then gets `--n-workers-per-magicc-notebook`,
+so the total number of workers used for running MAGICC stuff
+will be the *product* of the two.
+Be careful and don't crash your computer."""
+        ),
+    ] = 1,
+    n_workers_per_magicc_notebook: Annotated[
+        int,
+        typer.Option(
+            help="""Number of MAGICC workers to use in each MAGICC-running notebook
+
+Up to `--n-workers-multiprocessing-magicc`
+MAGICC processing notebooks are run in parallel,
+so the total number of workers used for running MAGICC stuff
+will be the *product* of the two levels of parallelisation.
+Be careful and don't crash your computer."""
+        ),
+    ] = 1,
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
@@ -268,7 +296,6 @@ However, as a result, they also have different worker numbers."""
         emissions_file=emissions_file,
         scenario_infos=scenario_infos,
         run_id=run_id,
-        n_workers=n_workers,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
@@ -293,12 +320,14 @@ However, as a result, they also have different worker numbers."""
         magicc_versions_to_run=magicc_versions_to_run,
         magicc_root_folder=magicc_root_folder,
         magicc_output_dir=magicc_output_dir,
-        n_magicc_workers=n_magicc_workers,
-        n_workers_esgf_ready_writing=n_workers_esgf_ready_writing,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,
+        n_workers=n_workers,
+        n_workers_multiprocessing=n_workers_multiprocessing,
+        n_workers_multiprocessing_magicc=n_workers_multiprocessing_magicc,
+        n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
     )
 
 

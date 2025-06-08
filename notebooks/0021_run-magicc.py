@@ -260,6 +260,7 @@ if magicc_version == "MAGICCv7.5.3" and platform.system() == "Darwin" and platfo
 # ### Run
 
 # %%
+# papermill_description=run-magicc
 res = run_scms(
     scenarios=complete_openscm_runner,
     climate_models_cfgs=climate_models_cfgs,
