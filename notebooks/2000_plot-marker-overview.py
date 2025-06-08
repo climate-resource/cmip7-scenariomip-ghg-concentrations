@@ -21,10 +21,13 @@
 # %% editable=true slideshow={"slide_type": ""}
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
 import pandas_openscm.db
+import tqdm.auto
 
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
@@ -33,7 +36,13 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 scenario_info_markers: str = (
-    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l"
+    "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
+    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;"
+    "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
+    "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
+    "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
+    "AIM 3.0;SSP2 - Low Overshoot;vlho;;"
+    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
 emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
 magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
@@ -81,8 +90,11 @@ emissions = pix.concat(
 # emissions
 
 # %%
+# magicc_output_db.load_metadata().to_frame(index=False)
+
+# %%
 magiccc_output_l = []
-for si in scenario_info_markers_p:
+for si in tqdm.auto.tqdm(scenario_info_markers_p):
     magiccc_output_l.append(
         magicc_output_db.load(
             pix.isin(
@@ -91,7 +103,7 @@ for si in scenario_info_markers_p:
                 climate_model="MAGICCv7.6.0a3",
             )
             & pix.ismatch(variable=["Surface Air Temperature Change", "Effective Radiative Forcing**"]),
-            progress=True,
+            # progress=True,
         )
     )
 
@@ -127,6 +139,137 @@ magiccc_output_pdf = add_cmip_scenario_name(magiccc_output)
 
 # %% [markdown]
 # ## Plot
+
+# %%
+palette = {
+    "vllo": "#499edb",
+    "vlho": "#4b3d89",
+    "l": "#2e9e68",
+    "ml": "#e1ad01",
+    "m": "#f7a84f",
+    "h": "#4c2525",
+    "hl": "#7f3e3e",
+}
+
+# %% [markdown]
+# ### Just temperatures
+
+# %%
+magiccc_output_pdf_q = (
+    magiccc_output_pdf.openscm.groupby_except("run_id")
+    .quantile([0.05, 0.17, 0.5, 0.83, 0.95])
+    .openscm.fix_index_name_after_groupby_quantile()
+)
+# magiccc_output_pdf_q
+
+# %%
+pdf = magiccc_output_pdf_q.loc[pix.isin(variable="Surface Air Temperature Change"), 1950:]
+quantiles_plumes = [(0.5, 0.95), ((0.05, 0.95), 0.3)]
+quantiles_plumes = [(0.5, 0.95), ((0.17, 0.83), 0.5)]
+
+fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
+
+for ax, xlim, yticks, ylim, show_legend in (
+    (axes[0], (2015, 2100), np.arange(1.0, 2.51, 0.1), (1.0, 2.5), False),
+    (axes[1], (1950, 2100), np.arange(0.5, 5.51, 0.5), None, True),
+):
+    pdf.loc[:, xlim[0] : xlim[1]].openscm.plot_plume(
+        quantiles_plumes=quantiles_plumes,
+        linewidth=3,
+        hue_var="cmip_scenario_name",
+        hue_var_label="Scenario",
+        palette=palette,
+        ax=ax,
+    )
+    ax.set_yticks(yticks)
+    ax.grid()
+    ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if not show_legend:
+        ax.get_legend().remove()
+
+# %%
+pi_period = np.arange(1850, 1900 + 1)
+assessment_period = np.arange(1995, 2014 + 1)
+assessed_gsat = 0.85
+
+tmp = magiccc_output_pdf.loc[pix.isin(variable="Surface Air Temperature Change"), :]
+
+tmp_pi = tmp.loc[:, pi_period].mean(axis="columns")
+tmp_rel_pi = tmp.subtract(tmp_pi, axis="rows")
+gsat = (
+    tmp_rel_pi.subtract(
+        tmp_rel_pi.loc[:, assessment_period]
+        .mean(axis="columns")
+        .groupby(["climate_model", "model", "scenario"])
+        .median(),
+        axis="rows",
+    )
+    + assessed_gsat
+)
+
+gsat_q = (
+    gsat.openscm.groupby_except("run_id")
+    .quantile([0.05, 0.17, 0.33, 0.5, 0.67, 0.83, 0.95])
+    .openscm.fix_index_name_after_groupby_quantile()
+)
+# gsat_q
+
+# %%
+pdf = gsat_q
+quantiles_plumes = [(0.5, 0.95), ((0.05, 0.95), 0.3)]
+quantiles_plumes = [(0.5, 0.95), ((0.17, 0.83), 0.5)]
+quantiles_plumes = [(0.5, 0.95), ((0.33, 0.67), 0.5)]
+
+# TODO: switch to mosaic
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
+
+for ax, xlim, yticks, ylim, show_legend in (
+    (axes[0][1], (1950, 2100), np.arange(0.5, 5.51, 0.5), None, True),
+    (axes[1][0], (2015, 2100), np.arange(1.0, 2.51, 0.1), (1.0, 2.5), False),
+    (axes[1][1], (2023, 2050), np.arange(1.0, 2.11, 0.1), (1.0, 2.2), False),
+):
+    pdf.loc[:, xlim[0] : xlim[1]].openscm.plot_plume(
+        quantiles_plumes=quantiles_plumes,
+        linewidth=3,
+        hue_var="cmip_scenario_name",
+        hue_var_label="Scenario",
+        palette=palette,
+        ax=ax,
+    )
+    ax.set_yticks(yticks)
+    # ax.yaxis.tick_right()
+    ax.tick_params(right=True, left=True, labelright=True, axis="y")
+    ax.grid()
+    ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if not show_legend:
+        ax.get_legend().remove()
+
+# TODO: fix legend position
+# plt.tight_layout()
+
+# %% [markdown]
+# ### Overview
+
+# %%
+# Breakdown in reverse causal chain:
+# - temperatures
+# - ERFs and closest linked emissions
+
+# %%
+# Other notebooks:
+# - comparison of MAGICC mode and concentration driven mode projections for markers
+#   - i.e. make sure that the difference isn't too large
+# - comparison of CMIP6 and CMIP7 ScenarioMIP global-mean annual-mean concentration
+#   history and projections and impact of MAGICC update on concentrations
+#   - i.e. breakdown change into scenario change and SCM change
 
 # %%
 assert False

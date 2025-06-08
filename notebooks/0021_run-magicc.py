@@ -259,7 +259,7 @@ if badly_converted:
     raise AssertionError(badly_converted)
 
 # %%
-climate_models_cfgs["MAGICC7"] = climate_models_cfgs["MAGICC7"][:10]
+# climate_models_cfgs["MAGICC7"] = climate_models_cfgs["MAGICC7"][:10]
 
 # %%
 if magicc_version == "MAGICCv7.5.3" and platform.system() == "Darwin" and platform.processor() == "arm":
