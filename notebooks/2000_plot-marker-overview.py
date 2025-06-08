@@ -27,6 +27,8 @@ import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
 import pandas_openscm.db
+import pint
+import seaborn as sns
 import tqdm.auto
 
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -71,12 +73,13 @@ magicc_output_db = pandas_openscm.db.OpenSCMDB(
     backend_index=pandas_openscm.db.INDEX_BACKENDS.get_instance(magicc_db_backend_str),
     db_dir=Path(magicc_output_db_dir),
 )
-scenario_info_markers_p
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Set up
 
 # %% editable=true slideshow={"slide_type": ""}
+pix.set_openscm_registry_as_default()
+UR = pint.get_application_registry()
 pandas_openscm.register_pandas_accessor()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -88,9 +91,6 @@ emissions = pix.concat(
 )
 
 # emissions
-
-# %%
-# magicc_output_db.load_metadata().to_frame(index=False)
 
 # %%
 magiccc_output_l = []
@@ -142,14 +142,16 @@ magiccc_output_pdf = add_cmip_scenario_name(magiccc_output)
 
 # %%
 palette = {
-    "vllo": "#499edb",
-    "vlho": "#4b3d89",
-    "l": "#2e9e68",
-    "ml": "#e1ad01",
-    "m": "#f7a84f",
-    "h": "#4c2525",
-    "hl": "#7f3e3e",
+    "vllo": "#24a4ff",
+    "vlho": "#4a0daf",
+    "l": "#00cc69",
+    "ml": "#f5ac00",
+    "m": "#ffa9dc",
+    "h": "#700000",
+    "hl": "#8f003b",
 }
+
+scenario_order = ["vllo", "vlho", "l", "ml", "m", "hl", "h"]
 
 # %% [markdown]
 # ### Just temperatures
@@ -209,7 +211,7 @@ gsat = (
         axis="rows",
     )
     + assessed_gsat
-)
+).pix.assign(variable="GSAT assessed")
 
 gsat_q = (
     gsat.openscm.groupby_except("run_id")
@@ -219,32 +221,61 @@ gsat_q = (
 # gsat_q
 
 # %%
-pdf = gsat_q
-quantiles_plumes = [(0.5, 0.95), ((0.05, 0.95), 0.3)]
-quantiles_plumes = [(0.5, 0.95), ((0.17, 0.83), 0.5)]
-quantiles_plumes = [(0.5, 0.95), ((0.33, 0.67), 0.5)]
+pdf = gsat_q.sort_index()
 
-# TODO: switch to mosaic
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
+fig, axes = plt.subplot_mosaic(
+    [
+        ["full"],
+        ["century"],
+        ["mid-century"],
+    ],
+    figsize=(10, 12),
+)
 
-for ax, xlim, yticks, ylim, show_legend in (
-    (axes[0][1], (1950, 2100), np.arange(0.5, 5.51, 0.5), None, True),
-    (axes[1][0], (2015, 2100), np.arange(1.0, 2.51, 0.1), (1.0, 2.5), False),
-    (axes[1][1], (2023, 2050), np.arange(1.0, 2.11, 0.1), (1.0, 2.2), False),
+
+def create_legend(ax, handles) -> None:
+    """Create legend for the plot"""
+    handles_labels = [h.get_label() for h in handles]
+    scenario_header_idx = handles_labels.index("Scenario")
+    variable_header_idx = handles_labels.index("Variable")
+    scenario_handles_d = {h.get_label(): h for h in handles[scenario_header_idx + 1 : variable_header_idx]}
+
+    handles_scenarios_ordered = []
+    for s in scenario_order:
+        try:
+            handles_scenarios_ordered.append(scenario_handles_d[s])
+        except KeyError:
+            continue
+
+    handles_sorted = [
+        *handles[: scenario_header_idx + 1],
+        *handles_scenarios_ordered,
+        *handles[variable_header_idx:],
+    ]
+
+    ax.legend(handles=handles_sorted, loc="center left", bbox_to_anchor=(1.05, 0.5))
+
+
+for ax, xlim, yticks, ylim, show_legend, qps in (
+    (axes["full"], (1950, 2100), np.arange(0.5, 5.01, 0.5), None, True, [(0.5, 0.95), ((0.05, 0.95), 0.2)]),
+    (axes["century"], (2015, 2100), np.arange(1.0, 2.51, 0.1), (1.0, 2.5), True, [(0.5, 0.95), ((0.33, 0.67), 0.5)]),
+    (axes["mid-century"], (2023, 2050), np.arange(1.3, 2.01, 0.1), (1.3, 2.0), True, [(0.5, 0.95)]),
 ):
     pdf.loc[:, xlim[0] : xlim[1]].openscm.plot_plume(
-        quantiles_plumes=quantiles_plumes,
+        quantiles_plumes=qps,
         linewidth=3,
         hue_var="cmip_scenario_name",
         hue_var_label="Scenario",
         palette=palette,
         ax=ax,
+        create_legend=create_legend,
     )
     ax.set_yticks(yticks)
     # ax.yaxis.tick_right()
     ax.tick_params(right=True, left=True, labelright=True, axis="y")
-    ax.grid()
+    # ax.grid()
     ax.set_xlim(xlim)
+    ax.set_xlabel("")
 
     if ylim is not None:
         ax.set_ylim(ylim)
@@ -252,24 +283,180 @@ for ax, xlim, yticks, ylim, show_legend in (
     if not show_legend:
         ax.get_legend().remove()
 
+# axes["mid-century"].tick_params(right=True, left=False, labelleft=False, labelright=True, axis="y")
+for level in [1.5, 2.0]:
+    axes["full"].axhline(level, linestyle="--", color="gray", zorder=1.1)
+
+for level in [1.5, 1.7, 1.8, 2.0]:
+    axes["century"].axhline(level, linestyle="--", color="gray", zorder=1.1)
+
+axes["mid-century"].grid()
 # TODO: fix legend position
 # plt.tight_layout()
 
+# %%
+pdf.index.droplevel(pdf.index.names.difference(["model", "scenario", "cmip_scenario_name"])).drop_duplicates().to_frame(
+    index=False
+).set_index("cmip_scenario_name").loc[scenario_order]
+
 # %% [markdown]
 # ### Overview
+#
+# Plot below gives a rough breakdown in the reverse of the causal chain.
 
 # %%
-# Breakdown in reverse causal chain:
-# - temperatures
-# - ERFs and closest linked emissions
+# TODO: calculate extras in upstream notebook
+emissions_pdf_incl_extras = pix.concat(
+    [
+        emissions_pdf,
+        emissions_pdf.loc[pix.ismatch(variable="Emissions|CO2|*")]
+        .openscm.groupby_except("variable")
+        .sum()
+        .pix.assign(variable="Emissions|CO2"),
+    ]
+)
+
+gwp = "AR6GWP100"
+with UR.context(gwp):
+    ghg_eq = emissions_pdf.loc[
+        ~pix.ismatch(variable=[f"Emissions|{s}" for s in ["SOx", "NOx", "BC", "OC", "CO", "NMVOC", "NH3"]])
+    ].pix.convert_unit("GtCO2/yr")
+
+emissions_pdf_incl_extras = pix.concat(
+    [
+        emissions_pdf_incl_extras,
+        ghg_eq.openscm.groupby_except("variable").sum().pix.assign(variable=f"Emissions|GHG {gwp}"),
+    ]
+).pix.convert_unit({"Mt CO2/yr": "Gt CO2/yr"})
+
+# emissions_pdf_incl_extras
 
 # %%
-# Other notebooks:
+xlim = (2015, 2100)
+quantiles_plumes = [
+    (0.5, 0.95),
+    # ((0.05, 0.95), 0.2),
+]
+
+mosaic = [
+    ["GSAT assessed", "Effective Radiative Forcing"],
+    ["Effective Radiative Forcing|Greenhouse Gases", "Effective Radiative Forcing|Aerosols"],
+    ["Emissions|GHG AR6GWP100", "."],
+    ["Effective Radiative Forcing|CO2", "Emissions|CO2"],
+    ["Emissions|CO2|Fossil", "Emissions|CO2|Biosphere"],
+    ["Effective Radiative Forcing|CH4", "Emissions|CH4"],
+    ["Effective Radiative Forcing|Ozone", "Emissions|NMVOC"],
+    ["Emissions|CO", "."],
+    ["Effective Radiative Forcing|N2O", "Emissions|N2O"],
+    ["Effective Radiative Forcing|Aerosols|Direct Effect", "Effective Radiative Forcing|Aerosols|Indirect Effect"],
+    ["Emissions|NOx", "Emissions|NH3"],
+    ["Effective Radiative Forcing|Aerosols|Direct Effect|BC", "Emissions|BC"],
+    ["Effective Radiative Forcing|Aerosols|Direct Effect|OC", "Emissions|OC"],
+    ["Effective Radiative Forcing|Aerosols|Direct Effect|SOx", "Emissions|SOx"],
+    ["Effective Radiative Forcing|Montreal Protocol Halogen Gases", "."],
+]
+fig, axes = plt.subplot_mosaic(
+    mosaic,
+    figsize=(12, 4 * len(mosaic)),
+)
+
+legend_variables = [v[1] for v in mosaic]
+zero_line_variables = [v for vv in mosaic for v in vv if "CO2" in v or "GHG" in v]
+
+
+def create_legend(ax, handles) -> None:
+    """Create legend for the plot"""
+    handles_labels = [h.get_label() for h in handles]
+    scenario_header_idx = handles_labels.index("Scenario")
+    variable_header_idx = handles_labels.index("Variable")
+    scenario_handles_d = {h.get_label(): h for h in handles[scenario_header_idx + 1 : variable_header_idx]}
+
+    handles_scenarios_ordered = []
+    for s in scenario_order:
+        try:
+            handles_scenarios_ordered.append(scenario_handles_d[s])
+        except KeyError:
+            continue
+
+    handles_sorted = [
+        *handles[: scenario_header_idx + 1],
+        *handles_scenarios_ordered,
+        *handles[variable_header_idx:],
+    ]
+
+    ax.legend(handles=handles_sorted, loc="center left", bbox_to_anchor=(1.05, 0.5))
+
+
+for variable, ax in tqdm.auto.tqdm(axes.items()):
+    variable_locator = pix.isin(variable=variable)
+
+    if variable in gsat_q.pix.unique("variable"):
+        pdf = gsat_q.loc[variable_locator, xlim[0] : xlim[1]]
+        pdf.openscm.plot_plume(
+            quantiles_plumes=quantiles_plumes,
+            linewidth=3,
+            hue_var="cmip_scenario_name",
+            hue_var_label="Scenario",
+            palette=palette,
+            ax=ax,
+            create_legend=create_legend,
+        )
+
+    elif variable in magiccc_output_pdf_q.pix.unique("variable"):
+        pdf = magiccc_output_pdf_q.loc[variable_locator, xlim[0] : xlim[1]]
+        pdf.openscm.plot_plume(
+            quantiles_plumes=quantiles_plumes,
+            linewidth=3,
+            hue_var="cmip_scenario_name",
+            hue_var_label="Scenario",
+            palette=palette,
+            ax=ax,
+            create_legend=create_legend,
+        )
+
+    elif variable in emissions_pdf_incl_extras.pix.unique("variable"):
+        vdf = emissions_pdf_incl_extras.loc[variable_locator, :]
+        pdf = vdf.loc[:, xlim[0] : xlim[1]]
+        sns.lineplot(
+            data=pdf.openscm.to_long_data(),
+            x="time",
+            y="value",
+            hue="cmip_scenario_name",
+            hue_order=scenario_order,
+            palette=palette,
+            linewidth=3,
+            ax=ax,
+        )
+
+        ax.axhline(vdf.loc[:, 1750].iloc[0], linestyle=":", color="black")
+
+    ax.set_title(variable)
+    if variable in legend_variables:
+        sns.move_legend(ax, loc="center left", bbox_to_anchor=(1.05, 0.5))
+
+    else:
+        ax.legend().remove()
+
+    if variable in zero_line_variables:
+        ax.axhline(0.0, linestyle="--", color="gray", zorder=1.1)
+
+    elif variable.startswith("Emissions"):
+        ax.set_ylim(ymin=0.0)
+
+    ax.set_xlabel("")
+
+    unit_l = pdf.pix.unique("unit")
+    if len(unit_l) != 1:
+        raise AssertionError(unit_l)
+
+    unit = unit_l[0]
+    ax.set_ylabel(unit)
+    ax.set_xlim(xlim)
+
+# %%
+# Other notebooks to write:
 # - comparison of MAGICC mode and concentration driven mode projections for markers
 #   - i.e. make sure that the difference isn't too large
 # - comparison of CMIP6 and CMIP7 ScenarioMIP global-mean annual-mean concentration
 #   history and projections and impact of MAGICC update on concentrations
 #   - i.e. breakdown change into scenario change and SCM change
-
-# %%
-assert False

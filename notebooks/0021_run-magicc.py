@@ -107,8 +107,8 @@ os.environ["MAGICC_EXECUTABLE_7"] = str(magicc_exe_p)
 MAGICC_START_SCENARIO_YEAR = 2015
 
 # %%
-complete_for_magicc = complete.loc[:, MAGICC_START_SCENARIO_YEAR:]
-# complete_for_magicc
+complete_openscm_runner_for_magicc = complete_openscm_runner.loc[:, MAGICC_START_SCENARIO_YEAR:]
+# complete_openscm_runner_for_magicc
 
 # %%
 output_variables = (
@@ -269,9 +269,12 @@ if magicc_version == "MAGICCv7.5.3" and platform.system() == "Darwin" and platfo
 # ### Run
 
 # %%
+complete_openscm_runner_for_magicc.head(3)
+
+# %%
 # papermill_description=run-magicc
 res = run_scms(
-    scenarios=complete_openscm_runner,
+    scenarios=complete_openscm_runner_for_magicc,
     climate_models_cfgs=climate_models_cfgs,
     output_variables=output_variables,
     scenario_group_levels=["model", "scenario"],
