@@ -178,8 +178,8 @@ if np.round(mass_one_ppm_co2.to("GtC / ppm").m, 2) != cdiac_expected:
 # %%
 one_box_projections_l = []
 for ghg, lifetime in HALOGEN_TAUS.items():
-    if ghg not in ["ccl4", "hcfc141b"]:
-        continue
+    # if ghg not in ["ccl4", "hcfc141b"]:
+    #     continue
 
     molecular_mass = HALOGEN_MOLECULAR_MASSES[ghg]
 
@@ -192,9 +192,11 @@ for ghg, lifetime in HALOGEN_TAUS.items():
 
     historical_concs_ghg = historical_concs.loc[pix.isin(ghg=ghg)]
     if historical_concs_ghg.empty:
-        raise AssertionError
+        print(f"Need to get historical {ghg}")
+        continue
+        # raise AssertionError
 
-    emissions = emissions_pdf.loc[emissions_pdf.index.get_level_values("variable").str.lower().str.contains(ghg)]
+    emissions = emissions_pdf.loc[emissions_pdf.index.get_level_values("variable").str.lower().str.endswith(ghg)]
     emissions_m = emissions.pix.convert_unit(f"t{ghg_units}/yr")
 
     years = np.arange(historical_concs_ghg.columns.max(), emissions_m.columns.max())
@@ -234,15 +236,11 @@ palette = {
 scenario_order = ["vllo", "vlho", "l", "ml", "m", "hl", "h"]
 
 # %%
-one_box_projection.pix.assign(source="one-box").reset_index(
-    one_box_projection.index.names.difference(["cmip_scenario_name", "source", "unit"]), drop=True
-)
-
-# %%
-for variable, one_box_projection in one_box_projections.groupby("variable"):
+for variable, one_box_projection in tqdm.auto.tqdm(one_box_projections.groupby("variable")):
     ghg = variable.split("Atmospheric Concentrations|")[1]
+    emissions = emissions_pdf.loc[emissions_pdf.index.get_level_values("variable").str.lower().str.endswith(ghg)]
 
-    fig, axes = plt.subplots(nrows=2, figsize=(6, 8))
+    fig, axes = plt.subplots(nrows=3, figsize=(6, 10))
 
     sns.lineplot(
         data=emissions.openscm.to_long_data(),
@@ -257,8 +255,12 @@ for variable, one_box_projection in one_box_projections.groupby("variable"):
     historical_concs_tmp = historical_concs.loc[pix.isin(ghg=ghg)].pix.assign(
         source="historical-ghgs", cmip_scenario_name="historical"
     )
+    if historical_concs_tmp.empty:
+        print(f"Need historical concs for {ghg}")
+        continue
+
     magiccc_output_pdf_tmp = (
-        magiccc_output_pdf.loc[magiccc_output_pdf.index.get_level_values("variable").str.lower().str.contains(ghg)]
+        magiccc_output_pdf.loc[magiccc_output_pdf.index.get_level_values("variable").str.lower().str.endswith(ghg)]
         .openscm.groupby_except("run_id")
         .median()
         .pix.assign(source="MAGICC")
@@ -276,15 +278,23 @@ for variable, one_box_projection in one_box_projections.groupby("variable"):
                 magiccc_output_pdf_tmp.index.names.difference(["cmip_scenario_name", "source", "unit"]), drop=True
             ),
         ]
-    )
+    ).sort_index(axis="columns")
 
-    sns.lineplot(
-        data=pdf_conc.openscm.to_long_data(),
-        x="time",
-        y="value",
-        hue="cmip_scenario_name",
-        style="source",
-        ax=axes[1],
-    )
-    sns.move_legend(axes[1], loc="center left", bbox_to_anchor=(1.05, 0.5))
+    for ax, xlim in ((axes[1], (1750, 2100)), (axes[2], (2000, 2050))):
+        sns.lineplot(
+            data=pdf_conc.loc[:, xlim[0] : xlim[1]].openscm.to_long_data(),
+            x="time",
+            y="value",
+            hue="cmip_scenario_name",
+            style="source",
+            ax=ax,
+        )
+        ax.set_xlim(xlim)
+        sns.move_legend(ax, loc="center left", bbox_to_anchor=(1.05, 0.5))
+
+    plt.suptitle(ghg)
+    plt.show()
+
     # break
+
+# %%
