@@ -2,6 +2,7 @@
 Main flow
 """
 
+import itertools
 import multiprocessing.pool
 from contextlib import nullcontext
 from functools import partial
@@ -12,11 +13,13 @@ from prefect.futures import PrefectFuture, wait
 from prefect.states import Completed
 from prefect.task_runners import ThreadPoolTaskRunner
 
+from cmip7_scenariomip_ghg_generation.constants import EQUIVALENT_SPECIES_COMPONENTS
 from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_wmo_data,
     compile_inverse_emissions,
     create_esgf_files,
+    create_esgf_files_equivalence_species,
     create_gradient_aware_harmonisation_annual_mean_file,
     create_one_box_annual_mean_file,
     download_cmip7_historical_ghg_concentrations,
@@ -321,6 +324,19 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             )
             raise AssertionError(msg)
 
+    if equivalence_ghgs:
+        for eg in equivalence_ghgs:
+            equivalence_ghg_components = EQUIVALENT_SPECIES_COMPONENTS[eg]
+            missing_gases = set(equivalence_ghg_components) - set(ghgs)
+            if missing_gases:
+                cli_args = " ".join(f"--ghg {ghg}" for ghg in missing_gases)
+                msg = (
+                    f"To generate {eg}, you need multiple components. "
+                    f"Missing: {missing_gases}. "
+                    f"CLI args: {cli_args}"
+                )
+                raise AssertionError(msg)
+
     ### Get the markers
     scenario_info_markers = tuple(v for v in scenario_infos if v.cmip_scenario_name is not None)
 
@@ -602,12 +618,30 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
             tmp.extend(esgf_ready_futures.values())
 
+        # TODO: remove this and use magicc_based_futures
         for v in tmp:
             v.wait()
 
     if equivalence_ghgs:
-        print(f"Not implemented yet for {equivalence_ghgs}")
-        # raise NotImplementedError(equivalence_ghgs)
+        equivalence_ghgs_esgf_ready_futures = {
+            (equivalent_species, si.cmip_scenario_name): submit_output_aware(
+                # TODO: fix up flow so we don't need to duplicate the file-writing logic so much
+                create_esgf_files_equivalence_species,
+                equivalent_species=equivalent_species,
+                components=EQUIVALENT_SPECIES_COMPONENTS[equivalent_species],
+                cmip_scenario_name=si.cmip_scenario_name,
+                input4mips_cvs_source=input4mips_cvs_source,
+                esgf_ready_root_dir=esgf_ready_root_dir,
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+                checklist_file=esgf_ready_root_dir / f"{equivalent_species}_{si.cmip_scenario_name}.chk",
+                pool=pool_multiprocessing,
+            )
+            for equivalent_species, si in itertools.product(equivalence_ghgs, scenario_info_markers)
+        }
+        # TODO: remove this and use equivalence_futures and done at the end
+        for v in equivalence_ghgs_esgf_ready_futures.values():
+            v.wait()
 
     # TODO: turn this back on
     # if magicc_based_ghgs:

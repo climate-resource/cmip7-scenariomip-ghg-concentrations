@@ -8,7 +8,10 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.annual_mean_to_monthly impor
 from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import (
     download_cmip7_historical_ghg_concentrations,
 )
-from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import create_esgf_files
+from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import (
+    create_esgf_files,
+    create_esgf_files_equivalence_species,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extract_specific_variable import (
     extract_specific_variable_from_collection,
@@ -54,6 +57,7 @@ __all__ = [
     "clean_wmo_data",
     "compile_inverse_emissions",
     "create_esgf_files",
+    "create_esgf_files_equivalence_species",
     "create_gradient_aware_harmonisation_annual_mean_file",
     "create_one_box_annual_mean_file",
     "create_single_concentration_projection_annual_mean_file",

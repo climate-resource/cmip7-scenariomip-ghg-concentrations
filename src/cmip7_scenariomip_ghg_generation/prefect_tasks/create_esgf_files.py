@@ -142,3 +142,97 @@ def create_esgf_files(  # noqa: PLR0913
     )
 
     return esgf_ready_files
+
+
+@task(
+    task_run_name="create-esgf-files-equivalence-species_{equivalent_species}_{cmip_scenario_name}",
+    persist_result=True,
+    cache_policy=(INPUTS - "pool" - "res_timeout")
+    # + TASK_SOURCE
+    + PathHashesCP(
+        parameters_output=("checklist_file",),
+    ),
+)
+def create_esgf_files_equivalence_species(  # noqa: PLR0913
+    equivalent_species: str,
+    components: tuple[str, ...],
+    cmip_scenario_name: str,
+    input4mips_cvs_source: str,
+    esgf_ready_root_dir: Path,
+    raw_notebooks_root_dir: Path,
+    executed_notebooks_dir: Path,
+    checklist_file: Path,
+    pool: multiprocessing.pool.Pool | None,
+    res_timeout: int = 10 * 60,
+) -> tuple[Path, ...]:
+    """
+    Create ESGF files
+
+    Parameters
+    ----------
+    equivalent_species
+        Equivalent species for which we want to create the ESGF-ready files
+
+    components
+        Greenhouse gases which contribute to `equivalent_species`
+
+    cmip_scenario_name
+        CMIP scenario name
+
+    input4mips_cvs_source
+        Source from which to get the input4MIPs CVs
+
+    esgf_ready_root_dir
+        Root directory for writing ESGF-ready files
+
+    raw_notebooks_root_dir
+        Directory in which the raw notebooks live
+
+    executed_notebooks_dir
+        Directory in which executed notebooks should be written
+
+    checklist_file
+        File in which to write a checklist of written files
+
+    pool
+        Parallel processing pool to use for running
+
+        If `None`, no parallel processing is used
+
+    res_timeout
+        Time to wait for parallel results before timing out
+
+    Returns
+    -------
+    :
+        Written paths
+    """
+    call_maybe_in_subprocess(
+        run_notebook,
+        maybe_pool=pool,
+        notebook=raw_notebooks_root_dir / "1101_create-esgf-files-equivalent-species.py",
+        # verbose=True,
+        # progress=True,
+        parameters={
+            "equivalent_species": equivalent_species,
+            "components": ";;".join(components),
+            "cmip_scenario_name": cmip_scenario_name,
+            "input4mips_cvs_source": input4mips_cvs_source,
+            "esgf_ready_root_dir": str(esgf_ready_root_dir),
+        },
+        run_notebooks_dir=executed_notebooks_dir,
+        identity=f"{equivalent_species}_{cmip_scenario_name}",
+        logger=get_run_logger(),
+        kwargs_to_show_in_logging=("identity",),
+        timeout=res_timeout,
+    )
+
+    esgf_ready_files = tuple(esgf_ready_root_dir.rglob(f"**/{equivalent_species}/**/*.nc"))
+
+    write_hash_dict_to_file(
+        hash_dict=create_hash_dict(esgf_ready_files),
+        checklist_file=checklist_file,
+        relative_to=esgf_ready_root_dir,
+    )
+
+    return esgf_ready_files
