@@ -56,12 +56,11 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "ccl4"
 cmip_scenario_name: str = "vllo"
+internal_processing_scenario_name: str = "all"
 esgf_version: str = "0.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
 doi: str = "dev-test-doi"
-model: str = "REMIND-MAGPIE"
-scenario: str = "Very Low Overshoot"
 global_mean_monthly_file: str = (
     "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_ccl4_monthly-mean.nc"
 )
@@ -98,18 +97,23 @@ pandas_openscm.register_pandas_accessor()
 lda = partial(xr.load_dataarray, use_cftime=True)
 lds = partial(xr.load_dataset, use_cftime=True)
 
+
+def ssoi(inv):  # noqa: D103
+    return inv.sel(scenario=internal_processing_scenario_name).drop_vars("scenario")
+
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Global-mean monthly
 
 # %%
-global_mean_monthly_no_seasonality = lda(global_mean_monthly_file_p).pint.quantify(unit_registry=ur)
+global_mean_monthly_no_seasonality = ssoi(lda(global_mean_monthly_file_p).pint.quantify(unit_registry=ur))
 # global_mean_monthly_no_seasonality
 
 # %% [markdown]
 # ### Seasonality
 
 # %%
-seasonality_month_year = lda(seasonality_file_p).pint.quantify(unit_registry=ur)
+seasonality_month_year = ssoi(lda(seasonality_file_p).pint.quantify(unit_registry=ur))
 seasonality = convert_year_month_to_time(seasonality_month_year)
 # seasonality
 
@@ -117,7 +121,7 @@ seasonality = convert_year_month_to_time(seasonality_month_year)
 # ### Latitudinal gradient info
 
 # %%
-lat_grad_info = lds(lat_gradient_file_p).pint.quantify(unit_registry=ur)
+lat_grad_info = ssoi(lds(lat_gradient_file_p).pint.quantify(unit_registry=ur))
 # lat_grad_info
 
 # %% [markdown]

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -27,6 +27,7 @@ import openscm_units
 import pandas as pd
 import pandas_indexing as pix  # noqa: F401
 import pandas_openscm
+import pint
 import pint_xarray
 import xarray as xr
 import yaml
@@ -34,6 +35,9 @@ import yaml
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import (
     LaiKaplanInterpolator,
     interpolate_annual_mean_to_monthly,
+)
+from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan import (
+    get_wall_control_points_y_cubic,
 )
 from cmip7_scenariomip_ghg_generation.xarray_helpers import (
     convert_year_to_time,
@@ -44,7 +48,7 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "ccl4"
-annual_mean_emissions_file: str = "../output-bundles/dev-test/data/processed/inverse-emissions/single-concentration-projection_ccl4_inverse-emissions.feather"  # noqa: E501
+annual_mean_emissions_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_ccl4_inverse-emissions.feather"  # noqa: E501
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
@@ -165,9 +169,9 @@ if len(delta_E_unit_l) != 1:
 delta_E_unit = delta_E_unit_l[0]
 
 delta_E_xr = xr.DataArray(
-    delta_E.values.squeeze(),
-    dims=["year"],
-    coords=dict(year=delta_E.columns),
+    delta_E.values,
+    dims=["scenario", "year"],
+    coords=dict(scenario=delta_E.index.get_level_values("scenario"), year=delta_E.columns),
 ).pint.quantify(delta_E_unit, unit_registry=ur)
 # dE_dt_xr
 
@@ -186,16 +190,59 @@ pc.pint.to("dimensionless").plot(ax=axes[1])
 # %% [markdown]
 # ## Interpolate to monthly
 
+# %% [markdown]
+# We have to ensure that the scenarios stay harmonised until the last month of the historical data.
+# Therefore, we use the same wall control point value for all scenarios.
+# A a simple choice, we use the average wall control point across all scenarios.
+
 # %%
-pc_extended_monthly = interpolate_annual_mean_to_monthly(
-    values=pc_extended.data.m.squeeze(),
-    values_units=pc_extended.data.u,
-    years=pc_extended["year"].values,
-    algorithm=LaiKaplanInterpolator(
-        progress_bar=True,
-    ),
-    unit_registry=openscm_units.unit_registry,
+fixed_control_point = (
+    pc_extended.sel(year=[last_hist_year, last_hist_year + 1]).mean("year").mean("scenario").data.squeeze()
 )
+# fixed_control_point
+
+
+# %%
+def get_wall_control_points(
+    intervals_x: pint.UnitRegistry.Quantity,
+    intervals_y: pint.UnitRegistry.Quantity,
+    control_points_wall_x: pint.UnitRegistry.Quantity,
+) -> pint.UnitRegistry.Quantity:
+    """
+    Get wall control points including setting our fixed control point
+    """
+    # Start off with standard implementation
+    control_points_wall_y = get_wall_control_points_y_cubic(
+        intervals_x=intervals_x,
+        intervals_y=intervals_y,
+        control_points_wall_x=control_points_wall_x,
+    )
+
+    # Also fix the control point between overlap year month 12 and overlap year + 1 month 1
+    fixed_control_point_idxr = np.where(
+        control_points_wall_x == openscm_units.unit_registry.Quantity(last_hist_year + 1, "yr")
+    )
+    control_points_wall_y[fixed_control_point_idxr] = fixed_control_point
+
+    return control_points_wall_y
+
+
+# %%
+pc_extended_monthly_l = []
+
+for scenario, sda in pc_extended.groupby("scenario"):
+    scenario_monthly = interpolate_annual_mean_to_monthly(
+        values=pc_extended.data.m.squeeze(),
+        values_units=pc_extended.data.u,
+        years=pc_extended["year"].values,
+        algorithm=LaiKaplanInterpolator(
+            progress_bar=True,
+        ),
+        unit_registry=openscm_units.unit_registry,
+    ).assign_coords(scenario=scenario)
+    pc_extended_monthly_l.append(scenario_monthly)
+
+pc_extended_monthly = xr.concat(pc_extended_monthly_l, dim="scenario")
 pc_extended_monthly.name = "principal-components-monthly"
 pc_extended_monthly.attrs["description"] = "principal component values on a monthly timestep"
 pc_extended_monthly
@@ -208,9 +255,9 @@ for years, ax in (
     (np.arange(last_hist_year + 1, last_hist_year + 15), axes[1]),
 ):
     pc_extended_monthly.sel(time=pc_extended_monthly["time"].dt.year.isin(years)).pint.to("dimensionless").plot(
-        ax=ax, alpha=0.6
+        ax=ax, alpha=0.6, hue="scenario"
     )
-    convert_year_to_time(pc_extended.sel(year=years)).pint.to("dimensionless").plot.scatter(ax=ax)
+    convert_year_to_time(pc_extended.sel(year=years)).pint.to("dimensionless").plot.scatter(ax=ax, hue="scenario")
 
 plt.tight_layout()
 

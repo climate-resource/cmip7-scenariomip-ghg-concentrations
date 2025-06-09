@@ -29,6 +29,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     make_complete_scenario,
     plot_marker_overview,
     run_magicc,
+    scale_seasonality_based_on_annual_mean,
     split_input_emissions_into_individual_files,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -516,7 +517,51 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 raw_notebooks_root_dir=raw_notebooks_root_dir,
                 executed_notebooks_dir=executed_notebooks_dir,
             )
+
+            if ghg in ["co2"]:
+                # Scale seasonality based on NPP
+                # (will require redoing to the regression)
+                print(f"skipping {ghg}")
+
+            else:
+                seasonality_all_time_file_future = submit_output_aware(
+                    scale_seasonality_based_on_annual_mean,
+                    ghg=ghg,
+                    annual_mean_file=global_mean_yearly_file_future,
+                    historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                    historical_data_seasonality_lat_gradient_info_root=(
+                        cmip7_historical_seasonality_lat_gradient_info_extracted
+                    ),
+                    out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
+                    raw_notebooks_root_dir=raw_notebooks_root_dir,
+                    executed_notebooks_dir=executed_notebooks_dir,
+                )
+
+            # if ghg in ["co2", "ch4", "n2o"]:
+            #     # Scale latitudinal gradient using
+            #     # fossil emissions for co2 and ch4,
+            #     # total emissions for n2o.
+            #     # Only first PC changes.
+            #     # Second PC is assumed constant in future.
+            #     print(f"skipping {ghg}")
+            #
+            # else:
+            #     # Scale latitudinal gradient using total emissions
+            #     seasonality_all_time_file_future = submit_output_aware(
+            #         scale_seasonality_based_on_annual_mean,
+            #         ghg=ghg,
+            #         annual_mean_file=global_mean_yearly_file_future,
+            #         historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+            #         historical_data_seasonality_lat_gradient_info_root=(
+            #             cmip7_historical_seasonality_lat_gradient_info_extracted
+            #         ),
+            #         out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
+            #         raw_notebooks_root_dir=raw_notebooks_root_dir,
+            #         executed_notebooks_dir=executed_notebooks_dir,
+            #     )
+
             tmp.append(global_mean_monthly_file_future)
+            tmp.append(seasonality_all_time_file_future)
 
         for v in tmp:
             v.wait()
@@ -532,26 +577,28 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         #     breakpoint()
 
     if equivalence_ghgs:
-        raise NotImplementedError(equivalence_ghgs)
+        print(f"Not implemented yet for {equivalence_ghgs}")
+        # raise NotImplementedError(equivalence_ghgs)
 
     # TODO: put this behind some if statement
-    plotting_futures_l = []
-    plotting_futures_l.append(
-        plot_marker_overview.submit(
-            scenario_info_markers=scenario_info_markers,
-            emissions_complete_dir=emissions_complete_dir,
-            magicc_output_db_dir=magicc_output_db_dir,
-            magicc_db_backend_str=magicc_db_backend_str,
-            dependency_complete_files=tuple(
-                v for k, v in magicc_complete_files_d.items() if k[0].cmip_scenario_name is not None
-            ),
-            complete_file=plot_complete_dir / "plot-marker-overview.complete",
-            raw_notebooks_root_dir=raw_notebooks_root_dir,
-            executed_notebooks_dir=executed_notebooks_dir,
+    if magicc_based_ghgs:
+        plotting_futures_l = []
+        plotting_futures_l.append(
+            plot_marker_overview.submit(
+                scenario_info_markers=scenario_info_markers,
+                emissions_complete_dir=emissions_complete_dir,
+                magicc_output_db_dir=magicc_output_db_dir,
+                magicc_db_backend_str=magicc_db_backend_str,
+                dependency_complete_files=tuple(
+                    v for k, v in magicc_complete_files_d.items() if k[0].cmip_scenario_name is not None
+                ),
+                complete_file=plot_complete_dir / "plot-marker-overview.complete",
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+            )
         )
-    )
-    for pt in plotting_futures_l:
-        pt.wait()
+        for pt in plotting_futures_l:
+            pt.wait()
 
     # Ensure all paths finish
     done, not_done = wait(

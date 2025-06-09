@@ -27,13 +27,12 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP, creat
 )
 def create_esgf_files(  # noqa: PLR0913
     ghg: str,
+    internal_processing_scenario_name: str,
     cmip_scenario_name: str,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
     doi: str,
-    model: str,
-    scenario: str,
     global_mean_monthly_file: Path,
     seasonality_file: Path,
     lat_gradient_file: Path,
@@ -52,6 +51,13 @@ def create_esgf_files(  # noqa: PLR0913
     ghg
         GHG for which to create the annual-mean
 
+    internal_processing_scenario_name
+        The name of the scenario to use from the internal processing
+
+        This can be the same as `cmip_scenario_name`,
+        but if the same projections are used for all CMIP scenarios,
+        then it is usually simply `"all"`.
+
     cmip_scenario_name
         CMIP scenario name
 
@@ -66,12 +72,6 @@ def create_esgf_files(  # noqa: PLR0913
 
     doi
         DOI to include in the files
-
-    model
-        Model that created the scenario
-
-    scenario
-        Name of the scenario as created by the model
 
     global_mean_monthly_file
         File in which the global-mean, monthly data is saved
@@ -116,12 +116,11 @@ def create_esgf_files(  # noqa: PLR0913
         parameters={
             "ghg": ghg,
             "cmip_scenario_name": cmip_scenario_name,
+            "internal_processing_scenario_name": internal_processing_scenario_name,
             "esgf_version": esgf_version,
             "esgf_institution_id": esgf_institution_id,
             "input4mips_cvs_source": input4mips_cvs_source,
             "doi": doi,
-            "model": model,
-            "scenario": scenario,
             "global_mean_monthly_file": str(global_mean_monthly_file),
             "seasonality_file": str(seasonality_file),
             "lat_gradient_file": str(lat_gradient_file),

@@ -188,10 +188,10 @@ stitched_units = stitched_units_l[0]
 fixed_control_point = openscm_units.unit_registry.Quantity(
     stitched.loc[:, overlap_year : overlap_year + 1].mean(axis="columns").mean(), stitched_units
 )
+# fixed_control_point
+
 
 # %%
-
-
 def get_wall_control_points(
     intervals_x: pint.UnitRegistry.Quantity,
     intervals_y: pint.UnitRegistry.Quantity,

@@ -122,7 +122,7 @@ cmip7_seasonality = cmip7_seasonality_ds.to_dataarray().isel(variable=0).drop_va
 
 # %%
 annual_mean_first_year = annual_mean.columns.min()
-annual_mean_first_year_value = annual_mean[annual_mean_first_year].iloc[0]
+annual_mean_first_year_value = annual_mean[annual_mean_first_year]
 annual_mean_first_year_value
 
 # %%
@@ -130,7 +130,7 @@ np.testing.assert_allclose(
     cmip7_seasonality_all_years.sel(year=annual_mean_first_year).data.m,
     # Product of seasonality and annual-mean
     # should give the seasonality that was actually used.
-    cmip7_seasonality.data.m * annual_mean_first_year_value,
+    cmip7_seasonality.data.m * annual_mean_first_year_value.values,
     atol=1e-5,
     rtol=1e-3,
 )
@@ -143,7 +143,9 @@ if len(annual_mean_unit_l) != 1:
 annual_mean_unit = annual_mean_unit_l[0]
 
 annual_mean_xr = xr.DataArray(
-    annual_mean.values.squeeze(), dims=["year"], coords=dict(year=annual_mean.columns)
+    annual_mean.values,
+    dims=["scenario", "year"],
+    coords=dict(scenario=annual_mean.index.get_level_values("scenario"), year=annual_mean.columns),
 ).pint.quantify(annual_mean_unit, unit_registry=openscm_units.unit_registry)
 
 # annual_mean_xr
@@ -152,17 +154,18 @@ annual_mean_xr = xr.DataArray(
 seasonality = cmip7_seasonality * annual_mean_xr
 # seasonality
 
-# %% editable=true slideshow={"slide_type": ""}
-fig, axes = plt.subplots(ncols=2, sharey=True)
-
-for years, ax in (
-    (range(2025, 2030 + 1), axes[0]),
-    (range(2445, 2450 + 1), axes[1]),
+# %%
+for years in (
+    range(2025, 2030 + 1),
+    range(2445, 2450 + 1),
 ):
-    convert_year_month_to_time(seasonality.sel(year=years, lat=[-82.5, -22.5, 7.5, 82.5])).plot(
-        ax=ax, hue="lat", alpha=0.5
+    fg = convert_year_month_to_time(seasonality.sel(year=years, lat=[-82.5, -22.5, 7.5, 82.5])).plot(
+        col="scenario", col_wrap=min(3, seasonality["scenario"].size), hue="lat", alpha=0.5
     )
-    ax.grid()
+    for ax in fg.axs.flatten():
+        ax.grid()
+
+    plt.show()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Prepare output
@@ -174,7 +177,7 @@ out_years = np.setdiff1d(annual_mean.columns, cmip7_historical_gm_monthly["time"
 # %% editable=true slideshow={"slide_type": ""}
 out = seasonality.sel(year=out_years).pint.dequantify()
 out.name = f"{ghg}_seasonality_all_months"
-# out
+out
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Save
