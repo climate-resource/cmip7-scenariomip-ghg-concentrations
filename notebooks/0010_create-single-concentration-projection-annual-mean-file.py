@@ -33,10 +33,12 @@ import xarray as xr
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "cfc11"
-cleaned_data_path: str = "../output-bundles/dev-test/data/interim/wmo-2022/extracted-mixing-ratios.feather"
+ghg: str = "ccl4"
+cleaned_data_path: str = "../output-bundles/dev-test/data/interim/wmo-2022/cleaned-mixing-ratios.feather"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
-out_file: str = "../output-bundles/dev-test/data/interim/annual-means/wmo-based_cfc11_annual-mean.feather"
+out_file: str = (
+    "../output-bundles/dev-test/data/interim/annual-means/single-concentration-projection_ccl4_annual-mean.feather"
+)
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -141,7 +143,7 @@ if ghg != "halon1202":
         rtol=2e-3,
     )
 
-harmonised = source_mid_year
+harmonised = source_mid_year.pix.assign(scenario="all")
 
 # %% editable=true slideshow={"slide_type": ""}
 fig, ax = plt.subplots()

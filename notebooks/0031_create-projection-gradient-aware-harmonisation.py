@@ -343,5 +343,11 @@ plt.show()
 # ## Save
 
 # %%
+out = harmonised.pix.assign(ghg=ghg, scenario=harmonised.index.get_level_values("cmip_scenario_name")).pix.project(
+    ["unit", "scenario", "ghg"]
+)
+out
+
+# %%
 out_file_p.parent.mkdir(exist_ok=True, parents=True)
-harmonised.reset_index("cmip_scenario_name", drop=True).to_feather(out_file_p)
+out.to_feather(out_file_p)

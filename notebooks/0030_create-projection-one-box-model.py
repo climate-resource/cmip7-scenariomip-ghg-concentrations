@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# # Create annual-means for gases that can be compared to a one-box model
+# # Create annual-means for gases that can projected with a one-box model
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Imports
@@ -43,7 +43,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "cfc12"
+ghg: str = "sf6"
 scenario_info_markers: str = (
     "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
     "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;"
@@ -57,7 +57,7 @@ emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
-out_file: str = "../output-bundles/dev-test/data/interim/annual-means/one-box_cfc12_annual-mean.feather"
+out_file: str = "../output-bundles/dev-test/data/interim/annual-means/one-box_sf6_annual-mean.feather"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -346,5 +346,11 @@ historical_concs_ghg[2022]
 # ## Save
 
 # %%
+out = one_box_projection.pix.assign(
+    ghg=ghg, scenario=one_box_projection.index.get_level_values("cmip_scenario_name")
+).pix.project(["unit", "scenario", "ghg"])
+# out
+
+# %%
 out_file_p.parent.mkdir(exist_ok=True, parents=True)
-one_box_projection.reset_index("cmip_scenario_name", drop=True).to_feather(out_file_p)
+out.to_feather(out_file_p)
