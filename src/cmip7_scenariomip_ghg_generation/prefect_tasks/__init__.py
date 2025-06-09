@@ -10,6 +10,9 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import create_esgf_files
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
+from cmip7_scenariomip_ghg_generation.prefect_tasks.extract_specific_variable import (
+    extract_specific_variable_from_collection,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extraction import extract_tar, extract_zip
 from cmip7_scenariomip_ghg_generation.prefect_tasks.gradient_aware_harmonisation_projection import (
     create_gradient_aware_harmonisation_annual_mean_file,
@@ -57,6 +60,7 @@ __all__ = [
     "download_cmip7_historical_ghg_concentrations",
     "download_file",
     "extend_western_et_al_2024",
+    "extract_specific_variable_from_collection",
     "extract_tar",
     "extract_zip",
     "get_doi",

@@ -261,6 +261,7 @@ Be careful and don't crash your computer."""
     emissions_complete_dir = data_interim_root / "complete-emissions"
     magicc_output_db_dir = data_interim_root / "magicc-output" / "db"
     magicc_db_backend_str = "feather"
+    single_variable_dir = data_interim_root / "single-variable-files"
     plot_complete_dir = data_interim_root / "plot-complete"
 
     ### Final outputs
@@ -358,6 +359,7 @@ Be careful and don't crash your computer."""
         magicc_output_db_dir=magicc_output_db_dir,
         magicc_db_backend_str=magicc_db_backend_str,
         magicc_based_ghgs_projection_method=magicc_based_ghgs_projection_method,
+        single_variable_dir=single_variable_dir,
         plot_complete_dir=plot_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,

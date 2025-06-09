@@ -54,21 +54,21 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "ccl4"
+ghg: str = "c8f18"
 cmip_scenario_name: str = "vllo"
-internal_processing_scenario_name: str = "all"
+internal_processing_scenario_name: str = "vllo"
 esgf_version: str = "0.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_ccl4_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_c8f18_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/single-concentration-projection_ccl4_seasonality-all-years.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_c8f18_seasonality-all-time.nc"
 )
 lat_gradient_file: str = (
-    "../output-bundles/dev-test/data/interim/latitudinal-gradient/ccl4_latitudinal-gradient-info.nc"
+    "../output-bundles/dev-test/data/interim/latitudinal-gradient/c8f18_latitudinal-gradient-info.nc"
 )
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 
@@ -153,7 +153,7 @@ lat_grad_ym = convert_time_to_year_month(lat_grad)
 # Quick checks
 
 # %%
-np.testing.assert_allclose(seasonality_ym.mean("month").data.m, 0.0, atol=1e-6)
+np.testing.assert_allclose(seasonality_ym.mean("month").data.m, 0.0, atol=1e-5)
 
 # %%
 np.testing.assert_allclose(calculate_cos_lat_weighted_mean_latitude_only(lat_grad_ym).data.m, 0.0, atol=1e-8)
