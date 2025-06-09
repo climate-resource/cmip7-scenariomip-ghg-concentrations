@@ -18,7 +18,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 @task_standard_path_cache(
     task_run_name="split-input-emissions-into-scenarios_{emissions_file.name}",
     parameters_output=("out_dir",),
-    refresh_cache=True,
+    # refresh_cache=True,
 )
 def split_input_emissions_into_individual_files(
     emissions_file: Path, scenario_infos: tuple[ScenarioInfo, ...], out_dir: Path

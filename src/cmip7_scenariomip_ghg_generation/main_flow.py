@@ -16,6 +16,8 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_wmo_data,
     compile_inverse_emissions,
+    create_gradient_aware_harmonisation_annual_mean_file,
+    create_one_box_annual_mean_file,
     download_cmip7_historical_ghg_concentrations,
     download_file,
     extend_western_et_al_2024,
@@ -23,6 +25,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     get_doi,
     get_magicc_version_info,
     get_western_et_al_2024_clean,
+    interpolate_annual_mean_to_monthly,
     make_complete_scenario,
     plot_marker_overview,
     run_magicc,
@@ -63,6 +66,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     magicc_root_folder: Path,
     magicc_output_db_dir: Path,
     magicc_db_backend_str: str,
+    magicc_based_ghgs_projection_method: dict[str, str],
     plot_complete_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
@@ -160,6 +164,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     magicc_db_backend_str
         Name of the back-end to use for the MAGICC output database
+
+    magicc_based_ghgs_projection_method
+        Projection method to use for MAGICC-based GHGs
+
+        The point here is that for some gases,
+        we simply use a one-box model
+        instead of MAGICC because it's simpler and easier to harmonise.
 
     plot_complete_dir
         Directory in which to write complete files for plotting
@@ -441,6 +452,75 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             for ghg in magicc_based_ghgs
         }
 
+        magicc_v760a3_complete_files_markers = tuple(
+            res
+            for (si, magicc_version), res in magicc_complete_files_d.items()
+            if si.cmip_scenario_name is not None and magicc_version == "MAGICCv7.6.0a3"
+        )
+        tmp = []
+        for ghg in magicc_based_ghgs:
+            global_mean_yearly_common_kwargs = dict(
+                ghg=ghg,
+                scenario_info_markers=scenario_info_markers,
+                historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                magicc_output_db_dir=magicc_output_db_dir,
+                magicc_db_backend_str=magicc_db_backend_str,
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+                pool=pool_multiprocessing,
+                wait_for=[downloaded_cmip7_historical_ghgs_futures[ghg], *magicc_v760a3_complete_files_markers],
+            )
+            if ghg in ["co2", "ch4", "n2o"]:
+                if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
+                    global_mean_yearly_file_future = submit_output_aware(
+                        create_gradient_aware_harmonisation_annual_mean_file,
+                        out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
+                        **global_mean_yearly_common_kwargs,
+                    )
+
+                else:
+                    raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
+
+            else:
+                # Submit in all cases, even if not used,
+                # so we have a record of how much the choice between MAGICC
+                # and one-box matters.
+                one_box_annual_mean_file = submit_output_aware(
+                    create_one_box_annual_mean_file,
+                    emissions_complete_dir=emissions_complete_dir,
+                    out_file=annual_mean_dir / f"one-box_{ghg}_annual-mean.feather",
+                    **global_mean_yearly_common_kwargs,
+                )
+                if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
+                    global_mean_yearly_file_future = submit_output_aware(
+                        create_gradient_aware_harmonisation_annual_mean_file,
+                        out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
+                        **global_mean_yearly_common_kwargs,
+                    )
+
+                elif magicc_based_ghgs_projection_method[ghg] == "one-box":
+                    global_mean_yearly_file_future = one_box_annual_mean_file
+
+                else:
+                    raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
+
+            global_mean_monthly_file_future = submit_output_aware(
+                interpolate_annual_mean_to_monthly,
+                ghg=ghg,
+                annual_mean_file=global_mean_yearly_file_future,
+                historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                historical_data_seasonality_lat_gradient_info_root=(
+                    cmip7_historical_seasonality_lat_gradient_info_extracted
+                ),
+                out_file=monthly_mean_dir / f"modelling-based-projection_{ghg}_monthly-mean.nc",
+                raw_notebooks_root_dir=raw_notebooks_root_dir,
+                executed_notebooks_dir=executed_notebooks_dir,
+            )
+            tmp.append(global_mean_monthly_file_future)
+
+        for v in tmp:
+            v.wait()
+
         # For each GHG and marker scenario:
         # - harmonise
         # - get monthly
@@ -530,6 +610,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     magicc_root_folder: Path,
     magicc_output_db_dir: Path,
     magicc_db_backend_str: str,
+    magicc_based_ghgs_projection_method: dict[str, str],
     esgf_ready_root_dir: Path,
     esgf_version: str,
     esgf_institution_id: str,
@@ -633,6 +714,13 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     magicc_db_backend_str
         Name of the back-end to use for the MAGICC output database
+
+    magicc_based_ghgs_projection_method
+        Projection method to use for MAGICC-based GHGs
+
+        The point here is that for some gases,
+        we simply use a one-box model
+        instead of MAGICC because it's simpler and easier to harmonise.
 
     plot_complete_dir
         Directory in which to write complete files for plotting
@@ -741,6 +829,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             magicc_root_folder=magicc_root_folder,
             magicc_output_db_dir=magicc_output_db_dir,
             magicc_db_backend_str=magicc_db_backend_str,
+            magicc_based_ghgs_projection_method=magicc_based_ghgs_projection_method,
             plot_complete_dir=plot_complete_dir,
             esgf_ready_root_dir=esgf_ready_root_dir,
             esgf_version=esgf_version,

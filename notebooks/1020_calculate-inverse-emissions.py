@@ -31,7 +31,7 @@ import pint_xarray
 import xarray as xr
 from attrs import evolve
 
-from cmip7_scenariomip_ghg_generation.constants import HALOGEN_MOLECULAR_MASSES, HALOGEN_TAUS
+from cmip7_scenariomip_ghg_generation.constants import GHG_LIFETIMES, GHG_MOLECULAR_MASSES
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import mean_preserving_interpolation
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.annual_to_monthly import DEFAULT_ALGORITHM
 
@@ -148,7 +148,7 @@ dC_dt = dC_approx / dt_approx
 # dC_dt
 
 # %%
-tau = HALOGEN_TAUS[ghg]
+tau = GHG_LIFETIMES[ghg]
 # tau
 
 # %%
@@ -223,7 +223,7 @@ if np.round(mass_one_ppm_co2.to("GtC / ppm").m, 2) != cdiac_expected:
     raise AssertionError
 
 # %%
-molecular_mass = HALOGEN_MOLECULAR_MASSES[ghg]
+molecular_mass = GHG_MOLECULAR_MASSES[ghg]
 alpha = 1 / (atm_moles * fraction_factor * molecular_mass)
 emms_unit = str(molecular_mass.u).replace(" / mole", "").replace("g", "t") + " / yr"
 emms_yearly = (alpha_emms_yearly / alpha).to(emms_unit)

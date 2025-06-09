@@ -8,7 +8,7 @@ import openscm_units
 
 Q = openscm_units.unit_registry.Quantity
 
-HALOGEN_TAUS = {
+GHG_LIFETIMES = {
     "cf4": Q(50000.0, "yr"),
     "c2f6": Q(10000.0, "yr"),
     "c3f8": Q(2600.0, "yr"),
@@ -21,7 +21,7 @@ HALOGEN_TAUS = {
     "ch3br": Q(0.8, "yr"),
     "ch3cl": Q(0.9, "yr"),
     "chcl3": Q(178.0 / 365.0, "yr"),
-    "hfc23": Q(228, "yr"),
+    "hfc23": Q(228.0, "yr"),
     "hfc32": Q(5.27, "yr"),
     "hfc125": Q(30.7, "yr"),
     "hfc134a": Q(13.5, "yr"),
@@ -37,6 +37,7 @@ HALOGEN_TAUS = {
     "so2f2": Q(36.0, "yr"),
     "cc4f8": Q(3200.0, "yr"),
     "n2o": Q(109.0, "yr"),
+    "halon1201": Q(4.85, "yr"),
     "halon1202": Q(2.5, "yr"),
     "halon1211": Q(16, "yr"),
     "halon1301": Q(72, "yr"),
@@ -53,13 +54,13 @@ HALOGEN_TAUS = {
     "ccl4": Q(30, "yr"),
 }
 """
-Lifetimes for halogen gases
+Lifetimes for GHGs that have an approximately defined lifetime
 
 Table A-5 of WMO 2022
 https://csl.noaa.gov/assessments/ozone/2022/downloads/Annex_2022OzoneAssessment.pdf
 """
 
-HALOGEN_MOLECULAR_MASSES = {
+GHG_MOLECULAR_MASSES = {
     # Gas: molecular mass
     "cf4": Q(12.01 + 4 * 19.0, "gCF4 / mole"),
     "c2f6": Q(2 * 12.01 + 6 * 19.0, "gC2F6 / mole"),
@@ -95,6 +96,7 @@ HALOGEN_MOLECULAR_MASSES = {
     "so2f2": Q(32.07 + 2 * 16.0 + 2 * 19.0, "gSO2F2 / mole"),
     "cc4f8": Q(4 * 12.01 + 8 * 19.0, "gcC4F8 / mole"),
     "n2o": Q(2 * 14.01 + 16.0, "gN2O / mole"),
+    "halon1201": Q(12.01 + 1.0 + 79.9 + 2 * 19.0, "gHalon1201 / mole"),  # CHBrF2
     "halon1202": Q(12.01 + 2 * 79.9 + 2 * 19.0, "gHalon1202 / mole"),  # CBr2F2
     "halon1211": Q(12.01 + 79.9 + 35.45 + 2 * 19.0, "gHalon1211 / mole"),  # CBrClF2
     "halon1301": Q(12.01 + 79.9 + 3 * 19.0, "gHalon1301 / mole"),  # CBrF3
@@ -111,7 +113,68 @@ HALOGEN_MOLECULAR_MASSES = {
     "ccl4": Q(12.01 + 4 * 35.45, "gCCl4 / mole"),
 }
 """
-Halogen molecular masses
+Molecular masses
+"""
+
+GHG_RADIATIVE_EFFICIENCIES = {
+    # Chlorofluorocarbons
+    "cfc11": Q(0.291, "W / m^2 / ppb"),
+    "cfc11eq": Q(0.291, "W / m^2 / ppb"),
+    "cfc12": Q(0.358, "W / m^2 / ppb"),
+    "cfc12eq": Q(0.358, "W / m^2 / ppb"),
+    "cfc113": Q(0.301, "W / m^2 / ppb"),
+    "cfc114": Q(0.314, "W / m^2 / ppb"),
+    "cfc115": Q(0.246, "W / m^2 / ppb"),
+    # Hydrofluorochlorocarbons
+    "hcfc22": Q(0.214, "W / m^2 / ppb"),
+    "hcfc141b": Q(0.161, "W / m^2 / ppb"),
+    "hcfc142b": Q(0.193, "W / m^2 / ppb"),
+    # Hydrofluorocarbons
+    "hfc23": Q(0.191, "W / m^2 / ppb"),
+    "hfc32": Q(0.111, "W / m^2 / ppb"),
+    "hfc125": Q(0.234, "W / m^2 / ppb"),
+    "hfc134a": Q(0.167, "W / m^2 / ppb"),
+    "hfc134aeq": Q(0.167, "W / m^2 / ppb"),
+    "hfc143a": Q(0.168, "W / m^2 / ppb"),
+    "hfc152a": Q(0.102, "W / m^2 / ppb"),
+    "hfc227ea": Q(0.273, "W / m^2 / ppb"),
+    "hfc236fa": Q(0.251, "W / m^2 / ppb"),
+    "hfc245fa": Q(0.245, "W / m^2 / ppb"),
+    "hfc365mfc": Q(0.228, "W / m^2 / ppb"),
+    "hfc4310mee": Q(0.357, "W / m^2 / ppb"),
+    # Chlorocarbons and Hydrochlorocarbons
+    "ch3ccl3": Q(0.065, "W / m^2 / ppb"),
+    "ccl4": Q(0.166, "W / m^2 / ppb"),
+    "ch3cl": Q(0.005, "W / m^2 / ppb"),
+    "ch2cl2": Q(0.029, "W / m^2 / ppb"),
+    "chcl3": Q(0.074, "W / m^2 / ppb"),
+    # Bromocarbons, Hydrobromocarbons and Halons
+    "ch3br": Q(0.004, "W / m^2 / ppb"),
+    "halon1201": Q(0.152, "W / m^2 / ppb"),
+    "halon1211": Q(0.300, "W / m^2 / ppb"),
+    "halon1301": Q(0.299, "W / m^2 / ppb"),
+    "halon2402": Q(0.312, "W / m^2 / ppb"),
+    # Fully Fluorinated Species
+    "nf3": Q(0.204, "W / m^2 / ppb"),
+    "sf6": Q(0.567, "W / m^2 / ppb"),
+    "so2f2": Q(0.211, "W / m^2 / ppb"),
+    "cf4": Q(0.099, "W / m^2 / ppb"),
+    "c2f6": Q(0.261, "W / m^2 / ppb"),
+    "c3f8": Q(0.270, "W / m^2 / ppb"),
+    "cc4f8": Q(0.314, "W / m^2 / ppb"),
+    "c4f10": Q(0.369, "W / m^2 / ppb"),
+    "c5f12": Q(0.408, "W / m^2 / ppb"),
+    "c6f14": Q(0.449, "W / m^2 / ppb"),
+    "c7f16": Q(0.503, "W / m^2 / ppb"),
+    "c8f18": Q(0.558, "W / m^2 / ppb"),
+}
+"""
+Radiative efficiencies for GHGs
+
+Linear hence approximate, but fine.
+
+From Table 7.SM.6 of
+https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter07_SM.pdf
 """
 
 VARIABLE_TO_STANDARD_NAME_RENAMING = {

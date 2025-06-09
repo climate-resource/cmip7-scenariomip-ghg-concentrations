@@ -11,12 +11,18 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import
 from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import create_esgf_files
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extraction import extract_tar, extract_zip
+from cmip7_scenariomip_ghg_generation.prefect_tasks.gradient_aware_harmonisation_projection import (
+    create_gradient_aware_harmonisation_annual_mean_file,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.inverse_emissions import (
     calculate_inverse_emissions,
     compile_inverse_emissions,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.magicc_handling import get_magicc_version_info
 from cmip7_scenariomip_ghg_generation.prefect_tasks.make_complete_scenarios import make_complete_scenario
+from cmip7_scenariomip_ghg_generation.prefect_tasks.one_box_projection import (
+    create_one_box_annual_mean_file,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.plotting import plot_marker_overview
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
     scale_lat_gradient_based_on_emissions,
@@ -45,6 +51,8 @@ __all__ = [
     "clean_wmo_data",
     "compile_inverse_emissions",
     "create_esgf_files",
+    "create_gradient_aware_harmonisation_annual_mean_file",
+    "create_one_box_annual_mean_file",
     "create_single_concentration_projection_annual_mean_file",
     "download_cmip7_historical_ghg_concentrations",
     "download_file",

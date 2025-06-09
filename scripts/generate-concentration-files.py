@@ -42,6 +42,7 @@ ALL_GHGS = [
     "ch4",
     "chcl3",
     "co2",
+    "halon1202",
     "halon1211",
     "halon1301",
     "halon2402",
@@ -181,6 +182,39 @@ Be careful and don't crash your computer."""
         ("GCAM 7.1 scenarioMIP", "SSP3 - High Emissions", "h"),
         ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
     )
+
+    # Choices here are quite arbitrary
+    # and based on expert judgement.
+    magicc_based_ghgs_projection_method = {
+        "co2": "gradient-aware-harmonisation",
+        "ch4": "gradient-aware-harmonisation",
+        "n2o": "gradient-aware-harmonisation",
+        "c2f6": "one-box",
+        "c3f8": "one-box",
+        "c4f10": "one-box",
+        "c5f12": "one-box",
+        "c6f14": "one-box",
+        "c7f16": "one-box",
+        "c8f18": "one-box",
+        "cc4f8": "one-box",
+        "cf4": "one-box",
+        "ch2cl2": "one-box",
+        "chcl3": "one-box",
+        "hfc125": "one-box",
+        "hfc134a": "gradient-aware-harmonisation",
+        "hfc143a": "one-box",
+        "hfc152a": "gradient-aware-harmonisation",
+        "hfc227ea": "one-box",
+        "hfc23": "gradient-aware-harmonisation",
+        "hfc236fa": "one-box",
+        "hfc245fa": "gradient-aware-harmonisation",
+        "hfc32": "gradient-aware-harmonisation",
+        "hfc365mfc": "gradient-aware-harmonisation",
+        "hfc4310mee": "one-box",
+        "nf3": "one-box",
+        "sf6": "one-box",
+        "so2f2": "one-box",
+    }
 
     emissions_batch_id = emissions_file.name.split("_harmonised")[0]
 
@@ -323,6 +357,7 @@ Be careful and don't crash your computer."""
         magicc_root_folder=magicc_root_folder,
         magicc_output_db_dir=magicc_output_db_dir,
         magicc_db_backend_str=magicc_db_backend_str,
+        magicc_based_ghgs_projection_method=magicc_based_ghgs_projection_method,
         plot_complete_dir=plot_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
         esgf_version=esgf_version,

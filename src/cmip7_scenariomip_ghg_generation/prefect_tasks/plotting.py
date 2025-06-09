@@ -62,14 +62,6 @@ def plot_marker_overview(  # noqa: PLR0913
     scenario_info_markers_str = ";;".join(
         ";".join((si.model, si.scenario, si.cmip_scenario_name)) for si in scenario_info_markers
     )
-    print(
-        {
-            "scenario_info_markers": scenario_info_markers_str,
-            "emissions_complete_dir": str(emissions_complete_dir),
-            "magicc_output_db_dir": str(magicc_output_db_dir),
-            "magicc_db_backend_str": magicc_db_backend_str,
-        }
-    )
     run_notebook(
         raw_notebooks_root_dir / "2000_plot-marker-overview.py",
         parameters={

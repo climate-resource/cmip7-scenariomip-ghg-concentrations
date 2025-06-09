@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import multiprocessing
 import os
+import threading
 from collections.abc import Callable, Collection
 from typing import ParamSpec, TypeVar
 
@@ -72,14 +73,14 @@ def call_maybe_in_subprocess(
         return func(*args, **kwargs)
 
     if logger:
-        logger.info(f"Submitting {logging_info_text} to the parallel pool in {os.getpid()=}")
+        logger.info(f"Submitting {logging_info_text} to the parallel pool in {os.getpid()=} {threading.get_ident()=}")
     res_async = maybe_pool.apply_async(func, args, kwargs)
 
     if logger:
-        logger.info(f"Waiting for the results of {logging_info_text} in {os.getpid()=}")
+        logger.info(f"Waiting for the results of {logging_info_text} in {os.getpid()=} {threading.get_ident()=}")
     res = res_async.get(timeout=timeout)
 
     if logger:
-        logger.info(f"Received the results of {logging_info_text} in {os.getpid()=}")
+        logger.info(f"Received the results of {logging_info_text} in {os.getpid()=} {threading.get_ident()=}")
 
     return res

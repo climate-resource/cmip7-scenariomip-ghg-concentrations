@@ -9,6 +9,7 @@ description = "Generation of GHG concentration inputs (i.e. forcings) for CMIP7'
 readme = "README.md"
 dependencies = [
     "bokeh>=3.7.3,<4",
+    "continuous-timeseries>=0.4.3,<0.5",
     "input4mips-validation>=0.19",
     "ipywidgets>=8.1.7",
     "jupyterlab>=4.0.0",

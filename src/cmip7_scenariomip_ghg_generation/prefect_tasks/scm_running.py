@@ -14,9 +14,7 @@ from prefect.logging import get_run_logger
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
 from cmip7_scenariomip_ghg_generation.parallelisation import call_maybe_in_subprocess
-from cmip7_scenariomip_ghg_generation.prefect_helpers import (
-    PathHashesCP,
-)
+from cmip7_scenariomip_ghg_generation.prefect_helpers import PathHashesCP
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 
