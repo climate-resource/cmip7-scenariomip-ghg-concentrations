@@ -13,12 +13,13 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# # Scale latitudinal gradient based on emissions
+# # Scale latitudinal gradient EOFs
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Imports
 
 # %% editable=true slideshow={"slide_type": ""}
+from functools import partial
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -31,7 +32,6 @@ import pint
 import pint_xarray
 import seaborn as sns
 import xarray as xr
-import yaml
 
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import (
     LaiKaplanInterpolator,
@@ -45,13 +45,13 @@ from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan i
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "c8f18"
-annual_mean_emissions_file: str = "../output-bundles/dev-test/data/interim/single-variable-files/c8f18_total.feather"
+ghg: str = "n2o"
+annual_mean_emissions_file: str = "../output-bundles/dev-test/data/interim/single-variable-files/n2o_total.feather"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
-out_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/c8f18_latitudinal-gradient-info.nc"
+out_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/n2o_latitudinal-gradient-info.nc"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -79,10 +79,7 @@ pandas_openscm.register_pandas_accessor()
 
 # %% editable=true slideshow={"slide_type": ""}
 annual_mean_emissions = pd.read_feather(annual_mean_emissions_file_p)
-if "hfc4310" in ghg:
-    ghg_search_for = "hfc4310"
-else:
-    ghg_search_for = ghg
+ghg_search_for = ghg
 
 annual_mean_emissions_emms_units = annual_mean_emissions.loc[
     annual_mean_emissions.index.get_level_values("unit").str.lower().str.contains(ghg_search_for)
@@ -90,8 +87,22 @@ annual_mean_emissions_emms_units = annual_mean_emissions.loc[
 if len(annual_mean_emissions_emms_units.pix.unique("unit")) != 1:
     raise AssertionError
 
+annual_mean_emissions_emms_u = annual_mean_emissions_emms_units.pix.unique("unit")[0]
+
 annual_mean_emissions_emms_units
 
+
+# %%
+harmonisation_year = annual_mean_emissions_emms_units.loc[
+    :, np.isclose(annual_mean_emissions_emms_units.std(), 0.0)
+].columns.max()
+harmonisation_year_exp = 2022
+if harmonisation_year != harmonisation_year_exp:
+    raise AssertionError(harmonisation_year)
+
+# Take any scenario, doesn't matter as all the same pre-harmonisation
+annual_mean_emissions_emms_units_historical = annual_mean_emissions_emms_units.loc[:, :harmonisation_year].iloc[:1, :]
+annual_mean_emissions_emms_units_historical
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### CMIP7 historical GHG concentrations
@@ -120,57 +131,62 @@ cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
 # ### CMIP7 historical latitudinal gradient
 
 # %%
-if ghg != "c8f18":
-    cmip7_lat_gradient_pieces_ds = load_file_from_glob(
-        f"{ghg}_allyears-lat-gradient-eofs-pcs.nc", historical_data_seasonality_lat_gradient_info_root_p
-    ).pint.quantify(unit_registry=ur)
-
-else:
-    # Assume constant latitudinal gradient
-    # because the historical regression doesn't make sense
-    # and we didn't save the data out.
-    pass
+cmip7_lat_gradient_pieces_ds = load_file_from_glob(
+    f"{ghg}_allyears-lat-gradient-eofs-pcs.nc", historical_data_seasonality_lat_gradient_info_root_p
+).pint.quantify(unit_registry=ur)
+# cmip7_lat_gradient_pieces_ds
 
 # %% [markdown]
-# ### CMIP7 historical latitudinal gradient regression info
+# ## Regress emissions against PC0
 
 # %%
-if ghg != "c8f18":
-    file_l = list(
-        historical_data_seasonality_lat_gradient_info_root_p.rglob(f"{ghg}_pc0-total-emissions-regression.yaml")
-    )
-    if len(file_l) != 1:
-        raise AssertionError(file_l)
-    with open(file_l[0]) as fh:
-        reg_info = yaml.safe_load(fh)
-else:
-    reg_info = {"m": (0.0, "yr / (kt C8F18)")}
-# reg_info
+pc0 = cmip7_lat_gradient_pieces_ds["principal-components"].sel(eof=0)
+start_non_constant_pc0 = np.where(pc0.diff("year") != 0.0)[0][0]
+# start_non_constant_pc0
+
+# %%
+regression_years = np.intersect1d(
+    pc0.sel(year=pc0["year"] >= start_non_constant_pc0)["year"].values,
+    annual_mean_emissions_emms_units_historical.columns,
+)
+# regression_years
+
+# %%
+pc0_to_regress = pc0.sel(year=regression_years)
+# pc0_to_regress
+
+# %%
+annual_mean_emissions_emms_units_historical_to_regress_q = Q(
+    annual_mean_emissions_emms_units_historical.loc[:, regression_years].values.squeeze(), annual_mean_emissions_emms_u
+)
+# annual_mean_emissions_emms_units_historical_to_regress_q
+
+# %%
+x = annual_mean_emissions_emms_units_historical_to_regress_q
+A = np.vstack([x.m, np.ones(x.size)]).T
+y = pc0_to_regress.data
+
+res = np.linalg.lstsq(A, y.m, rcond=None)
+m, c = res[0]
+m = Q(m, (y / x).units)
+c = Q(c, y.units)
+
+fig, ax = plt.subplots()
+ax.scatter(x.m, y.m, label="raw data")
+ax.plot(x.m, (m * x + c).m, color="tab:orange", label="regression")
+ax.set_ylabel("PC0")
+ax.set_xlabel("emissions")
+ax.legend()
 
 # %% [markdown]
-# ## Scale latitudinal gradient pc
+# ## Scale latitudinal gradient PCs
+
+# %% [markdown]
+# ### PC0
 
 # %%
 last_hist_year = cmip7_historical_gm_monthly["time"].dt.year.values[-1]
 # last_hist_year
-
-# %%
-if ghg != "c8f18":
-    pc = cmip7_lat_gradient_pieces_ds["principal-components"]
-else:
-    years = cmip7_historical_gm_monthly.groupby("time.year").mean()["year"]
-    pc = xr.DataArray(
-        Q(np.ones((years.size, 1)), "dimensionless"),
-        dims=("year", "eof"),
-        coords=dict(year=years, eof=[0]),
-        name="principal-components",
-    ).transpose("eof", "year")
-
-if pc["eof"].shape != (1,):
-    msg = "Expect only one EOF"
-    raise AssertionError(msg)
-
-# pc
 
 # %%
 delta_E = (
@@ -195,18 +211,50 @@ delta_E_xr = xr.DataArray(
 # delta_E_xr
 
 # %%
-delta_pc = delta_E_xr * Q(reg_info["m"][0], reg_info["m"][1])
+delta_pc = delta_E_xr * m
 # delta_pc
 
 # %%
-pc_extended = delta_pc + pc.sel(year=last_hist_year).data
+pc0_extended = delta_pc + pc0.sel(year=last_hist_year)
 
 fig, axes = plt.subplots(nrows=2, figsize=(8, 8))
 annual_mean_emissions_emms_units.T.plot(ax=axes[0])
-pc_extended.pint.to("dimensionless").plot(ax=axes[1], hue="scenario")
-pc.pint.to("dimensionless").plot(ax=axes[1])
+pc0_extended.pint.to("dimensionless").plot(ax=axes[1], hue="scenario")
+pc0.pint.to("dimensionless").plot(ax=axes[1])
 for ax in axes:
     sns.move_legend(ax, loc="center left", bbox_to_anchor=(1.05, 0.5))
+
+# pc0_extended
+
+# %% [markdown]
+# ### PC1
+
+# %%
+pc1 = cmip7_lat_gradient_pieces_ds["principal-components"].sel(eof=1)
+pc1_extended = pc1.pint.dequantify().interp(
+    year=annual_mean_emissions.columns, kwargs={"fill_value": pc1.sel(year=last_hist_year).data.m}
+)
+
+pc1_extended_all_scenarios_l = []
+for scenario in pc0_extended["scenario"]:
+    pc1_extended_all_scenarios_l.append(pc1_extended.assign_coords(scenario=scenario.data))
+
+pc1_extended_all_scenarios = xr.concat(pc1_extended_all_scenarios_l, dim="scenario")
+pc1_extended_all_scenarios
+
+pc1_extended_all_scenarios.plot(hue="scenario")
+
+pc1_extended_all_scenarios = pc1_extended_all_scenarios.sel(
+    year=annual_mean_emissions.loc[:, last_hist_year:].columns
+).pint.quantify(unit_registry=ur)
+
+# pc1_extended_all_scenarios
+
+# %%
+exp_n_eofs = 2
+if cmip7_lat_gradient_pieces_ds["eof"].size != exp_n_eofs:
+    raise AssertionError
+
 
 # %% [markdown]
 # ## Interpolate to monthly
@@ -216,18 +264,13 @@ for ax in axes:
 # Therefore, we use the same wall control point value for all scenarios.
 # As a simple choice, we use the average wall control point across all scenarios.
 
-# %%
-fixed_control_point = (
-    pc_extended.sel(year=[last_hist_year, last_hist_year + 1]).mean("year").mean("scenario").data.squeeze()
-)
-# fixed_control_point
-
 
 # %%
 def get_wall_control_points(
     intervals_x: pint.UnitRegistry.Quantity,
     intervals_y: pint.UnitRegistry.Quantity,
     control_points_wall_x: pint.UnitRegistry.Quantity,
+    fixed_control_point: pint.UnitRegistry.Quantity,
 ) -> pint.UnitRegistry.Quantity:
     """
     Get wall control points including setting our fixed control point
@@ -249,38 +292,52 @@ def get_wall_control_points(
 
 
 # %%
-pc_extended_monthly_l = []
+pcs_extended_monthly_l = []
+for pc_extended in [
+    pc0_extended,
+    pc1_extended_all_scenarios,
+]:
+    tmp_l = []
+    fixed_control_point = (
+        pc_extended.sel(year=[last_hist_year, last_hist_year + 1]).mean("year").mean("scenario").data.squeeze()
+    )
 
-for scenario, sda in pc_extended.groupby("scenario"):
-    scenario_monthly = interpolate_annual_mean_to_monthly(
-        values=sda.data.m.squeeze(),
-        values_units=pc_extended.data.u,
-        years=pc_extended["year"].values,
-        algorithm=LaiKaplanInterpolator(
-            progress_bar=True,
-            get_wall_control_points_y_from_interval_ys=get_wall_control_points,
-        ),
-        unit_registry=openscm_units.unit_registry,
-    ).assign_coords(scenario=scenario)
-    pc_extended_monthly_l.append(scenario_monthly)
+    for scenario, sda in pc_extended.groupby("scenario"):
+        scenario_monthly = interpolate_annual_mean_to_monthly(
+            values=sda.data.m.squeeze(),
+            values_units=pc_extended.data.u,
+            years=pc_extended["year"].values,
+            algorithm=LaiKaplanInterpolator(
+                progress_bar=True,
+                get_wall_control_points_y_from_interval_ys=partial(
+                    get_wall_control_points, fixed_control_point=fixed_control_point
+                ),
+            ),
+            unit_registry=openscm_units.unit_registry,
+        ).assign_coords(scenario=scenario, eof=pc_extended["eof"].values)
+        tmp_l.append(scenario_monthly)
 
-pc_extended_monthly = xr.concat(pc_extended_monthly_l, dim="scenario")
-pc_extended_monthly.name = "principal-components-monthly"
-pc_extended_monthly.attrs["description"] = "principal component values on a monthly timestep"
-pc_extended_monthly
+    pcs_extended_monthly_l.append(xr.concat(tmp_l, dim="scenario"))
+
+pcs_extended_monthly = xr.concat(pcs_extended_monthly_l, dim="eof")
+pcs_extended_monthly.name = "principal-components-monthly"
+pcs_extended_monthly.attrs["description"] = "principal component values on a monthly timestep"
+pcs_extended_monthly
 
 # %%
 months_per_year = 12
-last_overlap_month = pc_extended_monthly.sel(
-    time=(pc_extended_monthly["time"].dt.year == last_hist_year)
-    & (pc_extended_monthly["time"].dt.month == months_per_year)
-)
 
-np.testing.assert_allclose(
-    last_overlap_month.data.m.squeeze(),
-    last_overlap_month.data.m[0].squeeze(),
-    rtol=1e-3,
-)
+for _, pc_extended_monthly in pcs_extended_monthly.groupby("eof"):
+    last_overlap_month = pc_extended_monthly.sel(
+        time=(pc_extended_monthly["time"].dt.year == last_hist_year)
+        & (pc_extended_monthly["time"].dt.month == months_per_year)
+    )
+
+    np.testing.assert_allclose(
+        last_overlap_month.data.m.squeeze(),
+        last_overlap_month.data.m[0].squeeze(),
+        rtol=1e-3,
+    )
 
 # %%
 fig, axes = plt.subplots(ncols=2)
@@ -289,10 +346,12 @@ for years, ax in (
     (np.arange(last_hist_year + 1, 2500 + 1), axes[0]),
     (np.arange(last_hist_year + 1, last_hist_year + 15), axes[1]),
 ):
-    pc_extended_monthly.sel(time=pc_extended_monthly["time"].dt.year.isin(years)).pint.to("dimensionless").plot(
-        ax=ax, alpha=0.6, hue="scenario"
-    )
-    # convert_year_to_time(pc_extended.sel(year=years)).pint.to("dimensionless").plot.scatter(ax=ax, hue="scenario")
+    for _, pc_extended_monthly in pcs_extended_monthly.groupby("eof"):
+        pc_extended_monthly.sel(time=pc_extended_monthly["time"].dt.year.isin(years)).pint.to("dimensionless").plot(
+            ax=ax,
+            alpha=0.6,
+            hue="scenario",
+        )
 
 plt.tight_layout()
 
@@ -300,39 +359,12 @@ plt.tight_layout()
 # ## Prepare output
 
 # %%
-if ghg != "c8f18":
-    eofs = cmip7_lat_gradient_pieces_ds["eofs"]
-
-else:
-    # Calculate the EOF based on the output on ESGF.
-    # In general this doesn't work,
-    # but for c8f18 it's ok because seasonality is zero
-    # and we want a constant latitudinal gradient in the future.
-    cmip7_historical_gn_monthly_ds = load_file_from_glob(f"*{ghg}_*nz_175001-*.nc", historical_data_root_dir_p)
-    cmip7_historical_gn_monthly = cmip7_historical_gn_monthly_ds[ghg]
-    cmip7_historical_gn_monthly["lat"].attrs.pop("units")
-    months_per_year = 12
-    eofs = (
-        (
-            cmip7_historical_gn_monthly.sel(
-                time=(cmip7_historical_gn_monthly["time"].dt.year == last_hist_year)
-                & (cmip7_historical_gn_monthly["time"].dt.month == months_per_year)
-            ).pint.quantify(unit_registry=ur)
-            - cmip7_historical_gm_monthly.sel(
-                time=(cmip7_historical_gm_monthly["time"].dt.year == last_hist_year)
-                & (cmip7_historical_gm_monthly["time"].dt.month == months_per_year)
-            ).pint.quantify(unit_registry=ur)
-        )
-        .isel(time=0)
-        .assign_coords(eof=0)
-        .expand_dims("eof")
-    )
-    eofs.name = "eofs"
+eofs = cmip7_lat_gradient_pieces_ds["eofs"]
 
 out = xr.merge(
     [
         eofs,
-        pc_extended_monthly.pint.to("dimensionless"),
+        pcs_extended_monthly.pint.to("dimensionless"),
     ],
     combine_attrs="drop_conflicts",
 ).pint.dequantify()
@@ -341,7 +373,8 @@ out
 
 # %%
 # Double check this can work
-tmp = out["eofs"] * out["principal-components-monthly"]
+out_tmp = out.pint.quantify(unit_registry=ur)
+tmp = (out_tmp["eofs"] * out_tmp["principal-components-monthly"]).sum("eof")
 # tmp
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}

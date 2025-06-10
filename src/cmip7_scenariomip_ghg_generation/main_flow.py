@@ -35,6 +35,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     plot_marker_overview,
     run_magicc,
     scale_lat_gradient_based_on_emissions,
+    scale_lat_gradient_eofs,
     scale_seasonality_based_on_annual_mean,
     split_input_emissions_into_individual_files,
 )
@@ -569,8 +570,35 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 # total emissions for n2o.
                 # Only first PC changes.
                 # Second PC is assumed constant in future.
-                print(f"skipping {ghg}")
-                continue
+                if ghg == "n2o":
+                    eof_one_scaling_variable = f"emissions|{ghg}"
+                elif ghg in ["co2", "ch4"]:
+                    eof_one_scaling_variable = f"emissions|{ghg}|fossil"
+                    print(f"skipping {ghg}")
+                    continue
+                else:
+                    raise NotImplementedError(ghg)
+
+                eof_zero_scaling_emissions_file = extract_specific_variable_from_collection.submit(
+                    extract_from=complete_scenario_files_markers,
+                    scenario_infos=scenario_info_markers,
+                    # Scale latitudinal gradient using total emissions
+                    variable_lower=eof_one_scaling_variable,
+                    out_file=single_variable_dir / f"{ghg}_eof-one-scaling.feather",
+                )
+
+                lat_gradient_file_future = submit_output_aware(
+                    scale_lat_gradient_eofs,
+                    ghg=ghg,
+                    annual_mean_emissions_file=eof_zero_scaling_emissions_file,
+                    historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                    historical_data_seasonality_lat_gradient_info_root=(
+                        cmip7_historical_seasonality_lat_gradient_info_extracted
+                    ),
+                    out_file=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info.nc",
+                    raw_notebooks_root_dir=raw_notebooks_root_dir,
+                    executed_notebooks_dir=executed_notebooks_dir,
+                )
 
             else:
                 ghg_annual_mean_emissions_file = extract_specific_variable_from_collection.submit(
