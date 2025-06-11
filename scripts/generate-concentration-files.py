@@ -68,7 +68,7 @@ ALL_GHGS = [
 ]
 
 
-def main(  # noqa: PLR0913, PLR0915
+def main(  # noqa: PLR0912, PLR0913, PLR0915
     emissions_file: Annotated[
         Path, typer.Option(help="Emissions file received from the emissions harmonisation team")
     ] = (REPO_RAW_DATA_DIR / "input-scenarios" / "0009-zn_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv"),
@@ -171,6 +171,12 @@ Be careful and don't crash your computer."""
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
+    fossil_bio_split_file = emissions_file.parent / emissions_file.name.replace(
+        "up-to-sillicone", "fossil-biosphere-aggregation"
+    )
+    if not fossil_bio_split_file.exists():
+        raise FileNotFoundError(fossil_bio_split_file)
+
     markers = (
         # (model, scenario, cmip7 experiment name)
         # Note: these are all still TBC
@@ -261,6 +267,7 @@ Be careful and don't crash your computer."""
     emissions_complete_dir = data_interim_root / "complete-emissions"
     magicc_output_db_dir = data_interim_root / "magicc-output" / "db"
     magicc_db_backend_str = "feather"
+    fossil_bio_split_interim_dir = data_interim_root / "fossil-biosphere-split"
     single_variable_dir = data_interim_root / "single-variable-files"
     plot_complete_dir = data_interim_root / "plot-complete"
 
@@ -359,6 +366,8 @@ Be careful and don't crash your computer."""
         magicc_output_db_dir=magicc_output_db_dir,
         magicc_db_backend_str=magicc_db_backend_str,
         magicc_based_ghgs_projection_method=magicc_based_ghgs_projection_method,
+        fossil_bio_split_file=fossil_bio_split_file,
+        fossil_bio_split_interim_dir=fossil_bio_split_interim_dir,
         single_variable_dir=single_variable_dir,
         plot_complete_dir=plot_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,

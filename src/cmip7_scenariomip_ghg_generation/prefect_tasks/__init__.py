@@ -13,6 +13,9 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import (
     create_esgf_files_equivalence_species,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.download_file import download_file
+from cmip7_scenariomip_ghg_generation.prefect_tasks.extract_fossil_biosphere_timeseries import (
+    extract_fossil_biosphere_timeseries,
+)
 from cmip7_scenariomip_ghg_generation.prefect_tasks.extract_specific_variable import (
     extract_specific_variable_from_collection,
 )
@@ -65,6 +68,7 @@ __all__ = [
     "download_cmip7_historical_ghg_concentrations",
     "download_file",
     "extend_western_et_al_2024",
+    "extract_fossil_biosphere_timeseries",
     "extract_specific_variable_from_collection",
     "extract_tar",
     "extract_zip",

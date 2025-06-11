@@ -54,18 +54,20 @@ def extract_specific_variable_from_collection(
     # Could make this injectable
     file_reader = pd.read_feather
     variable_level = "variable"
+    model_level = "model"
+    scenario_level = "scenario"
+    unit_level = "unit"
 
     db = pix.concat([file_reader(f) for f in extract_from])
 
     raw = db.loc[db.index.get_level_values(variable_level).str.lower() == variable_lower]
 
-    scenario_infos
     scenario_map = {(si.model, si.scenario): si.cmip_scenario_name for si in scenario_infos}
-    cmip_scenario_names = raw.pix.project(["model", "scenario"]).index.map(scenario_map)
+    cmip_scenario_names = raw.pix.project([model_level, scenario_level]).index.map(scenario_map)
     if cmip_scenario_names.isnull().any():
         raise AssertionError
 
-    out = raw.pix.assign(scenario=cmip_scenario_names).pix.project(["unit", "scenario", "variable"])
+    out = raw.pix.assign(scenario=cmip_scenario_names).pix.project([unit_level, scenario_level, variable_level])
 
     out_file.parent.mkdir(exist_ok=True, parents=True)
     out.to_feather(out_file)

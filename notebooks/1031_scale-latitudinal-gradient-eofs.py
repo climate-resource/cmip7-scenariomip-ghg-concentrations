@@ -45,13 +45,15 @@ from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan i
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "n2o"
-annual_mean_emissions_file: str = "../output-bundles/dev-test/data/interim/single-variable-files/n2o_total.feather"
+ghg: str = "ch4"
+annual_mean_emissions_file: str = (
+    "../output-bundles/dev-test/data/interim/single-variable-files/ch4_eof-one-scaling.feather"
+)
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
-out_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/n2o_latitudinal-gradient-info.nc"
+out_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/ch4_latitudinal-gradient-info.nc"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -96,8 +98,8 @@ annual_mean_emissions_emms_units
 harmonisation_year = annual_mean_emissions_emms_units.loc[
     :, np.isclose(annual_mean_emissions_emms_units.std(), 0.0)
 ].columns.max()
-harmonisation_year_exp = 2022
-if harmonisation_year != harmonisation_year_exp:
+harmonisation_years_exp = [2022, 2023]
+if harmonisation_year not in harmonisation_years_exp:
     raise AssertionError(harmonisation_year)
 
 # Take any scenario, doesn't matter as all the same pre-harmonisation
@@ -142,14 +144,22 @@ cmip7_lat_gradient_pieces_ds = load_file_from_glob(
 # %%
 pc0 = cmip7_lat_gradient_pieces_ds["principal-components"].sel(eof=0)
 start_non_constant_pc0 = np.where(pc0.diff("year") != 0.0)[0][0]
-# start_non_constant_pc0
+start_non_constant_pc0
+
+# %%
+annual_mean_emissions_emms_non_zero_years = (
+    annual_mean_emissions_emms_units_historical[annual_mean_emissions_emms_units_historical > 0.0]
+    .dropna(axis="columns")
+    .columns
+)
+annual_mean_emissions_emms_non_zero_years
 
 # %%
 regression_years = np.intersect1d(
     pc0.sel(year=pc0["year"] >= start_non_constant_pc0)["year"].values,
-    annual_mean_emissions_emms_units_historical.columns,
+    annual_mean_emissions_emms_non_zero_years,
 )
-# regression_years
+regression_years
 
 # %%
 pc0_to_regress = pc0.sel(year=regression_years)
@@ -169,7 +179,7 @@ y = pc0_to_regress.data
 res = np.linalg.lstsq(A, y.m, rcond=None)
 m, c = res[0]
 m = Q(m, (y / x).units)
-c = Q(c, y.units)
+# c = Q(c, y.units)
 
 fig, ax = plt.subplots()
 ax.scatter(x.m, y.m, label="raw data")
@@ -340,20 +350,17 @@ for _, pc_extended_monthly in pcs_extended_monthly.groupby("eof"):
     )
 
 # %%
-fig, axes = plt.subplots(ncols=2)
-
-for years, ax in (
-    (np.arange(last_hist_year + 1, 2500 + 1), axes[0]),
-    (np.arange(last_hist_year + 1, last_hist_year + 15), axes[1]),
+for years in (
+    np.arange(last_hist_year + 1, 2500 + 1),
+    np.arange(last_hist_year + 1, last_hist_year + 15),
 ):
-    for _, pc_extended_monthly in pcs_extended_monthly.groupby("eof"):
-        pc_extended_monthly.sel(time=pc_extended_monthly["time"].dt.year.isin(years)).pint.to("dimensionless").plot(
-            ax=ax,
-            alpha=0.6,
-            hue="scenario",
-        )
+    pcs_extended_monthly.sel(time=pcs_extended_monthly["time"].dt.year.isin(years)).pint.to("dimensionless").plot(
+        alpha=0.6,
+        hue="scenario",
+        col="eof",
+    )
 
-plt.tight_layout()
+    plt.show()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Prepare output

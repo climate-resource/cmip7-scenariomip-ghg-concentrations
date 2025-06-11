@@ -25,6 +25,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     download_cmip7_historical_ghg_concentrations,
     download_file,
     extend_western_et_al_2024,
+    extract_fossil_biosphere_timeseries,
     extract_specific_variable_from_collection,
     extract_tar,
     get_doi,
@@ -75,6 +76,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     magicc_output_db_dir: Path,
     magicc_db_backend_str: str,
     magicc_based_ghgs_projection_method: dict[str, str],
+    fossil_bio_split_file: Path,
+    fossil_bio_split_interim_dir: Path,
     single_variable_dir: Path,
     plot_complete_dir: Path,
     esgf_ready_root_dir: Path,
@@ -180,6 +183,12 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         The point here is that for some gases,
         we simply use a one-box model
         instead of MAGICC because it's simpler and easier to harmonise.
+
+    fossil_bio_split_file
+        File in which the fossil/biosphere split scenario information is saved
+
+    fossil_bio_split_interim_dir
+        Directory in which to save interim fossil/biosphere split information
 
     single_variable_dir
         Directory in which to write single variable files as needed
@@ -549,6 +558,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 # Scale seasonality based on NPP
                 # (will require redoing to the regression)
                 print(f"skipping {ghg}")
+                continue
 
             else:
                 seasonality_all_time_file_future = submit_output_aware(
@@ -572,17 +582,26 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 # Second PC is assumed constant in future.
                 if ghg == "n2o":
                     eof_one_scaling_variable = f"emissions|{ghg}"
+                    extract_from = complete_scenario_files_markers
+
                 elif ghg in ["co2", "ch4"]:
+                    extract_from = (
+                        submit_output_aware(
+                            extract_fossil_biosphere_timeseries,
+                            (fossil_bio_split_file,),
+                            scenario_infos=scenario_info_markers,
+                            out_file=fossil_bio_split_interim_dir / "fossil-bio-split-markers.feather",
+                        ),
+                    )
                     eof_one_scaling_variable = f"emissions|{ghg}|fossil"
-                    print(f"skipping {ghg}")
-                    continue
+
                 else:
                     raise NotImplementedError(ghg)
 
-                eof_zero_scaling_emissions_file = extract_specific_variable_from_collection.submit(
-                    extract_from=complete_scenario_files_markers,
+                eof_zero_scaling_emissions_file = submit_output_aware(
+                    extract_specific_variable_from_collection,
+                    extract_from=extract_from,
                     scenario_infos=scenario_info_markers,
-                    # Scale latitudinal gradient using total emissions
                     variable_lower=eof_one_scaling_variable,
                     out_file=single_variable_dir / f"{ghg}_eof-one-scaling.feather",
                 )
@@ -601,7 +620,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 )
 
             else:
-                ghg_annual_mean_emissions_file = extract_specific_variable_from_collection.submit(
+                ghg_annual_mean_emissions_file = submit_output_aware(
+                    extract_specific_variable_from_collection,
                     extract_from=complete_scenario_files_markers,
                     scenario_infos=scenario_info_markers,
                     # Scale latitudinal gradient using total emissions
@@ -750,6 +770,8 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     magicc_output_db_dir: Path,
     magicc_db_backend_str: str,
     magicc_based_ghgs_projection_method: dict[str, str],
+    fossil_bio_split_file: Path,
+    fossil_bio_split_interim_dir: Path,
     single_variable_dir: Path,
     esgf_ready_root_dir: Path,
     esgf_version: str,
@@ -862,6 +884,12 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         we simply use a one-box model
         instead of MAGICC because it's simpler and easier to harmonise.
 
+    fossil_bio_split_file
+        File in which the fossil/biosphere split scenario information is saved
+
+    fossil_bio_split_interim_dir
+        Directory in which to save interim fossil/biosphere split information
+
     single_variable_dir
         Directory in which to write single variable files as needed
 
@@ -973,6 +1001,8 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             magicc_output_db_dir=magicc_output_db_dir,
             magicc_db_backend_str=magicc_db_backend_str,
             magicc_based_ghgs_projection_method=magicc_based_ghgs_projection_method,
+            fossil_bio_split_file=fossil_bio_split_file,
+            fossil_bio_split_interim_dir=fossil_bio_split_interim_dir,
             single_variable_dir=single_variable_dir,
             plot_complete_dir=plot_complete_dir,
             esgf_ready_root_dir=esgf_ready_root_dir,
