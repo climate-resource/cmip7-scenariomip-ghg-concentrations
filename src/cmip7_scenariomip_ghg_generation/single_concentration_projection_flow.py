@@ -31,8 +31,8 @@ class SingleConcentrationProjectionResult:
     ghg: str
     """Greenhouse gas"""
 
-    esgf_ready_files_future: prefect.futures.PrefectFuture[tuple[Path, ...]] | None
-    """ESGF-ready files future"""
+    esgf_ready_files_futures: tuple[prefect.futures.PrefectFuture[tuple[Path, ...]], ...] | None
+    """ESGF-ready files futuress"""
 
     inverse_emissions_file_future: prefect.futures.PrefectFuture[Path]
     """Inverse emissions file future"""
@@ -245,7 +245,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     res = {
         ghg: SingleConcentrationProjectionResult(
             ghg=ghg,
-            esgf_ready_files_future=esgf_ready_futures[ghg] if ghg != "halon1202" else None,
+            esgf_ready_files_futures=(esgf_ready_futures[ghg] if ghg != "halon1202" else None,),
             inverse_emissions_file_future=inverse_emissions_file_futures[ghg],
         )
         for ghg in inverse_emissions_file_futures

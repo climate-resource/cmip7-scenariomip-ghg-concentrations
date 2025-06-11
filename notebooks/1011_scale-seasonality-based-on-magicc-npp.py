@@ -103,18 +103,12 @@ magicc_output_db_reader = magicc_output_db.create_reader()
 # %%
 magiccc_output_l = []
 for si in tqdm.auto.tqdm(scenario_info_markers_p):
-    try:
-        magiccc_output_l.append(
-            magicc_output_db_reader.load(
-                pix.isin(
-                    model=si.model, scenario=si.scenario, climate_model="MAGICCv7.6.0a3", variable="CO2_CURRENT_NPP"
-                )
-                # progress=True,
-            ).pix.assign(scenario=si.cmip_scenario_name)
-        )
-    except ValueError:
-        print(si)
-        pass
+    magiccc_output_l.append(
+        magicc_output_db_reader.load(
+            pix.isin(model=si.model, scenario=si.scenario, climate_model="MAGICCv7.6.0a3", variable="CO2_CURRENT_NPP")
+            # progress=True,
+        ).pix.assign(scenario=si.cmip_scenario_name)
+    )
 
 magiccc_output = pix.concat(magiccc_output_l)
 magiccc_output_median = magiccc_output.openscm.groupby_except("run_id").median()

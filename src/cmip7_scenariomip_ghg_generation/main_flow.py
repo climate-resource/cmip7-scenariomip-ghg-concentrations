@@ -2,12 +2,14 @@
 Main flow
 """
 
-import itertools
 import multiprocessing.pool
+from collections import defaultdict
 from contextlib import nullcontext
 from functools import partial
 from pathlib import Path
 
+import prefect.futures
+from attrs import define
 from prefect import flow
 from prefect.futures import PrefectFuture, wait
 from prefect.states import Completed
@@ -45,6 +47,19 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
     create_scenariomip_ghgs_single_concentration_projection,
 )
+
+
+@define
+class ScenarioConcentrationProjectionResult:
+    """
+    Result of running [tbd_function_name][]
+    """
+
+    ghg: str
+    """Greenhouse gas"""
+
+    esgf_ready_files_futures: tuple[prefect.futures.PrefectFuture[tuple[Path, ...]], ...] | None
+    """ESGF-ready files futures"""
 
 
 def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
@@ -411,7 +426,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 ),
             }
 
-    magicc_based_futures = {}
+    magicc_based_futures_d = {}
     if magicc_based_ghgs:
         inverse_emissions_file = submit_output_aware(
             compile_inverse_emissions,
@@ -495,7 +510,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             for (si, magicc_version), res in magicc_complete_files_d.items()
             if si.cmip_scenario_name is not None and magicc_version == "MAGICCv7.6.0a3"
         )
-        tmp = []
+        magicc_based_futures_d = defaultdict(list)
         for ghg in magicc_based_ghgs:
             global_mean_yearly_common_kwargs = dict(
                 ghg=ghg,
@@ -586,16 +601,14 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 )
 
             if ghg in ["co2", "ch4", "n2o"]:
-                # Scale latitudinal gradient using
-                # fossil emissions for co2 and ch4,
-                # total emissions for n2o.
-                # Only first PC changes.
-                # Second PC is assumed constant in future.
+                # Scale latitudinal gradient.
                 if ghg == "n2o":
+                    # Total emissions for n2o
                     eof_one_scaling_variable = f"emissions|{ghg}"
                     extract_from = complete_scenario_files_markers
 
                 elif ghg in ["co2", "ch4"]:
+                    # Fossil emissions for co2 and ch4
                     extract_from = (
                         submit_output_aware(
                             extract_fossil_biosphere_timeseries,
@@ -653,7 +666,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     executed_notebooks_dir=executed_notebooks_dir,
                 )
 
-            esgf_ready_futures = {
+            esgf_ready_files_future = {
                 (ghg, si.cmip_scenario_name): submit_output_aware(
                     create_esgf_files,
                     ghg=ghg,
@@ -675,32 +688,55 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 for si in scenario_info_markers
             }
 
-            tmp.extend(esgf_ready_futures.values())
+            for key, v in esgf_ready_files_future.items():
+                magicc_based_futures_d[key[0]].append(v)
 
-        # TODO: remove this and use magicc_based_futures
-        for v in tmp:
-            v.wait()
+    magicc_based_futures = {
+        ghg: ScenarioConcentrationProjectionResult(
+            ghg=ghg,
+            esgf_ready_files_futures=tuple(futures),
+        )
+        for ghg, futures in magicc_based_futures_d.items()
+    }
+    esgf_ready_futures_individual_species = {
+        **wmo_2022_futures,
+        **western_2024_futures,
+        **magicc_based_futures,
+    }
 
-    if equivalence_ghgs:
-        equivalence_ghgs_esgf_ready_futures = {
-            (equivalent_species, si.cmip_scenario_name): submit_output_aware(
-                # TODO: fix up flow so we don't need to duplicate the file-writing logic so much
-                create_esgf_files_equivalence_species,
-                equivalent_species=equivalent_species,
-                components=EQUIVALENT_SPECIES_COMPONENTS[equivalent_species],
-                cmip_scenario_name=si.cmip_scenario_name,
-                input4mips_cvs_source=input4mips_cvs_source,
-                esgf_ready_root_dir=esgf_ready_root_dir,
-                raw_notebooks_root_dir=raw_notebooks_root_dir,
-                executed_notebooks_dir=executed_notebooks_dir,
-                checklist_file=esgf_ready_root_dir / f"{equivalent_species}_{si.cmip_scenario_name}.chk",
-                pool=pool_multiprocessing,
+    equivalence_species_futures = {}
+    for equivalence_ghg in equivalence_ghgs:
+        s_futures = []
+        for si in scenario_info_markers:
+            s_futures.append(
+                submit_output_aware(
+                    # TODO: fix up flow so we don't need to duplicate the file-writing notebook
+                    create_esgf_files_equivalence_species,
+                    equivalent_species=equivalence_ghg,
+                    components=EQUIVALENT_SPECIES_COMPONENTS[equivalence_ghg],
+                    cmip_scenario_name=si.cmip_scenario_name,
+                    input4mips_cvs_source=input4mips_cvs_source,
+                    esgf_ready_root_dir=esgf_ready_root_dir,
+                    raw_notebooks_root_dir=raw_notebooks_root_dir,
+                    executed_notebooks_dir=executed_notebooks_dir,
+                    checklist_file=esgf_ready_root_dir / f"{equivalence_ghg}_{si.cmip_scenario_name}.chk",
+                    pool=pool_multiprocessing,
+                    wait_for=[
+                        esgf_ready_futures_individual_species[component].esgf_ready_files_futures
+                        for component in EQUIVALENT_SPECIES_COMPONENTS[equivalence_ghg]
+                        if esgf_ready_futures_individual_species[ghg].esgf_ready_files_futures is not None
+                    ],
+                )
             )
-            for equivalent_species, si in itertools.product(equivalence_ghgs, scenario_info_markers)
-        }
-        # TODO: remove this and use equivalence_futures and done at the end
-        for v in equivalence_ghgs_esgf_ready_futures.values():
-            v.wait()
+
+        equivalence_species_futures[equivalence_ghg] = ScenarioConcentrationProjectionResult(
+            ghg=equivalence_ghg, esgf_ready_files_futures=tuple(s_futures)
+        )
+
+    esgf_ready_futures_all_variables = {
+        **esgf_ready_futures_individual_species,
+        **equivalence_species_futures,
+    }
 
     # TODO: turn this back on
     # if magicc_based_ghgs:
@@ -726,10 +762,11 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     # Ensure all paths finish
     done, not_done = wait(
         (
-            v.esgf_ready_files_future
-            for v in (*wmo_2022_futures.values(), *western_2024_futures.values(), *magicc_based_futures.values())
+            vv
+            for v in esgf_ready_futures_all_variables.values()
+            for vv in v.esgf_ready_files_futures
             # Urgh this bloody halon1202 business
-            if v.esgf_ready_files_future is not None
+            if vv is not None
         ),
         timeout=30 * 60,
     )
