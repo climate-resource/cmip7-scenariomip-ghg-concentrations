@@ -185,13 +185,13 @@ output_variables = (
     "Atmospheric Concentrations|HCFC141b",
     "Atmospheric Concentrations|HCFC142b",
     "Atmospheric Concentrations|HCFC22",
-    # # Carbon cycle
-    # "Net Atmosphere to Land Flux|CO2",
-    # "Net Atmosphere to Ocean Flux|CO2",
-    # "CO2_CURRENT_NPP",
-    # # Permafrost
-    # "Net Land to Atmosphere Flux|CO2|Earth System Feedbacks|Permafrost",
-    # "Net Land to Atmosphere Flux|CH4|Earth System Feedbacks|Permafrost",
+    # Carbon cycle
+    "Net Atmosphere to Land Flux|CO2",
+    "Net Atmosphere to Ocean Flux|CO2",
+    "CO2_CURRENT_NPP",
+    # Permafrost
+    "Net Land to Atmosphere Flux|CO2|Earth System Feedbacks|Permafrost",
+    "Net Land to Atmosphere Flux|CH4|Earth System Feedbacks|Permafrost",
     "Sea Level Rise",
 )
 

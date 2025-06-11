@@ -54,7 +54,7 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "c8f18"
+ghg: str = "co2"
 cmip_scenario_name: str = "vllo"
 internal_processing_scenario_name: str = "vllo"
 esgf_version: str = "0.0.1"
@@ -62,14 +62,12 @@ esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_c8f18_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_co2_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_c8f18_seasonality-all-time.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_co2_seasonality-all-time.nc"
 )
-lat_gradient_file: str = (
-    "../output-bundles/dev-test/data/interim/latitudinal-gradient/c8f18_latitudinal-gradient-info.nc"
-)
+lat_gradient_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/co2_latitudinal-gradient-info.nc"
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 
 

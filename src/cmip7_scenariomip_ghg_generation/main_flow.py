@@ -38,6 +38,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     scale_lat_gradient_based_on_emissions,
     scale_lat_gradient_eofs,
     scale_seasonality_based_on_annual_mean,
+    scale_seasonality_based_on_magicc_npp,
     split_input_emissions_into_individual_files,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -555,10 +556,20 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             )
 
             if ghg in ["co2"]:
-                # Scale seasonality based on NPP
-                # (will require redoing to the regression)
-                print(f"skipping {ghg}")
-                continue
+                seasonality_all_time_file_future = submit_output_aware(
+                    scale_seasonality_based_on_magicc_npp,
+                    ghg=ghg,
+                    scenario_info_markers=scenario_info_markers,
+                    magicc_output_db_dir=magicc_output_db_dir,
+                    magicc_db_backend_str=magicc_db_backend_str,
+                    historical_data_seasonality_lat_gradient_info_root=(
+                        cmip7_historical_seasonality_lat_gradient_info_extracted
+                    ),
+                    out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
+                    raw_notebooks_root_dir=raw_notebooks_root_dir,
+                    executed_notebooks_dir=executed_notebooks_dir,
+                    wait_for=magicc_v760a3_complete_files_markers,
+                )
 
             else:
                 seasonality_all_time_file_future = submit_output_aware(

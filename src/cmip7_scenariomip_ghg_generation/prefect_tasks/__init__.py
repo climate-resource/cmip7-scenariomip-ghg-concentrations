@@ -37,8 +37,9 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_w
     scale_lat_gradient_based_on_emissions,
     scale_lat_gradient_eofs,
 )
-from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_seasonality_with_annual_mean import (
+from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_seasonality import (
     scale_seasonality_based_on_annual_mean,
+    scale_seasonality_based_on_magicc_npp,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scm_running import run_magicc
 from cmip7_scenariomip_ghg_generation.prefect_tasks.single_concentration_projection import (
@@ -82,5 +83,6 @@ __all__ = [
     "scale_lat_gradient_based_on_emissions",
     "scale_lat_gradient_eofs",
     "scale_seasonality_based_on_annual_mean",
+    "scale_seasonality_based_on_magicc_npp",
     "split_input_emissions_into_individual_files",
 ]
