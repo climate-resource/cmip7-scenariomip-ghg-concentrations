@@ -97,9 +97,6 @@ def run_magicc(  # noqa: PLR0913
     :
         Written file
     """
-    # TODO: remove this and fix caching so we don't get so many accidental hits
-    if out_file.exists():
-        return out_file
     call_maybe_in_subprocess(
         run_notebook,
         maybe_pool=pool,
