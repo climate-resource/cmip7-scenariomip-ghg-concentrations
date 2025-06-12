@@ -24,6 +24,7 @@
 # ## Imports
 
 # %% editable=true slideshow={"slide_type": ""}
+import json
 import os
 from functools import partial
 from pathlib import Path
@@ -39,6 +40,7 @@ import seaborn as sns
 import tqdm.auto
 import xarray as xr
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
+from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
 from pymagicc.definitions import convert_magicc7_to_openscm_variables
 from pymagicc.io import MAGICCData
 
@@ -208,20 +210,33 @@ magicc_file_dir = magicc_run_dir / "cmip7-ghgs" / source_id
 magicc_file_dir.mkdir(exist_ok=True, parents=True)
 
 # %%
+conc2emis_switch_year = 10000
+last_hist_conc_year = int(historical_concentrations_xr["time"].dt.year.max().values)
+conc2emis_switch_year = last_hist_conc_year + 1
 magicc_concentration_cfg = {
     "file_co2_conc": None,
-    "co2_switchfromconc2emis_year": 10000,
+    "co2_switchfromconc2emis_year": conc2emis_switch_year,
     "file_ch4_conc": None,
-    "ch4_switchfromconc2emis_year": 10000,
+    "ch4_switchfromconc2emis_year": conc2emis_switch_year,
     "file_n2o_conc": None,
-    "n2o_switchfromconc2emis_year": 10000,
+    "n2o_switchfromconc2emis_year": conc2emis_switch_year,
     "fgas_files_conc": [None] * 23,
-    "fgas_switchfromconc2emis_year": 10000,
+    "fgas_switchfromconc2emis_year": conc2emis_switch_year,
     "mhalo_files_conc": [None] * 18,
-    "mhalo_switchfromconc2emis_year": 10000,
+    "mhalo_switchfromconc2emis_year": conc2emis_switch_year,
+    # Need to think about whether these flags make sense to use.
+    # Conclusion: don't fiddle with these, just use the above
+    # then do gradient-aware harmonisation to clean up.
+    # "n2o_budget_avgyears": 10,
+    "n2o_lastbudgetyear": last_hist_conc_year,
+    # "ch4_budget_avgyears": 10,
+    "ch4_lastbudgetyear": last_hist_conc_year,
+    # Ok, this is the kind of stuff that is much less clear
+    "ch4_clathratefeed_yrstart": conc2emis_switch_year + 1,
 }
 # Halon1202, just ignore essentially
 magicc_concentration_cfg["mhalo_files_conc"][17] = ""
+# magicc_concentration_cfg
 
 # %%
 for ghg in tqdm.auto.tqdm(concentrations_xr.data_vars):
@@ -307,7 +322,10 @@ os.environ["MAGICC_EXECUTABLE_7"] = str(magicc_exe_p)
 MAGICC_START_SCENARIO_YEAR = 2015
 
 # %%
-complete_openscm_runner_for_magicc = complete_openscm_runner.loc[:, MAGICC_START_SCENARIO_YEAR:]
+# Ignoring MAGICC_START_SCENARIO_YEAR means we're basically doing a CMIP7-like run.
+# TODO: decide whether we want to keep this or whether it causes too many issues for historical tuning/calibration.
+complete_openscm_runner_for_magicc = complete_openscm_runner
+# complete_openscm_runner_for_magicc = complete_openscm_runner.loc[:, MAGICC_START_SCENARIO_YEAR:]
 # complete_openscm_runner_for_magicc
 
 # %%
@@ -455,11 +473,6 @@ def load_magicc_cfgs(
 
 
 # %%
-import json
-
-from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
-
-# %%
 climate_models_cfgs = load_magicc_cfgs(
     prob_distribution_path=magicc_prob_distribution_p,
     output_variables=output_variables,
@@ -492,7 +505,8 @@ res = run_scms(
     climate_models_cfgs=climate_models_cfgs,
     output_variables=output_variables,
     scenario_group_levels=["model", "scenario"],
-    n_processes=n_magicc_workers,
+    # n_processes=n_magicc_workers,
+    n_processes=8,
     db=None,
     verbose=True,
     progress=True,
@@ -553,6 +567,24 @@ for yrs in (range(2005, 2035 + 1), slice(None, None, None)):
         style_var="scenario",
         hue_var="run_mode",
     )
+    plt.show()
+
+# %%
+for yrs in (range(2015, 2030 + 1), slice(None, None, None)):
+    ax = pdf.loc[
+        pix.isin(variable="Atmospheric Concentrations|N2O"), yrs
+    ].openscm.plot_plume_after_calculating_quantiles(
+        quantile_over="run_id",
+        quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+        style_var="scenario",
+        hue_var="run_mode",
+    )
+    try:
+        ax.set_xticks(yrs, minor=True)
+        ax.grid(which="minor")
+    except ValueError:
+        pass
+    ax.grid(which="major")
     plt.show()
 
 # %%
@@ -617,6 +649,50 @@ pdf.loc[pix.isin(variable="Effective Radiative Forcing|Aerosols"), :].openscm.pl
 
 # %%
 pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+tmp = pdf.loc[pix.isin(variable="Surface Air Temperature Change"), :]
+tmpa = tmp.subtract(tmp.loc[:, 1850:1900].mean(axis="columns"), axis="rows")
+tmpb = (
+    tmpa.subtract(
+        tmpa.loc[:, 1995:2014]
+        .mean(axis="columns")
+        .groupby(["climate_model", "model", "scenario", "variable", "run_mode"])
+        .median(),
+        axis="rows",
+    )
+    + 0.85
+)
+# tmpb
+
+# %%
+# Conclusions:
+# - use updated i.e. CMIP7 historical aerosol emissions and GHG concentrations for the GHG producing runs
+# - still harmonise using gradient-aware-harmonisation to get as smooth a transition as possible when making CMIP7 future GHGs
+# - move the 'standard/ScenarioMIP' style runs to this notebook
+# - also do concentration-driven and esm-* style runs in this notebook
+#   to give the best possible estimate of what the ESMs will see and project
+#   - hence move some of this running MAGICC stuff into src so it's easier to re-use
+#
+# - decision to make: do we push MAGICC with updated historical back into ScenarioMIP?
+#   - suggestion: probably not as too much change too late
+#     and ScenarioMIP should be based on more solid, published science.
+#     (and the difference is ~0.01K)
+#   - also put in the paper: we're at the middle of the cycle,
+#     where SCMs are making projections before ESMs.
+#     These projections will be updated by ESMs as their results come in,
+#     hence these results should only be taken as an indication
+#     of where the scenarios sit according to current science,
+#     all the while knowing that the results of CMIP7
+#     will soon update the state of current science
+#     and hence our best estimate of the climate implications of these scenarios.
+#
+tmpb.loc[:, 2000:].openscm.plot_plume_after_calculating_quantiles(
     quantile_over="run_id",
     quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
     style_var="scenario",
