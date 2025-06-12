@@ -88,7 +88,10 @@ pixi run jupyter lab
            This is used for some extrapolations of latitudinal gradients.
            It's the same data as above, just at slightly higher sectoral detail.
 1. Put the received emissions in `data/raw/input-scenarios`
-1. Update the emissions file you use for you run (either from the command line or just change the value in `scripts/generate-concentration-files.py`)
+1. Update the emissions file you use for your run.
+   There are two options for how to do this:
+    1. specify this from the command line via the `--emissions-file` option
+    1. change the value of the `emissions_file` variable in `scripts/generate-concentration-files.py`
 1. Run with a new run ID and ESGF version (using the command line argument `--run-id` and `--esgf-version`).
    Pick whatever makes sense here (we don't have strong rules about our versioning yet)
     - This will also require creating entries for the controlled vocabularies (CVs).
