@@ -111,7 +111,7 @@ this will lead to a new run being done
     input4mips_cvs_source: Annotated[
         str,
         typer.Option(help="""Source for the input4MIPs CVs"""),
-    ] = "gh:78bc71513711d351987758b077cac3c698355828",
+    ] = "gh:c75a54d0af36dbedf654ad2eeba66e9c1fbce2a2",
     n_workers: Annotated[
         int,
         typer.Option(
