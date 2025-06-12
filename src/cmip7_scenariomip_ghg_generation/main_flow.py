@@ -768,7 +768,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             # Urgh this bloody halon1202 business
             if vv is not None
         ),
-        timeout=30 * 60,
+        # 4 hours
+        timeout=4 * 60 * 60,
     )
     if not_done:
         raise AssertionError
