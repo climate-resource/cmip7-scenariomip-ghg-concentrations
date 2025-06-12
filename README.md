@@ -77,7 +77,16 @@ pixi run jupyter lab
     - they should send two files.
       They produce these files with the script
       [here](https://github.com/iiasa/emissions_harmonization_historical/blob/extract-silicone-infilled/scripts/extract-for-ghg-concs.py)
-      (hopefully merged into main soon)
+      (hopefully merged into main soon).
+      The two files are:
+        1. the emissions for each scenario,
+           except for emissions of species
+           that we derive from our inversions of sources like WMO (2022)
+           (where we use only a single concentration projection,
+           rather than having variation across scenarios)
+        1. emissions for each scenario at the fossil/biosphere level.
+           This is used for some extrapolations of latitudinal gradients.
+           It's the same data as above, just at slightly higher sectoral detail.
 1. Put the received emissions in `data/raw/input-scenarios`
 1. Update the emissions file you use for you run (either from the command line or just change the value in `scripts/generate-concentration-files.py`)
 1. Run with a new run ID and ESGF version (using the command line argument `--run-id` and `--esgf-version`).
