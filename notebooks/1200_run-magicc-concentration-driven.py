@@ -24,16 +24,21 @@
 # ## Imports
 
 # %% editable=true slideshow={"slide_type": ""}
+import os
+from functools import partial
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
 import pandas_openscm.db
 import pint
+import seaborn as sns
 import tqdm.auto
 import xarray as xr
+from gcages.renaming import SupportedNamingConventions, convert_variable_name
 from pymagicc.definitions import convert_magicc7_to_openscm_variables
 from pymagicc.io import MAGICCData
 
@@ -281,12 +286,6 @@ for k, v in magicc_concentration_cfg.items():
 # ### Convert scenario to OpenSCM-Runner names
 
 # %%
-from functools import partial
-
-# %%
-from gcages.renaming import SupportedNamingConventions, convert_variable_name
-
-# %%
 complete_openscm_runner = emissions.openscm.update_index_levels(
     {
         "variable": partial(
@@ -300,9 +299,6 @@ complete_openscm_runner = emissions.openscm.update_index_levels(
 
 # %% [markdown]
 # ### Configure
-
-# %%
-import os
 
 # %%
 os.environ["MAGICC_EXECUTABLE_7"] = str(magicc_exe_p)
@@ -477,7 +473,7 @@ if badly_converted:
     raise AssertionError(badly_converted)
 
 # %%
-climate_models_cfgs["MAGICC7"] = climate_models_cfgs["MAGICC7"][:10]
+# climate_models_cfgs["MAGICC7"] = climate_models_cfgs["MAGICC7"][:10]
 
 # %%
 if magicc_version == "MAGICCv7.5.3" and platform.system() == "Darwin" and platform.processor() == "arm":
@@ -506,31 +502,171 @@ res = res.pix.assign(run_mode="concentration-driven")
 # res
 
 # %% [markdown]
+# ## Check concentrations were prescribed correctly
+
+# %%
+for ghg in tqdm.auto.tqdm(concentrations_xr.data_vars):
+    ghg_magicc = ghg.replace("hfc4310mee", "hfc4310")
+    openscm_runner_variable = convert_magicc7_to_openscm_variables(f"{ghg_magicc}_conc".upper())
+
+    np.testing.assert_allclose(
+        np.broadcast_to(
+            concentrations_xr[ghg].values, res.loc[pix.isin(variable=openscm_runner_variable), 2023:].shape
+        ),
+        res.loc[pix.isin(variable=openscm_runner_variable), 2023:].values,
+        rtol=1e-4,
+    )
+
+# %% [markdown]
 # ### Quick look plots
 
 # %%
-np.testing.assert_allclose(
-    np.broadcast_to(
-        concentrations_xr["ch4"].values, res.loc[pix.isin(variable="Atmospheric Concentrations|CO2"), 2023:].shape
-    ),
-    res.loc[pix.isin(variable="Atmospheric Concentrations|CH4"), 2023:].values,
-    rtol=1e-4,
+try:
+    res_normal_mode = magicc_output_db.load(
+        pix.isin(
+            model=model,
+            scenario=scenario,
+            run_mode="magicc-concentration-to-emissions-switch",
+            climate_model=res.pix.unique("climate_model"),
+        )
+        & pix.ismatch(
+            variable=["*Concentrations**", "Surface Air Temperature Change", "Effective Radiative Forcing**"]
+        ),
+    )
+    pdf = pix.concat([res, res_normal_mode])
+except ValueError:
+    pdf = res
+
+# %%
+pdf.loc[pix.isin(variable="Atmospheric Concentrations|CO2"), 2000:].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
 )
 
 # %%
-res.loc[pix.isin(variable="Atmospheric Concentrations|CH4"), 2000:].openscm.plot_plume_after_calculating_quantiles(
+for yrs in (range(2005, 2035 + 1), slice(None, None, None)):
+    pdf.loc[pix.isin(variable="Atmospheric Concentrations|CH4"), yrs].openscm.plot_plume_after_calculating_quantiles(
+        quantile_over="run_id",
+        quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+        style_var="scenario",
+        hue_var="run_mode",
+    )
+    plt.show()
+
+# %%
+pdf.loc[
+    pix.isin(variable="Effective Radiative Forcing|Greenhouse Gases"), :
+].openscm.plot_plume_after_calculating_quantiles(
     quantile_over="run_id",
     quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
 )
 
 # %%
-res.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot_plume_after_calculating_quantiles(
+pdf.loc[pix.isin(variable="Effective Radiative Forcing|CO2"), :].openscm.plot_plume_after_calculating_quantiles(
     quantile_over="run_id",
     quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
 )
+
+# %%
+pdf.loc[pix.isin(variable="Effective Radiative Forcing|CH4"), :].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+pdf.loc[pix.isin(variable="Effective Radiative Forcing|Ozone"), :].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+pdf.loc[pix.isin(variable="Effective Radiative Forcing|N2O"), :].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+pdf.loc[
+    pix.isin(variable="Effective Radiative Forcing|Montreal Protocol Halogen Gases"), :
+].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+pdf.loc[pix.isin(variable="Effective Radiative Forcing|Aerosols"), :].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+if len(pdf.pix.unique("run_mode")) == 2:
+    tmp = pdf.loc[pix.isin(variable="Surface Air Temperature Change")].openscm.groupby_except("run_id").median()
+    ax = (
+        tmp.loc[pix.isin(run_mode="concentration-driven")]
+        .reset_index("run_mode", drop=True)
+        .subtract(
+            tmp.loc[pix.isin(run_mode="magicc-concentration-to-emissions-switch")].reset_index("run_mode", drop=True)
+        )
+        .pix.assign(run_mode="concentration-driven - magicc-concentration-to-emissions-switch")
+        .pix.project(["scenario", "run_mode"])
+        .T.plot()
+    )
+    ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
+    ax.grid()
+    plt.show()
+
+    peak_warming = pdf.loc[pix.isin(variable="Surface Air Temperature Change")].max(axis="columns")
+    pdf_box = peak_warming.to_frame("peak_warming").reset_index()
+    ax = sns.boxplot(
+        data=pdf_box,
+        y="peak_warming",
+        x="run_mode",
+    )
+    ax.set_yticks(
+        np.arange(pdf_box["peak_warming"].min().round(1) - 0.1, pdf_box["peak_warming"].max().round(1) + 0.1, 0.05),
+        minor=True,
+    )
+    ax.grid(which="minor")
+    ax.grid(which="major", linewidth=2)
+    plt.show()
+
+    # Not adjusted to assessed warming hence can differ from 'normal' reporting
+    display(peak_warming.groupby(["run_mode"]).describe().round(3))
 
 # %% [markdown]
-# - check if concentrations output matches input (if not, might have to do mid-year shift)
+# ## Save to database
 
 # %%
-assert False, "Deal with the rest"
+magicc_output_db.save(
+    res,
+    groupby=["climate_model", "model", "scenario", "variable", "run_mode"],
+    allow_overwrite=True,
+    warn_on_partial_overwrite=False,
+    max_workers=n_magicc_workers,
+    # progress=True,
+)
