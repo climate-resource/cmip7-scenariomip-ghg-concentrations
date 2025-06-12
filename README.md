@@ -117,7 +117,7 @@ You can add extra cores with the flags below:
 - `--n-workers`: the number of threaded (i.e. parallel) workers to use for submitting jobs
     - note: this doesn't result in true parallelism. A full explanation is beyond the scope of this document
       (but if you want to google, explore the difference between multiprocessing with threads compared to processes in python)
-- `--n-workers-multiprocessing`: the number of multiprocessing (i.e. parallel) workers to use
+- `--n-workers-multiprocessing`: the number of multiprocessing (i.e. parallel) workers to use, excluding any tasks that require running MAGICC
 - `--n-workers-multiprocessing-magicc`: the number of multiprocessing (i.e. parallel) workers to use for tasks that run MAGICC
 - `--n-workers-per-magicc-notebook`: the number of MAGICC workers to use in each MAGICC-running task.
     - note: the total number of MAGICC workers is the product of `--n-workers-multiprocessing-magicc` and `--n-workers-per-magicc-notebook`
