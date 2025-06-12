@@ -3,7 +3,11 @@ Tasks for gases which only have a single concentration projection
 """
 
 import itertools
+import multiprocessing.pool
 from pathlib import Path
+
+import prefect.futures
+from attrs import define
 
 from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
@@ -16,6 +20,22 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     scale_seasonality_based_on_annual_mean,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
+
+
+@define
+class SingleConcentrationProjectionResult:
+    """
+    Result of running [create_scenariomip_ghgs_single_concentration_projection][]
+    """
+
+    ghg: str
+    """Greenhouse gas"""
+
+    esgf_ready_files_futures: tuple[prefect.futures.PrefectFuture[tuple[Path, ...]], ...] | None
+    """ESGF-ready files futuress"""
+
+    inverse_emissions_file_future: prefect.futures.PrefectFuture[Path]
+    """Inverse emissions file future"""
 
 
 def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
@@ -37,7 +57,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     doi: str,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
-) -> tuple[Path, ...]:
+    pool_multiprocessing: multiprocessing.pool.Pool | None,
+) -> dict[str, SingleConcentrationProjectionResult]:
     """
     Create the ScenarioMIP GHG concentrations for GHGs based on WMO 2022
 
@@ -94,6 +115,11 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     executed_notebooks_dir
         Path in which to write executed notebooks
 
+    pool_multiprocessing
+        Parallel pool to use for multiprocessing
+
+        If `None`, no parallel processing will be used
+
     Returns
     -------
     :
@@ -109,6 +135,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             / f"{ghg}_{cmip7_historical_ghg_concentration_source_id}.chk",
         )
         for ghg in ghgs
+        # We don't/didn't provide this for some reason,
+        # even though data is there and you need it to run MAGICC
+        if ghg != "halon1202"
     }
 
     global_mean_yearly_file_futures = {
@@ -120,7 +149,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             out_file=annual_mean_dir / f"single-concentration-projection_{ghg}_annual-mean.feather",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
-            wait_for=[cleaned_data_path, downloaded_cmip7_historical_ghgs_futures[ghg]],
+            wait_for=[cleaned_data_path, downloaded_cmip7_historical_ghgs_futures[ghg]]
+            if ghg != "halon1202"
+            else [cleaned_data_path],
         )
         for ghg in ghgs
     }
@@ -155,6 +186,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             executed_notebooks_dir=executed_notebooks_dir,
         )
         for ghg, yearly_future in global_mean_yearly_file_futures.items()
+        if ghg != "halon1202"
     }
 
     inverse_emissions_file_futures = {
@@ -165,6 +197,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             out_file=inverse_emission_dir / f"single-concentration-projection_{ghg}_inverse-emissions.feather",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
+            pool=pool_multiprocessing,
         )
         for ghg, monthly_future in global_mean_monthly_file_futures.items()
     }
@@ -183,6 +216,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             executed_notebooks_dir=executed_notebooks_dir,
         )
         for ghg, inverse_emmissions_file in inverse_emissions_file_futures.items()
+        if ghg != "halon1202"
     }
 
     esgf_ready_futures = {
@@ -190,12 +224,11 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             create_esgf_files,
             ghg=ghg,
             cmip_scenario_name=si.cmip_scenario_name,
+            internal_processing_scenario_name="all",
             esgf_version=esgf_version,
             esgf_institution_id=esgf_institution_id,
             input4mips_cvs_source=input4mips_cvs_source,
             doi=doi,
-            model=si.model,
-            scenario=si.scenario,
             global_mean_monthly_file=global_mean_monthly_file_futures[ghg],
             seasonality_file=seasonality_file_futures[ghg],
             lat_gradient_file=lat_gradient_file_futures[ghg],
@@ -203,9 +236,19 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
             checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
+            pool=pool_multiprocessing,
         )
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
+        if ghg != "halon1202"
     }
 
-    esgf_written_paths = tuple(future for future in esgf_ready_futures.values())
-    return esgf_written_paths
+    res = {
+        ghg: SingleConcentrationProjectionResult(
+            ghg=ghg,
+            esgf_ready_files_futures=(esgf_ready_futures[ghg] if ghg != "halon1202" else None,),
+            inverse_emissions_file_future=inverse_emissions_file_futures[ghg],
+        )
+        for ghg in inverse_emissions_file_futures
+    }
+
+    return res

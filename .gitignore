@@ -1,3 +1,7 @@
+# MAGICC bits and pieces
+magicc
+magicc-pieces.tar.gz
+
 # Ignore data by default
 data/
 output-bundles/

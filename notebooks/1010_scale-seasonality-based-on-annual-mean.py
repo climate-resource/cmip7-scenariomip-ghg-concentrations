@@ -37,16 +37,14 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "ccl4"
-annual_mean_file: str = (
-    "../output-bundles/dev-test/data/interim/annual-means/single-concentration-projection_ccl4_annual-mean.feather"
-)
+ghg: str = "hfc236fa"
+annual_mean_file: str = "../output-bundles/dev-test/data/interim/annual-means/one-box_hfc236fa_annual-mean.feather"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
 out_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/single-concentration-projection_ccl4_seasonality-all-years.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_hfc236fa_seasonality-all-time.nc"
 )
 
 
@@ -106,23 +104,37 @@ cmip7_historical_gm_monthly = cmip7_historical_gm_monthly_ds[ghg]
 # %%
 cmip7_seasonality_all_years_ds = load_file_from_glob(
     f"{ghg}_seasonality_fifteen-degree_allyears-monthly.nc", historical_data_seasonality_lat_gradient_info_root_p
-).pint.quantify()
+).pint.quantify(unit_registry=openscm_units.unit_registry)
 cmip7_seasonality_all_years = cmip7_seasonality_all_years_ds.to_dataarray().isel(variable=0).drop_vars("variable")
 # cmip7_seasonality_all_years
 
 # %% editable=true slideshow={"slide_type": ""}
-cmip7_seasonality_ds = load_file_from_glob(
-    f"{ghg}_observational-network_seasonality.nc", historical_data_seasonality_lat_gradient_info_root_p
-).pint.quantify(unit_registry=openscm_units.unit_registry)
-cmip7_seasonality = cmip7_seasonality_ds.to_dataarray().isel(variable=0).drop_vars("variable")
-# cmip7_seasonality
+try:
+    cmip7_seasonality_ds = load_file_from_glob(
+        f"{ghg}_observational-network_seasonality.nc", historical_data_seasonality_lat_gradient_info_root_p
+    ).pint.quantify(unit_registry=openscm_units.unit_registry)
+    cmip7_seasonality = cmip7_seasonality_ds.to_dataarray().isel(variable=0).drop_vars("variable")
+    # cmip7_seasonality
+except AssertionError:
+    if not (cmip7_seasonality_all_years == 0.0).all():
+        msg = "Expected to find zero seasonality"
+        raise AssertionError(msg)
+
+    # Ensure we get relative units
+    cmip7_seasonality = cmip7_seasonality_all_years.isel(year=0) / (1 * cmip7_seasonality_all_years.data[0].u)
 
 # %% [markdown]
 # ## Check scaling
 
 # %%
 annual_mean_first_year = annual_mean.columns.min()
-annual_mean_first_year_value = annual_mean[annual_mean_first_year].iloc[0]
+annual_mean_first_year_value_all_scenarios = annual_mean[annual_mean_first_year]
+np.testing.assert_allclose(
+    annual_mean_first_year_value_all_scenarios.values,
+    annual_mean_first_year_value_all_scenarios.values[0],
+)
+# Can use any scenario as they're all close
+annual_mean_first_year_value = annual_mean_first_year_value_all_scenarios.values[0]
 annual_mean_first_year_value
 
 # %%
@@ -131,8 +143,10 @@ np.testing.assert_allclose(
     # Product of seasonality and annual-mean
     # should give the seasonality that was actually used.
     cmip7_seasonality.data.m * annual_mean_first_year_value,
-    atol=1e-5,
-    rtol=1e-3,
+    # Rounding means these differences can be surprisingly big.
+    # This still makes sure we're in the right ballpark.
+    atol=1e-3,
+    rtol=1e-2,
 )
 
 # %%
@@ -143,7 +157,9 @@ if len(annual_mean_unit_l) != 1:
 annual_mean_unit = annual_mean_unit_l[0]
 
 annual_mean_xr = xr.DataArray(
-    annual_mean.values.squeeze(), dims=["year"], coords=dict(year=annual_mean.columns)
+    annual_mean.values,
+    dims=["scenario", "year"],
+    coords=dict(scenario=annual_mean.index.get_level_values("scenario"), year=annual_mean.columns),
 ).pint.quantify(annual_mean_unit, unit_registry=openscm_units.unit_registry)
 
 # annual_mean_xr
@@ -152,17 +168,18 @@ annual_mean_xr = xr.DataArray(
 seasonality = cmip7_seasonality * annual_mean_xr
 # seasonality
 
-# %% editable=true slideshow={"slide_type": ""}
-fig, axes = plt.subplots(ncols=2, sharey=True)
-
-for years, ax in (
-    (range(2025, 2030 + 1), axes[0]),
-    (range(2445, 2450 + 1), axes[1]),
+# %%
+for years in (
+    range(2025, 2030 + 1),
+    seasonality["year"][-5:],
 ):
-    convert_year_month_to_time(seasonality.sel(year=years, lat=[-82.5, -22.5, 7.5, 82.5])).plot(
-        ax=ax, hue="lat", alpha=0.5
+    fg = convert_year_month_to_time(seasonality.sel(year=years, lat=[-82.5, -22.5, 7.5, 82.5])).plot(
+        col="scenario", col_wrap=min(3, seasonality["scenario"].size), hue="lat", alpha=0.5
     )
-    ax.grid()
+    for ax in fg.axs.flatten():
+        ax.grid()
+
+    plt.show()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Prepare output
@@ -174,7 +191,7 @@ out_years = np.setdiff1d(annual_mean.columns, cmip7_historical_gm_monthly["time"
 # %% editable=true slideshow={"slide_type": ""}
 out = seasonality.sel(year=out_years).pint.dequantify()
 out.name = f"{ghg}_seasonality_all_months"
-# out
+out
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Save

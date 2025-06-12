@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# # Create files for ESGF
+# # Create files for ESGF - equivalent species
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Imports
@@ -27,6 +27,7 @@ import cftime
 import matplotlib.pyplot as plt
 import numpy as np
 import openscm_units
+import pandas as pd
 import pandas_indexing as pix  # noqa: F401
 import pandas_openscm
 import pint_xarray
@@ -42,11 +43,9 @@ from input4mips_validation.dataset.metadata_data_producer_minimum import (
 )
 from input4mips_validation.xarray_helpers import add_time_bounds
 
-from cmip7_scenariomip_ghg_generation.constants import VARIABLE_TO_STANDARD_NAME_RENAMING
+from cmip7_scenariomip_ghg_generation.constants import GHG_RADIATIVE_EFFICIENCIES, VARIABLE_TO_STANDARD_NAME_RENAMING
 from cmip7_scenariomip_ghg_generation.xarray_helpers import (
     calculate_cos_lat_weighted_mean_latitude_only,
-    convert_time_to_year_month,
-    convert_year_month_to_time,
     convert_year_to_time,
 )
 
@@ -54,20 +53,10 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "co2"
+equivalent_species: str = "cfc12eq"
+components = "cfc11;;cfc113;;cfc114;;cfc115;;cfc12;;ccl4;;ch2cl2;;ch3br;;ch3ccl3;;ch3cl;;chcl3;;halon1211;;halon1301;;halon2402;;hcfc141b;;hcfc142b;;hcfc22"  # noqa: E501
 cmip_scenario_name: str = "vllo"
-internal_processing_scenario_name: str = "vllo"
-esgf_version: str = "0.0.1"
-esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
-doi: str = "dev-test-doi"
-global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_co2_monthly-mean.nc"
-)
-seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_co2_seasonality-all-time.nc"
-)
-lat_gradient_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/co2_latitudinal-gradient-info.nc"
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 
 
@@ -75,9 +64,7 @@ esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready
 # ## Parse parameters
 
 # %% editable=true slideshow={"slide_type": ""}
-global_mean_monthly_file_p = Path(global_mean_monthly_file)
-seasonality_file_p = Path(seasonality_file)
-lat_gradient_file_p = Path(lat_gradient_file)
+components_p = tuple(components.split(";;"))
 esgf_ready_root_dir_p = Path(esgf_ready_root_dir)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -88,83 +75,83 @@ ur = pint_xarray.setup_registry(openscm_units.unit_registry)
 Q = ur.Quantity
 pandas_openscm.register_pandas_accessor()
 
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Load data
 
-# %%
-lda = partial(xr.load_dataarray, use_cftime=True)
-lds = partial(xr.load_dataset, use_cftime=True)
-
-
-def ssoi(inv):  # noqa: D103
-    return inv.sel(scenario=internal_processing_scenario_name).drop_vars("scenario")
-
-
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# ### Global-mean monthly
 
 # %%
-global_mean_monthly_no_seasonality = ssoi(lda(global_mean_monthly_file_p).pint.quantify(unit_registry=ur))
-# global_mean_monthly_no_seasonality
+def load_component_da(component: str) -> xr.DataArray:
+    """
+    Load data for a given component
+    """
+    # Start from 15-degree data
+    candidates = list(esgf_ready_root_dir_p.rglob(f"**/{component}/gnz/**/*-{cmip_scenario_name}-*.nc"))
+    if len(candidates) != 1:
+        msg = f"{component=} {candidates=}"
+        raise AssertionError(msg)
+
+    res = xr.open_dataset(candidates[0])[component]
+    # Pop out lat units to avoid pint quantification issues
+    res["lat"].attrs.pop("units")
+    res = res.pint.quantify(unit_registry=ur)
+
+    return res
+
+
+# %%
+component_das = {ghg: load_component_da(ghg) for ghg in tqdm.auto.tqdm(components_p)}
+# components
 
 # %% [markdown]
-# ### Seasonality
+# ## Create 15-degree grid equivalent product
+
 
 # %%
-seasonality_month_year = ssoi(lda(seasonality_file_p).pint.quantify(unit_registry=ur))
-seasonality = convert_year_month_to_time(seasonality_month_year)
-# seasonality
+def get_erf(da: xr.DataArray) -> xr.DataArray:
+    """Get ERF equivalent for a given spcies"""
+    return da * GHG_RADIATIVE_EFFICIENCIES[da.name]
 
-# %% [markdown]
-# ### Latitudinal gradient info
 
 # %%
-lat_grad_info = ssoi(lds(lat_gradient_file_p).pint.quantify(unit_registry=ur))
-# lat_grad_info
+equiv_erf_df_l = []
 
-# %% [markdown]
-# ## Create 15-degree grid product
+equiv_erf = get_erf(component_das[components_p[0]])
+for component in components_p:
+    component_erf = get_erf(component_das[component])
+    if not equiv_erf_df_l:
+        equiv_erf = component_erf
 
-# %% [markdown]
-# ### Crunch latitudinal gradient
+    else:
+        equiv_erf = equiv_erf + component_erf
 
-# %%
-lat_grad = (lat_grad_info["eofs"] * lat_grad_info["principal-components-monthly"]).sum("eof")
-# lat_grad
+    equiv_erf_df_l.append(
+        component_erf.groupby("time.year")
+        .mean()
+        .mean("lat")
+        .pint.to("W / m^2")
+        .pint.dequantify()
+        .to_dataframe()[component]
+    )
 
-# %% [markdown]
-# ### Combine
+# equiv_erf
+equiv_erf_df = pd.concat(equiv_erf_df_l, axis="columns")
+equiv_erf_df = equiv_erf_df.T.sort_values(by=2023, ascending=False).T
 
-# %%
-global_mean_monthly_ym = convert_time_to_year_month(global_mean_monthly_no_seasonality)
-# global_mean_monthly_ym
+ax = equiv_erf_df.plot.area()
+ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
+plt.show()
 
-# %%
-seasonality_ym = convert_time_to_year_month(seasonality)
-# seasonality_ym
+tmp = equiv_erf_df.sum(axis="columns")
+tmp.name = "total"
+equiv_erf_df = pd.concat([equiv_erf_df, tmp], axis="columns")
 
-# %%
-lat_grad_ym = convert_time_to_year_month(lat_grad)
-# lat_grad_ym
-
-# %%
-# Quick checks
-
-# %%
-np.testing.assert_allclose(seasonality_ym.mean("month").data.m, 0.0, atol=1e-5)
-
-# %%
-np.testing.assert_allclose(calculate_cos_lat_weighted_mean_latitude_only(lat_grad_ym).data.m, 0.0, atol=1e-8)
-
-# %%
-native_grid_ym = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
-# native_grid_ym
+ax = equiv_erf_df.plot()
+ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
+plt.show()
 
 # %%
-ym_to_time = partial(convert_year_month_to_time, day=15)
-
-# %%
-native_grid = ym_to_time(native_grid_ym)
+native_grid = equiv_erf / GHG_RADIATIVE_EFFICIENCIES[equivalent_species.replace("eq", "")]
 # native_grid
 
 # %% [markdown]
@@ -291,8 +278,18 @@ plt.show()
 # ### Set common metadata
 
 # %%
-source_id = f"{esgf_institution_id}-{cmip_scenario_name}-{esgf_version.replace('.', '-')}"
+metadata_helper = xr.open_mfdataset(
+    esgf_ready_root_dir_p.rglob(f"**/{equivalent_species.replace('eq', '')}/gnz/**/*-{cmip_scenario_name}-*.nc")
+)
+# metadata_helper
+
+# %%
+source_id = metadata_helper.attrs["source_id"]
 source_id
+
+# %%
+doi = metadata_helper.attrs["doi"]
+doi
 
 # %%
 metadata_minimum_common = dict(
@@ -302,78 +299,28 @@ metadata_minimum_common = dict(
 metadata_minimum_common
 
 # %%
-funding_info = (
-    {
-        "name": "GHG Forcing For CMIP",
-        "url": "climate.esa.int/supporting-modelling/cmip-forcing-ghg-concentrations/",
-        "long_text": (
-            "This research has been funded by the European Space Agency (ESA) as part of the "
-            "GHG Forcing For CMIP project of the Climate Change Initiative (CCI) "
-            "(ESA Contract No. 4000146681/24/I-LR-cl)."
-        ),
-    },
-)
 comment = (
+    f"{equivalent_species} is the equivalent of {', '.join(sorted(components_p))}. "
     "Data compiled by Climate Resource, based on science by many others "
     "(see 'references*' attributes). "
     "For funding information, see the 'funding*' attributes."
 )
-
-# %%
-# TODO: handle this better
-# Probably just pass in short names
-# from scripts and then just load the rest from a hard-coded DB
-gas_deps = (
-    dict(
-        short_name="Nicholls et al., 2025 (in-prep)",
-        licence="Paper, NA",
-        reference=(
-            "Nicholls, Z., Meinshausen, M., Lewis, J., Pflueger, M., Menking, A., ...: "
-            "Greenhouse gas concentrations for climate modelling (CMIP7), "
-            "in-prep, 2025."
-        ),
-        url="https://github.com/climate-resource/CMIP-GHG-Concentration-Generation",
-        # resource_type="publication-article",
-    ),
-    dict(
-        short_name="Nicholls et al., 2025 (in-prep)",
-        licence="Paper, NA",
-        reference=(
-            "Nicholls, Z., Meinshausen, M., Lewis, J., Pflueger, M., Menking, A., ...: "
-            "Future greenhouse gas concentrations for climate modelling (CMIP7 ScenarioMIP), "
-            "in-prep, 2025."
-        ),
-        url="https://github.com/climate-resource/cmip7-scenariomip-ghg-concentrations",
-        # resource_type="publication-article",
-    ),
-    dict(
-        short_name="Meinshausen et al., 2020",
-        licence="Paper, NA",
-        reference=(
-            "Meinshausen, M., Nicholls, Z. R. J., ..., Vollmer, M. K., and Wang, R. H. J.: "
-            "The shared socio-economic pathway (SSP) greenhouse gas concentrations "
-            "and their extensions to 2500, "
-            "Geosci. Model Dev., 13, 3571-3605, https://doi.org/10.5194/gmd-13-3571-2020, 2020."
-        ),
-        doi="https://doi.org/10.5194/gmd-13-3571-2020",
-        url="https://doi.org/10.5194/gmd-13-3571-2020",
-        # resource_type="publication-article",
-    ),
-)
+# comment
 
 # %%
 non_input4mips_metadata_common = {
-    "references": " --- ".join([v["reference"] for v in gas_deps]),
-    "references_short_names": " --- ".join([v["short_name"] for v in gas_deps]),
-    "references_dois": " --- ".join(
-        [v["doi"] if ("doi" in v and v["doi"] is not None) else "No DOI" for v in gas_deps]
-    ),
-    "references_urls": " --- ".join([v["url"] for v in gas_deps]),
-    "funding": " ".join([v["long_text"] for v in funding_info]),
-    "funding_short_names": " --- ".join([v["name"] for v in funding_info]),
-    "funding_urls": " --- ".join([v["url"] for v in funding_info]),
+    k: metadata_helper.attrs[k]
+    # TODO: be more careful with references
+    for k in (
+        "references",
+        "references_short_names",
+        "references_dois",
+        "references_urls",
+        "funding",
+        "funding_short_names",
+        "funding_urls",
+    )
 }
-non_input4mips_metadata_common
 
 # %% [markdown]
 # ### Grab the CVs
@@ -417,7 +364,7 @@ time_ranges_to_write
 # or made up to look as close as possible.
 
 # %%
-standard_name = VARIABLE_TO_STANDARD_NAME_RENAMING[ghg]
+standard_name = VARIABLE_TO_STANDARD_NAME_RENAMING[equivalent_species]
 standard_name
 
 # %% [markdown]
@@ -441,8 +388,8 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
     grid_info = " x ".join([f"{dat_resolution[v].size} ({v})" for v in dat_resolution.dims])
     print(f"Processing {grid_info} grid")
 
-    variable_name_raw = ghg
-    variable_name_output = ghg
+    variable_name_raw = equivalent_species
+    variable_name_output = equivalent_species
 
     ds_to_write = dat_resolution.to_dataset(name=variable_name_output).pint.dequantify()
 
@@ -518,38 +465,3 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
         print(f"Wrote: {written.relative_to(esgf_ready_root_dir_p)}")
 
     print("")
-
-# %% [markdown]
-# ## Validate the written files
-
-# %%
-# papermill_description=validate-written-files
-# # Turn this off for now, very slow hence waste of time.
-# # Probably move into another step at some point
-# # (and just validate the entire written tree at once).
-# bounds_info = BoundsInfo(
-#     time_bounds="time_bnds",
-#     bounds_dim="bnds",
-#     bounds_dim_lower_val=0,
-#     bounds_dim_upper_val=1,
-# )
-# frequency_metadata_keys = FrequencyMetadataKeys(
-#     frequency_metadata_key="frequency",
-#     no_time_axis_frequency="fx",
-# )
-# xr_variable_processor = XRVariableHelper(
-#     bounds_coord_indicators=("bounds", "bnds"),
-#     climatology_bounds_coord_indicators=("climatology",),
-# )
-#
-# validate_tree(
-#     tree_root=esgf_ready_root_dir_p,
-#     cv_source=input4mips_cvs_source,
-#     xr_variable_processor=xr_variable_processor,
-#     frequency_metadata_keys=frequency_metadata_keys,
-#     bounds_info=bounds_info,
-#     time_dimension=time_dimension,
-#     rglob_input=f"**/*{variable_name_output}*/**/*.nc",
-#     allow_cf_checker_warnings=False,
-#     output_html=None,
-# )

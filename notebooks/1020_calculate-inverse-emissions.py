@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.1
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -31,7 +31,7 @@ import pint_xarray
 import xarray as xr
 from attrs import evolve
 
-from cmip7_scenariomip_ghg_generation.constants import HALOGEN_MOLECULAR_MASSES, HALOGEN_TAUS
+from cmip7_scenariomip_ghg_generation.constants import GHG_LIFETIMES, GHG_MOLECULAR_MASSES
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation import mean_preserving_interpolation
 from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.annual_to_monthly import DEFAULT_ALGORITHM
 
@@ -43,7 +43,7 @@ ghg: str = "ccl4"
 monthly_mean_file: str = (
     "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_ccl4_monthly-mean.nc"
 )
-out_file: str = "../output-bundles/dev-test/data/processed/inverse-emissions/single-concentration-projection_ccl4_inverse-emissions.feather"  # noqa: E501
+out_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_ccl4_inverse-emissions.feather"  # noqa: E501
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -102,13 +102,20 @@ pint.testing.assert_equal(
 x_bounds_out.to("yr")
 
 # %%
-y_in = monthly_mean.data
+if monthly_mean["scenario"].size != 1:
+    msg = (
+        "Should only be doing this for single concentration projection gases " "i.e. there should only be one scenario"
+    )
+    raise AssertionError(msg)
+
+y_in = monthly_mean.data.squeeze()
 y_in
 
 # %%
 algorithm = evolve(DEFAULT_ALGORITHM)
 
 # %%
+# papermill_description=calculate-high-res-values
 high_res_vals = mean_preserving_interpolation(
     x_bounds_in=x_bounds_in,
     y_in=y_in,
@@ -147,7 +154,7 @@ dC_dt = dC_approx / dt_approx
 # dC_dt
 
 # %%
-tau = HALOGEN_TAUS[ghg]
+tau = GHG_LIFETIMES[ghg]
 # tau
 
 # %%
@@ -206,6 +213,7 @@ out_ppt_yr = pd.DataFrame(
         [(ghg, str(alpha_emms_yearly.u), "inverse_emissions")], names=["ghg", "unit", "variable"]
     ),
 )
+
 out_ppt_yr
 
 # %%
@@ -222,7 +230,7 @@ if np.round(mass_one_ppm_co2.to("GtC / ppm").m, 2) != cdiac_expected:
     raise AssertionError
 
 # %%
-molecular_mass = HALOGEN_MOLECULAR_MASSES[ghg]
+molecular_mass = GHG_MOLECULAR_MASSES[ghg]
 alpha = 1 / (atm_moles * fraction_factor * molecular_mass)
 emms_unit = str(molecular_mass.u).replace(" / mole", "").replace("g", "t") + " / yr"
 emms_yearly = (alpha_emms_yearly / alpha).to(emms_unit)
@@ -239,8 +247,14 @@ out_t_yr = pd.DataFrame(
 # out_t_yr
 
 # %%
-out = pix.concat([out_ppt_yr, out_t_yr])
-# out
+if out_ppt_yr.shape[0] != 1 or out_t_yr.shape[0] != 1:
+    msg = (
+        "Should only be doing this for single concentration projection gases " "i.e. there should only be one scenario"
+    )
+    raise AssertionError(msg)
+
+out = pix.concat([out_ppt_yr, out_t_yr]).pix.assign(scenario="all")
+out
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Save
