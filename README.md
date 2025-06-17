@@ -107,7 +107,7 @@ pixi run jupyter lab
       The value should be of the form `"gh:[commit-id]"`
       e.g. `"gh:c75a54d0af36dbedf654ad2eeba66e9c1fbce2a2"`.
 1. When the run is finished, upload the results for the publication team with
-   `pixi run python --unique-upload-id-dir <unique-value-here> scripts/upload-to-llnl.py output-bundles/<run-id>/data/processed/esgf-ready/input4MIPs`
+   `pixi run python scripts/upload-to-llnl.py --unique-upload-id-dir <unique-value-here> output-bundles/<run-id>/data/processed/esgf-ready/input4MIPs`
    e.g. `pixi run python scripts/upload-to-llnl.py --unique-upload-id-dir cr-scenario-concs-20250701-1 output-bundles/v0.1.0a2/data/processed/esgf-ready/input4MIPs`
 1. Tell the publication team that the results are uploaded and the folder in which to find them i.e. the value of `--unique-upload-id-dir`
 
