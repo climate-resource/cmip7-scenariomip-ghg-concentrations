@@ -168,6 +168,8 @@ Be careful and don't crash your computer."""
     ghgs = tuple(ghg)
     magicc_versions_to_run = tuple(magicc_version_to_run)
 
+    # TODO: Some check that the ESGF version and the CVs source can actually work together
+
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
@@ -179,9 +181,8 @@ Be careful and don't crash your computer."""
 
     markers = (
         # (model, scenario, cmip7 experiment name)
-        # Note: these are all still TBC
-        ("REMIND-MAgPIE 3.5-4.10", "SSP1 - Very Low Emissions", "vllo"),
-        ("AIM 3.0", "SSP2 - Low Overshoot", "vlho"),
+        ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vllo"),
+        ("AIM 3.0", "SSP2 - Low Overshoot_e", "vlho"),
         ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
         ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
         ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
