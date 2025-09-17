@@ -65,11 +65,15 @@ pixi run jupyter lab
 #### In short
 
 1. Receive data from the emissions team
-1. Do a new run where you update `--emissions-file`, `--run-id`, `--esgf-version` and `--input4mips-cvs-source`
-1. Send data to the publication team using `scripts/upload-to-llnl.py`
+1. Update `scripts/create-latest-set-of-concentration-files.sh`
+    - Likely you will need to update `--emissions-file`, `--run-id`, `--esgf-version` and `--input4mips-cvs-source`
+1. Commit
+1. Run
+1. [TODO: update] Send data to the publication team using `scripts/upload-to-llnl.py`
 
 #### In long
 
+[TODO: update]
 1. Receive markers from the emissions team
     - the markers are defined in `scripts/generate-concentration-files.py`.
       If there are changes, make sure you update this variable.
