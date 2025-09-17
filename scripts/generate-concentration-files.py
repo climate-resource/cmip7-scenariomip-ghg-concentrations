@@ -8,8 +8,11 @@ from typing import Annotated
 import click
 import typer
 from attrs import evolve
+from input4mips_validation.cvs.loading import load_cvs_known_loader
+from input4mips_validation.cvs.loading_raw import get_raw_cvs_loader
 from pandas_openscm.io import load_timeseries_csv
 
+from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
@@ -168,8 +171,6 @@ Be careful and don't crash your computer."""
     ghgs = tuple(ghg)
     magicc_versions_to_run = tuple(magicc_version_to_run)
 
-    # TODO: Some check that the ESGF version and the CVs source can actually work together
-
     # Lots of things here that can't be passed from the CLI.
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
@@ -226,6 +227,28 @@ Be careful and don't crash your computer."""
     emissions_batch_id = emissions_file.name.split("_harmonised")[0]
 
     esgf_institution_id = "CR"
+
+    # Check that all the source IDs we will create
+    # are indeed already registered
+    raw_cvs_loader = get_raw_cvs_loader(
+        input4mips_cvs_source,
+        # # Can force updates if you need using this
+        # force_download=True,
+    )
+    cvs = load_cvs_known_loader(raw_cvs_loader)
+    for marker_info in markers:
+        marker_source_id = create_source_id(
+            esgf_institution_id=esgf_institution_id, cmip_scenario_name=marker_info[-1], esgf_version=esgf_version
+        )
+        # Check that source ID is in the CVs
+        if marker_source_id not in cvs.source_id_entries.source_ids:
+            msg = (
+                f"{marker_source_id} is not registered in "
+                f"input4MIPs CVs {input4mips_cvs_source}. "
+                "Please push an update to input4MIPs CVs, "
+                "then use that update as your `input4mips_cvs_source"
+            )
+            raise AssertionError(msg)
 
     raw_notebooks_root_dir = REPO_ROOT_DIR / "notebooks"
 
