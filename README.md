@@ -68,6 +68,7 @@ pixi run jupyter lab
 1. Update `scripts/create-latest-set-of-concentration-files.sh`
     - Likely you will need to update `--emissions-file`, `--run-id`, `--esgf-version` and `--input4mips-cvs-source`
 1. Commit
+1. Start your prefect server in a separate terminal, `pixi run prefect server start`
 1. Run
 1. [TODO: update] Send data to the publication team using `scripts/upload-to-llnl.py`
 
