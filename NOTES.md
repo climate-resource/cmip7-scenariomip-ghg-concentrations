@@ -17,8 +17,9 @@
 
 - uploading to NERSC
     - raw docs are pretty good: https://docs.nersc.gov/services/scp/
-    - command is something like `scp -r src zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
+    - command is something like `scp -r output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
         - `-r`: recursive i.e. upload the folder and its structure
+        - `output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs`: the directory you want to upload
         - `zrjn`: zeb's username, yours will be something like fb.
           You can get this by logging into jupyter then looking at the start of your shell.
         - `dtn01.nersc.gov:`: where we want to upload to
@@ -32,8 +33,8 @@
 
 Next steps:
 
-1. I'll leave this running on my machine
-1. FB to see if you can get the `create-latest...` script to run on your machine
-1. Tomorrow, we'll do the upload steps and pre-publish steps together
-    - if you want to try uploading in advance, that may save us some time
-    - the thing to upload will be `output-bundles/0.1.0/data/processed/esgf-ready/input4MIP`
+1. FB's runs finish
+1. FB uploads, moves files and does permissions update
+1. FB messages ZN, who will check
+1. ZN emails Sasha
+1. We go back and clean up this file, docs etc.
