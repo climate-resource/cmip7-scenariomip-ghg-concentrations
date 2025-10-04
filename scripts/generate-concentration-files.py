@@ -182,13 +182,15 @@ Be careful and don't crash your computer."""
 
     markers = (
         # (model, scenario, cmip7 experiment name)
-        ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vllo"),
-        ("AIM 3.0", "SSP2 - Low Overshoot_e", "vlho"),
-        ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
-        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
-        ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
-        ("GCAM 7.1 scenarioMIP", "SSP3 - High Emissions", "h"),
-        ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+        # Decision: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
+        # vl likely to be finalised first
+        ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
+        # ("AIM 3.0", "SSP2 - Low Overshoot_e", "ln"),
+        # ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
+        # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
+        # ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
+        # ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+        # ("GCAM 7.1 scenarioMIP", "SSP3 - High Emissions", "h"),
     )
 
     # Choices here are quite arbitrary
@@ -238,7 +240,9 @@ Be careful and don't crash your computer."""
     cvs = load_cvs_known_loader(raw_cvs_loader)
     for marker_info in markers:
         marker_source_id = create_source_id(
-            esgf_institution_id=esgf_institution_id, cmip_scenario_name=marker_info[-1], esgf_version=esgf_version
+            esgf_institution_id=esgf_institution_id,
+            cmip_scenario_name=marker_info[-1],
+            esgf_version=esgf_version,
         )
         # Check that source ID is in the CVs
         if marker_source_id not in cvs.source_id_entries.source_ids:
