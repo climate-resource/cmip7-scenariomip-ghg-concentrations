@@ -88,6 +88,9 @@ Options:
 - custom: run whatever custom selection is in the script""",
         ),
     ] = "markers",
+    harmonisation_year: Annotated[
+        int, typer.Option(help="Year in which the scenarios are harmonised to history")
+    ] = 2023,
     ghg: Annotated[list[str], typer.Option(help="GHG to process")] = ALL_GHGS,
     run_id: Annotated[
         str,
@@ -359,13 +362,14 @@ Be careful and don't crash your computer."""
         scenario_infos = tuple(
             v
             for v in scenario_infos_l
-            if (v.cmip_scenario_name in ["vllo", "l"])
+            if (v.cmip_scenario_name in ["vl", "l"])
             or (v.model == "WITCH 6.0" and v.scenario == "SSP1 - Very Low Emissions")
         )
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
         emissions_file=emissions_file,
+        harmonisation_year=harmonisation_year,
         scenario_infos=scenario_infos,
         run_id=run_id,
         raw_notebooks_root_dir=raw_notebooks_root_dir,

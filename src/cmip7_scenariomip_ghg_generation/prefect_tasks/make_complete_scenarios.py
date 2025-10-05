@@ -34,6 +34,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 def make_complete_scenario(  # noqa: PLR0913
     scenario_info: ScenarioInfo,
     scenario_file: Path,
+    harmonisation_year: int,
     inverse_emissions_file: Path,
     history_file: Path,
     out_file: Path,
@@ -52,6 +53,9 @@ def make_complete_scenario(  # noqa: PLR0913
 
     scenario_file
         File containing the raw scenario data from the IAM
+
+    harmonisation_year
+        Year in which the scenarios are harmonised to history
 
     inverse_emissions_file
         File containing inverse emissions based on GHGs that use a single concentration projection
@@ -91,6 +95,7 @@ def make_complete_scenario(  # noqa: PLR0913
             "model": scenario_info.model,
             "scenario": scenario_info.scenario,
             "scenario_file": str(scenario_file),
+            "harmonisation_year": harmonisation_year,
             "inverse_emissions_file": str(inverse_emissions_file),
             "history_file": str(history_file),
             "out_file": str(out_file),

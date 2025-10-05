@@ -79,6 +79,7 @@ def scale_lat_gradient_based_on_emissions(  # noqa: PLR0913
 def scale_lat_gradient_eofs(  # noqa: PLR0913
     ghg: str,
     annual_mean_emissions_file: Path,
+    harmonisation_year: int,
     historical_data_root_dir: Path,
     historical_data_seasonality_lat_gradient_info_root: Path,
     out_file: Path,
@@ -95,6 +96,9 @@ def scale_lat_gradient_eofs(  # noqa: PLR0913
 
     annual_mean_emissions_file
         Path in which the annual-mean emissions data is written
+
+    harmonisation_year
+        Year in which the annual-mean emissions are harmonised to history
 
     historical_data_root_dir
         Root path in which the historical data was downloaded
@@ -121,6 +125,7 @@ def scale_lat_gradient_eofs(  # noqa: PLR0913
         parameters={
             "ghg": ghg,
             "annual_mean_emissions_file": str(annual_mean_emissions_file),
+            "harmonisation_year": harmonisation_year,
             "historical_data_root_dir": str(historical_data_root_dir),
             "historical_data_seasonality_lat_gradient_info_root": str(
                 historical_data_seasonality_lat_gradient_info_root

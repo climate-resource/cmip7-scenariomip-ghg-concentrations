@@ -49,6 +49,7 @@ ghg: str = "ch4"
 annual_mean_emissions_file: str = (
     "../output-bundles/dev-test/data/interim/single-variable-files/ch4_eof-one-scaling.feather"
 )
+harmonisation_year: int = 2023
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
@@ -95,13 +96,6 @@ annual_mean_emissions_emms_units
 
 
 # %%
-harmonisation_year = annual_mean_emissions_emms_units.loc[
-    :, np.isclose(annual_mean_emissions_emms_units.std(), 0.0)
-].columns.max()
-harmonisation_years_exp = [2022, 2023]
-if harmonisation_year not in harmonisation_years_exp:
-    raise AssertionError(harmonisation_year)
-
 # Take any scenario, doesn't matter as all the same pre-harmonisation
 annual_mean_emissions_emms_units_historical = annual_mean_emissions_emms_units.loc[:, :harmonisation_year].iloc[:1, :]
 annual_mean_emissions_emms_units_historical

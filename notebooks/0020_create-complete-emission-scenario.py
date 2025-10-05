@@ -34,6 +34,7 @@ import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
 import seaborn as sns
+from gcages.harmonisation.common import assert_harmonised
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -43,6 +44,7 @@ from gcages.renaming import SupportedNamingConventions, convert_variable_name
 model: str = "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12"
 scenario: str = "SSP2 - Low Emissions"
 scenario_file: str = "../output-bundles/dev-test/data/interim/input-emissions/0009-zn_0003_0003_0002/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.feather"  # noqa: E501
+harmonisation_year: int = 2023
 inverse_emissions_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_inverse-emissions.feather"  # noqa: E501
 history_file: str = "../output-bundles/dev-test/data/interim/input-emissions/0009-zn_0003_0003_0002/historical.feather"
 out_file: str = "../output-bundles/dev-test/data/interim/complete-emissions/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.feather"  # noqa: E501
@@ -187,10 +189,11 @@ scaling_leaders = {
 PI_YEAR = 1750
 
 # %%
-harmonisation_year = annual_scenario.columns.min()
-exp_harmonisation_year = 2023
-if harmonisation_year != exp_harmonisation_year:
-    raise AssertionError
+assert_harmonised(
+    annual_scenario,
+    history=gcages_history.reset_index(["model", "scenario"], drop=True),
+    harmonisation_time=harmonisation_year,
+)
 
 # %%
 infilled_scaling_l = []

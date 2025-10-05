@@ -41,7 +41,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     scale_lat_gradient_eofs,
     scale_seasonality_based_on_annual_mean,
     scale_seasonality_based_on_magicc_npp,
-    split_input_emissions_into_individual_files,
+    split_input_emissions_into_individual_files_and_check_harmonisation,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -65,6 +65,7 @@ class ScenarioConcentrationProjectionResult:
 def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     ghgs: tuple[str, ...],
     emissions_file: Path,
+    harmonisation_year: int,
     scenario_infos: tuple[ScenarioInfo, ...],
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
@@ -114,6 +115,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     emissions_file
         File containing emissions received from the harmonisation team
+
+    harmonisation_year
+        Year in which the scenarios are harmonised to history
 
     scenario_infos
         Scenario information
@@ -437,9 +441,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         )
 
         scenario_files_d = submit_output_aware(
-            split_input_emissions_into_individual_files,
+            split_input_emissions_into_individual_files_and_check_harmonisation,
             emissions_file=emissions_file,
             scenario_infos=scenario_infos,
+            harmonisation_year=harmonisation_year,
             out_dir=emissions_split_dir,
         )
 
@@ -451,6 +456,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 make_complete_scenario,
                 scenario_info=scenario_info,
                 scenario_file=scenario_file,
+                harmonisation_year=harmonisation_year,
                 inverse_emissions_file=inverse_emissions_file,
                 history_file=scenario_files_d_res["historical"],
                 out_file=emissions_complete_dir / f"{scenario_info.to_file_stem()}.feather",
@@ -505,6 +511,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         complete_scenario_files_markers = tuple(
             file for si, file in complete_scenario_files_d.items() if si.cmip_scenario_name is not None
         )
+
         magicc_v760a3_complete_files_markers = tuple(
             res
             for (si, magicc_version), res in magicc_complete_files_d.items()
@@ -575,6 +582,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     scale_seasonality_based_on_magicc_npp,
                     ghg=ghg,
                     scenario_info_markers=scenario_info_markers,
+                    harmonisation_year=harmonisation_year,
                     magicc_output_db_dir=magicc_output_db_dir,
                     magicc_db_backend_str=magicc_db_backend_str,
                     historical_data_seasonality_lat_gradient_info_root=(
@@ -634,6 +642,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     scale_lat_gradient_eofs,
                     ghg=ghg,
                     annual_mean_emissions_file=eof_zero_scaling_emissions_file,
+                    harmonisation_year=harmonisation_year,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     historical_data_seasonality_lat_gradient_info_root=(
                         cmip7_historical_seasonality_lat_gradient_info_extracted
@@ -791,6 +800,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 def create_scenariomip_ghgs(  # noqa: PLR0913
     ghgs: tuple[str, ...],
     emissions_file: Path,
+    harmonisation_year: int,
     scenario_infos: tuple[ScenarioInfo, ...],
     run_id: str,
     raw_notebooks_root_dir: Path,
@@ -844,6 +854,12 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
     emissions_file
         File containing emissions received from the harmonisation team
+
+        This should contain both scenarios and history
+        (to check harmonisation)
+
+    harmonisation_year
+        Year in which the emissions are harmonised to history
 
     scenario_infos
         Scenario information
@@ -1023,6 +1039,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
         res_flow = run_id_flow(
             ghgs=ghgs,
             emissions_file=emissions_file,
+            harmonisation_year=harmonisation_year,
             scenario_infos=scenario_infos,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,

@@ -82,6 +82,7 @@ def scale_seasonality_based_on_annual_mean(  # noqa: PLR0913
 def scale_seasonality_based_on_magicc_npp(  # noqa: PLR0913
     ghg: str,
     scenario_info_markers: tuple[ScenarioInfo, ...],
+    harmonisation_year: int,
     magicc_output_db_dir: Path,
     magicc_db_backend_str: str,
     historical_data_seasonality_lat_gradient_info_root: Path,
@@ -99,6 +100,9 @@ def scale_seasonality_based_on_magicc_npp(  # noqa: PLR0913
 
     scenario_info_markers
         Scenario info about the marker scenarios
+
+    harmonisation_year
+        Year in which the scenarios are harmonised to history
 
     magicc_output_db_dir
         Root directory of the MAGICC output database
@@ -131,6 +135,7 @@ def scale_seasonality_based_on_magicc_npp(  # noqa: PLR0913
         parameters={
             "ghg": ghg,
             "scenario_info_markers": scenario_info_markers_str,
+            "harmonisation_year": harmonisation_year,
             "magicc_output_db_dir": str(magicc_output_db_dir),
             "magicc_db_backend_str": magicc_db_backend_str,
             "historical_data_seasonality_lat_gradient_info_root": str(

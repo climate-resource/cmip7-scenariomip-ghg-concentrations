@@ -56,8 +56,8 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "co2"
-cmip_scenario_name: str = "vllo"
-internal_processing_scenario_name: str = "vllo"
+cmip_scenario_name: str = "vl"
+internal_processing_scenario_name: str = "vl"
 esgf_version: str = "0.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"

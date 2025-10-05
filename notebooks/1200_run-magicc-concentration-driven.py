@@ -24,9 +24,12 @@
 # ## Imports
 
 # %% editable=true slideshow={"slide_type": ""}
+import json
 import os
+import platform
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,6 +42,7 @@ import seaborn as sns
 import tqdm.auto
 import xarray as xr
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
+from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
 from pymagicc.definitions import convert_magicc7_to_openscm_variables
 from pymagicc.io import MAGICCData
 
@@ -48,8 +52,8 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-cmip_scenario_name: str = "vllo"
-model: str = "REMIND-MAgPIE 3.5-4.10"
+cmip_scenario_name: str = "vl"
+model: str = "REMIND-MAgPIE 3.5-4.11"
 scenario: str = "SSP1 - Very Low Emissions"
 emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
 magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
@@ -61,6 +65,14 @@ magicc_exe: str = "../magicc/magicc-v7.6.0a3/bin/magicc-darwin-arm64"
 magicc_prob_distribution: str = "../magicc/magicc-v7.6.0a3/configs/magicc-ar7-fast-track-drawnset-v0-3-0.json"
 n_magicc_workers: int = 4
 
+
+# %%
+# Temporary helper
+output_bundle_version = "1.0.0"
+emissions_complete_dir: str = f"../output-bundles/{output_bundle_version}/data/interim/complete-emissions"
+magicc_output_db_dir: str = f"../output-bundles/{output_bundle_version}/data/interim/magicc-output/db"
+esgf_ready_root_dir: str = f"../output-bundles/{output_bundle_version}/data/processed/esgf-ready"
+historical_data_root_dir: str = f"../output-bundles/{output_bundle_version}/data/raw/historical-ghg-concs"
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Parse parameters
@@ -117,7 +129,7 @@ historical_concentrations_xr
 
 # %%
 # TODO: remove small hack
-esgf_ready_root_dir_p = Path("../output-bundles/v0.1.0a2/data/processed/esgf-ready")
+esgf_ready_root_dir_p = Path(f"../output-bundles/{output_bundle_version}/data/processed/esgf-ready")
 
 # %%
 concentrations_xr_l = []
@@ -193,6 +205,9 @@ CONC_MAGICC_FLAG_MAP = {
 
 # %%
 def to_df(da: xr.DataArray, variable: str) -> pd.DataFrame:
+    """
+    Convert to pandas DataFrame
+    """
     return (
         da.groupby("time.year")
         .mean()
@@ -396,9 +411,6 @@ output_variables = (
     # "Sea Level Rise",
 )
 
-# %%
-from typing import Any
-
 
 # %%
 def load_magicc_cfgs(
@@ -453,11 +465,6 @@ def load_magicc_cfgs(
 
     return climate_models_cfgs
 
-
-# %%
-import json
-
-from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
 
 # %%
 climate_models_cfgs = load_magicc_cfgs(
@@ -624,7 +631,8 @@ pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot
 )
 
 # %%
-if len(pdf.pix.unique("run_mode")) == 2:
+n_run_modes_to_show = 2
+if len(pdf.pix.unique("run_mode")) == n_run_modes_to_show:
     tmp = pdf.loc[pix.isin(variable="Surface Air Temperature Change")].openscm.groupby_except("run_id").median()
     ax = (
         tmp.loc[pix.isin(run_mode="concentration-driven")]
@@ -656,7 +664,7 @@ if len(pdf.pix.unique("run_mode")) == 2:
     plt.show()
 
     # Not adjusted to assessed warming hence can differ from 'normal' reporting
-    display(peak_warming.groupby(["run_mode"]).describe().round(3))
+    display(peak_warming.groupby(["run_mode"]).describe().round(3))  # noqa: F821
 
 # %% [markdown]
 # ## Save to database
