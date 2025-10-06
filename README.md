@@ -81,8 +81,7 @@ pixi run jupyter lab
 1. Receive emissions from the emissions team
     - they should send two files.
       They produce these files with the script
-      [here](https://github.com/iiasa/emissions_harmonization_historical/blob/extract-silicone-infilled/scripts/extract-for-ghg-concs.py)
-      (hopefully merged into main soon).
+      [here](https://github.com/iiasa/emissions_harmonization_historical/blob/main/scripts/extract-for-ghg-concs.py).
       The two files are:
         1. the emissions for each scenario,
            except for emissions of species
@@ -100,7 +99,7 @@ pixi run jupyter lab
 1. Run with a new run ID and ESGF version (using the command line argument `--run-id` and `--esgf-version`).
    Pick whatever makes sense here (we don't have strong rules about our versioning yet)
     - This will also require creating entries for the controlled vocabularies (CVs).
-      This requires updating [this file](https://github.com/PCMDI/input4MIPs_CVs/blob/cr-scenariomip/CVs/input4MIPs_source_id.json)
+      This requires updating [this file](https://github.com/PCMDI/input4MIPs_CVs/blob/main/CVs/input4MIPs_source_id.json)
       to include source IDs of the form "CR-scenario-esgf-version".
       In practice, simply copy the existing "CR-scenario-esgf-version"
       entries and update their version to match the ESGF version you used above.
