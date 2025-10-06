@@ -43,6 +43,7 @@ from input4mips_validation.dataset.metadata_data_producer_minimum import (
 from input4mips_validation.xarray_helpers import add_time_bounds
 
 from cmip7_scenariomip_ghg_generation.constants import VARIABLE_TO_STANDARD_NAME_RENAMING
+from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id
 from cmip7_scenariomip_ghg_generation.xarray_helpers import (
     calculate_cos_lat_weighted_mean_latitude_only,
     convert_time_to_year_month,
@@ -291,7 +292,8 @@ plt.show()
 # ### Set common metadata
 
 # %%
-source_id = f"{esgf_institution_id}-{cmip_scenario_name}-{esgf_version.replace('.', '-')}"
+# source_id = f"{esgf_institution_id}-{cmip_scenario_name}-{esgf_version.replace('.', '-')}"
+source_id = create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
 source_id
 
 # %%
