@@ -168,6 +168,8 @@ Be careful and don't crash your computer."""
     # # TODO: activate this
     # load_dotenv()
 
+    assert False, "Fix the output files so they start in 2022, not 2023"
+
     ghgs = tuple(ghg)
     magicc_versions_to_run = tuple(magicc_version_to_run)
 
