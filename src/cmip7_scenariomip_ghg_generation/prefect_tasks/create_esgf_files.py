@@ -37,6 +37,7 @@ def create_esgf_files(  # noqa: PLR0913
     seasonality_file: Path,
     lat_gradient_file: Path,
     esgf_ready_root_dir: Path,
+    historical_data_root_dir: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     checklist_file: Path,
@@ -85,6 +86,9 @@ def create_esgf_files(  # noqa: PLR0913
     esgf_ready_root_dir
         Root directory for writing ESGF-ready files
 
+    historical_data_root_dir
+        Root path in which the historical data was downloaded
+
     raw_notebooks_root_dir
         Directory in which the raw notebooks live
 
@@ -125,6 +129,7 @@ def create_esgf_files(  # noqa: PLR0913
             "seasonality_file": str(seasonality_file),
             "lat_gradient_file": str(lat_gradient_file),
             "esgf_ready_root_dir": str(esgf_ready_root_dir),
+            "historical_data_root_dir": str(historical_data_root_dir),
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{ghg}_{cmip_scenario_name}",

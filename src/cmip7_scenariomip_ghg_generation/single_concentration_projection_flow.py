@@ -233,6 +233,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             seasonality_file=seasonality_file_futures[ghg],
             lat_gradient_file=lat_gradient_file_futures[ghg],
             esgf_ready_root_dir=esgf_ready_root_dir,
+            historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
             checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",

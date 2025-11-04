@@ -143,6 +143,19 @@ def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
 
 
 # %%
+list(historical_data_seasonality_lat_gradient_info_root_p.rglob("co2*season*.nc"))
+
+# %%
+cmip7_seasonality_base = (
+    load_file_from_glob(
+        f"{ghg}_observational-network_seasonality.nc", historical_data_seasonality_lat_gradient_info_root_p
+    )
+    .pint.quantify(unit_registry=ur)
+    .rename({"__xarray_dataarray_variable__": "seasonality"})
+)
+cmip7_seasonality_base
+
+# %%
 cmip7_seasonality_pieces_ds = load_file_from_glob(
     f"{ghg}_observational-network_seasonality-change-eofs.nc", historical_data_seasonality_lat_gradient_info_root_p
 ).pint.quantify(unit_registry=ur)
@@ -199,7 +212,7 @@ fig, ax = plt.subplots()
 ax.scatter(x.m, y.m, label="raw data")
 ax.plot(x.m, (m * x + c).m, color="tab:orange", label="regression")
 ax.set_ylabel("PC0")
-ax.set_xlabel("emissions")
+ax.set_xlabel("NPP")
 ax.legend()
 
 # %% [markdown]
@@ -212,7 +225,7 @@ last_hist_year = int(cmip7_seasonality_pieces_ds["year"].max().values)
 # %%
 delta_npp = (
     magiccc_output_median.loc[:, last_hist_year:].subtract(magiccc_output_median[last_hist_year], axis="rows")
-).pix.assign(variable="change_in_emissions")
+).pix.assign(variable="change_in_npp")
 # delta_npp
 
 # %%
@@ -247,7 +260,9 @@ for ax in axes:
 # ## Prepare output
 
 # %%
-out = (cmip7_seasonality_pieces_ds["eofs"] * pc0_extended).sum("eof").pint.dequantify()
+out_seasonality_delta = (cmip7_seasonality_pieces_ds["eofs"] * pc0_extended).sum("eof")
+out = out_seasonality_delta + cmip7_seasonality_base["seasonality"]
+out = out.pint.dequantify()
 # out
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
