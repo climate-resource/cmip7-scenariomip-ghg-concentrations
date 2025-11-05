@@ -98,6 +98,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     single_variable_dir: Path,
     plot_complete_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_files_start_year: int,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
@@ -218,6 +219,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
+
+    esgf_files_start_year
+        Year in which ESGF files should start
 
     esgf_version
         Version to include in the files for ESGF
@@ -382,6 +386,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         inverse_emission_dir=inverse_emission_dir,
         lat_gradient_dir=lat_gradient_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
+        esgf_files_start_year=esgf_files_start_year,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
         executed_notebooks_dir=executed_notebooks_dir,
         esgf_version=esgf_version,
@@ -680,6 +685,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     create_esgf_files,
                     ghg=ghg,
                     cmip_scenario_name=si.cmip_scenario_name,
+                    esgf_files_start_year=esgf_files_start_year,
                     internal_processing_scenario_name=si.cmip_scenario_name,
                     esgf_version=esgf_version,
                     esgf_institution_id=esgf_institution_id,
@@ -834,6 +840,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     fossil_bio_split_interim_dir: Path,
     single_variable_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_files_start_year: int,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
@@ -965,6 +972,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
 
+    esgf_files_start_year
+        Year in which ESGF files should start
+
     esgf_version
         Version to include in the files for ESGF
 
@@ -1073,6 +1083,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             single_variable_dir=single_variable_dir,
             plot_complete_dir=plot_complete_dir,
             esgf_ready_root_dir=esgf_ready_root_dir,
+            esgf_files_start_year=esgf_files_start_year,
             esgf_version=esgf_version,
             esgf_institution_id=esgf_institution_id,
             input4mips_cvs_source=input4mips_cvs_source,

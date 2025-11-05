@@ -86,7 +86,7 @@ def calculate_inverse_emissions(  # noqa: PLR0913
         run_notebooks_dir=executed_notebooks_dir,
         identity=out_file.stem,
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 

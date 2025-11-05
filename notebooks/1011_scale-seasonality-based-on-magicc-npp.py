@@ -248,11 +248,18 @@ delta_pc = delta_npp_xr * m
 
 # %%
 pc0_extended = delta_pc + pc0.sel(year=last_hist_year).data
+pc0_extended = xr.concat(
+    [
+        pc0.sel(year=pc0["year"] < pc0_extended["year"].min()),
+        pc0_extended,
+    ],
+    dim="year",
+)
 
 fig, axes = plt.subplots(nrows=2, figsize=(8, 8))
 magiccc_output_median.pix.project("scenario").T.plot(ax=axes[0])
 pc0_extended.pint.to("dimensionless").plot(ax=axes[1], hue="scenario")
-pc0.pint.to("dimensionless").plot(ax=axes[1])
+pc0.pint.to("dimensionless").plot(ax=axes[1], linestyle="--", alpha=0.5, marker="x")
 for ax in axes:
     sns.move_legend(ax, loc="center left", bbox_to_anchor=(1.05, 0.5))
 

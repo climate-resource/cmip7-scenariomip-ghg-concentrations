@@ -69,6 +69,7 @@ seasonality_file: str = (
     "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_co2_seasonality-all-time.nc"
 )
 lat_gradient_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/co2_latitudinal-gradient-info.nc"
+esgf_files_start_year: int = 2022
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 
@@ -161,6 +162,10 @@ np.testing.assert_allclose(calculate_cos_lat_weighted_mean_latitude_only(lat_gra
 
 # %%
 native_grid_ym = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
+# Cut to intended time axis and check
+native_grid_ym = native_grid_ym.sel(year=native_grid_ym["year"] >= esgf_files_start_year)
+if native_grid_ym["year"].min() != esgf_files_start_year:
+    raise AssertionError(native_grid_ym["year"])
 # native_grid_ym
 
 # %%

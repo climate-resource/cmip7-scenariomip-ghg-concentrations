@@ -29,6 +29,7 @@ def create_esgf_files(  # noqa: PLR0913
     ghg: str,
     internal_processing_scenario_name: str,
     cmip_scenario_name: str,
+    esgf_files_start_year: int,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
@@ -61,6 +62,9 @@ def create_esgf_files(  # noqa: PLR0913
 
     cmip_scenario_name
         CMIP scenario name
+
+    esgf_files_start_year
+        Year in which ESGF files should start
 
     esgf_version
         Version to include in the files for ESGF
@@ -128,13 +132,14 @@ def create_esgf_files(  # noqa: PLR0913
             "global_mean_monthly_file": str(global_mean_monthly_file),
             "seasonality_file": str(seasonality_file),
             "lat_gradient_file": str(lat_gradient_file),
+            "esgf_files_start_year": esgf_files_start_year,
             "esgf_ready_root_dir": str(esgf_ready_root_dir),
             "historical_data_root_dir": str(historical_data_root_dir),
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{ghg}_{cmip_scenario_name}",
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 
@@ -228,7 +233,7 @@ def create_esgf_files_equivalence_species(  # noqa: PLR0913
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{equivalent_species}_{cmip_scenario_name}",
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 

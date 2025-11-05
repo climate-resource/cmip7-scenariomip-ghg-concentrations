@@ -51,6 +51,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_files_start_year: int,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
@@ -96,6 +97,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
+
+    esgf_files_start_year
+        Year in which ESGF files should start
 
     esgf_version
         Version to include in the files for ESGF
@@ -233,6 +237,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             seasonality_file=seasonality_file_futures[ghg],
             lat_gradient_file=lat_gradient_file_futures[ghg],
             esgf_ready_root_dir=esgf_ready_root_dir,
+            esgf_files_start_year=esgf_files_start_year,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,

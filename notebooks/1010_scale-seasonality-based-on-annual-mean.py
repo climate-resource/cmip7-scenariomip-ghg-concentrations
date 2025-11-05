@@ -185,13 +185,17 @@ for years in (
 # ## Prepare output
 
 # %%
-out_years = np.setdiff1d(annual_mean.columns, cmip7_historical_gm_monthly["time"].dt.year.values)
+# out_years = np.setdiff1d(annual_mean.columns, cmip7_historical_gm_monthly["time"].dt.year.values)
+out_years = annual_mean.columns
 # out_years
 
 # %% editable=true slideshow={"slide_type": ""}
 out = seasonality.sel(year=out_years).pint.dequantify()
 out.name = f"{ghg}_seasonality_all_months"
-out
+# out
+
+# %%
+# out["year"]
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Save

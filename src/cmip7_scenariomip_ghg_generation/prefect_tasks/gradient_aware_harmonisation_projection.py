@@ -101,7 +101,7 @@ def create_gradient_aware_harmonisation_annual_mean_file(  # noqa: PLR0913
         run_notebooks_dir=executed_notebooks_dir,
         identity=ghg,
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 

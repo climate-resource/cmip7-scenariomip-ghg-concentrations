@@ -110,6 +110,7 @@ this will lead to a new run being done
     ],
     magicc_root_folder: Annotated[Path, typer.Option(help="Root folder for MAGICC versions")] = REPO_ROOT_DIR
     / "magicc",
+    esgf_files_start_year: Annotated[int, typer.Option(help="Year in which ESGF files should start")] = 2022,
     esgf_version: Annotated[
         str,
         typer.Option(help="""Version to use when writing the files for ESGF"""),
@@ -403,6 +404,7 @@ Be careful and don't crash your computer."""
         single_variable_dir=single_variable_dir,
         plot_complete_dir=plot_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
+        esgf_files_start_year=esgf_files_start_year,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,

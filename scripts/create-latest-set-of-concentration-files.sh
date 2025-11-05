@@ -8,4 +8,8 @@ pixi run python scripts/generate-concentration-files.py \
     --run-id "1.0.0" \
     --esgf-version 1.0.0 \
     --input4mips-cvs-source "gh:ghg-concs-vl-final" \
+    --n-workers 2 \
+    --n-workers-multiprocessing 8 \
+    --n-workers-multiprocessing-magicc 2 \
+    --n-workers-per-magicc-notebook 6 \
     --emissions-file data/raw/input-scenarios/20250805-zn-scratch_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv
