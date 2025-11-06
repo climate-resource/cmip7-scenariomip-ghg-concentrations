@@ -143,9 +143,6 @@ def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
 
 
 # %%
-list(historical_data_seasonality_lat_gradient_info_root_p.rglob("co2*season*.nc"))
-
-# %%
 cmip7_seasonality_base = (
     load_file_from_glob(
         f"{ghg}_observational-network_seasonality.nc", historical_data_seasonality_lat_gradient_info_root_p

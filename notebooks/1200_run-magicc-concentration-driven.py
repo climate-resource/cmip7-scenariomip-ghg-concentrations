@@ -66,14 +66,6 @@ magicc_prob_distribution: str = "../magicc/magicc-v7.6.0a3/configs/magicc-ar7-fa
 n_magicc_workers: int = 4
 
 
-# %%
-# Temporary helper
-output_bundle_version = "1.0.0"
-emissions_complete_dir: str = f"../output-bundles/{output_bundle_version}/data/interim/complete-emissions"
-magicc_output_db_dir: str = f"../output-bundles/{output_bundle_version}/data/interim/magicc-output/db"
-esgf_ready_root_dir: str = f"../output-bundles/{output_bundle_version}/data/processed/esgf-ready"
-historical_data_root_dir: str = f"../output-bundles/{output_bundle_version}/data/raw/historical-ghg-concs"
-
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Parse parameters
 
@@ -126,10 +118,6 @@ historical_concentrations_xr
 
 # %% [markdown]
 # #### Future
-
-# %%
-# TODO: remove small hack
-esgf_ready_root_dir_p = Path(f"../output-bundles/{output_bundle_version}/data/processed/esgf-ready")
 
 # %%
 concentrations_xr_l = []

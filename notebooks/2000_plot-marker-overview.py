@@ -51,12 +51,6 @@ magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-outp
 magicc_db_backend_str: str = "feather"
 
 
-# %%
-# Temporary helper
-output_bundle_version = "1.0.0"
-emissions_complete_dir: str = f"../output-bundles/{output_bundle_version}/data/interim/complete-emissions"
-magicc_output_db_dir: str = f"../output-bundles/{output_bundle_version}/data/interim/magicc-output/db"
-
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Parse parameters
 
