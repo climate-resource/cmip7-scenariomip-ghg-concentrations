@@ -162,6 +162,13 @@ cmip_scenario_name_d
 
 
 # %%
+
+# %%
+
+# %%
+
+
+# %%
 def add_cmip_scenario_name(indf: pd.DataFrame) -> pd.DataFrame:
     """Add CMIP scenario name to the index"""
     cmip_scenario_names = indf.index.droplevel(indf.index.names.difference(["model", "scenario"])).map(
@@ -171,6 +178,8 @@ def add_cmip_scenario_name(indf: pd.DataFrame) -> pd.DataFrame:
 
     return res
 
+
+# %%
 
 # %%
 emissions_pdf = add_cmip_scenario_name(emissions)

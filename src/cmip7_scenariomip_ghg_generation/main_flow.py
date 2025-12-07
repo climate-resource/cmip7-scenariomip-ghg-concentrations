@@ -374,12 +374,17 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     ### Get the markers
     scenario_info_markers = tuple(v for v in scenario_infos if v.cmip_scenario_name is not None)
 
+    wmo_2022_cleaned = submit_output_aware(
+        clean_wmo_data, raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path
+    )
+
     create_single_concentration_projection = partial(
         create_scenariomip_ghgs_single_concentration_projection,
         scenario_infos=scenario_info_markers,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
         cmip7_historical_seasonality_lat_gradient_info_extracted=cmip7_historical_seasonality_lat_gradient_info_extracted,
+        wmo_2022_clean_file=wmo_2022_cleaned,
         annual_mean_dir=annual_mean_dir,
         monthly_mean_dir=monthly_mean_dir,
         seasonality_dir=seasonality_dir,
@@ -394,10 +399,6 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         input4mips_cvs_source=input4mips_cvs_source,
         doi=doi,
         pool_multiprocessing=pool_multiprocessing,
-    )
-
-    wmo_2022_cleaned = submit_output_aware(
-        clean_wmo_data, raw_data_path=wmo_raw_data_path, out_file=wmo_cleaned_data_path
     )
 
     if wmo_2022_ghgs:
@@ -577,6 +578,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 historical_data_seasonality_lat_gradient_info_root=(
                     cmip7_historical_seasonality_lat_gradient_info_extracted
                 ),
+                wmo_2022_clean_file=None,
                 out_file=monthly_mean_dir / f"modelling-based-projection_{ghg}_monthly-mean.nc",
                 raw_notebooks_root_dir=raw_notebooks_root_dir,
                 executed_notebooks_dir=executed_notebooks_dir,

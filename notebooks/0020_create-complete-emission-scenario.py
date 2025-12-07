@@ -33,6 +33,7 @@ import openscm_units
 import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
+import pandas_openscm.comparison
 import seaborn as sns
 from gcages.harmonisation.common import assert_harmonised
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
@@ -85,17 +86,17 @@ inverse_emissions = pd.read_feather(inverse_emissions_file_p)
 # inverse_emissions
 
 # %% [markdown]
-# ### Scenario without infilling
+# ### Complete scenario
 
 # %% editable=true slideshow={"slide_type": ""}
-raw_scenario = pd.read_feather(scenario_file_p)
-# raw_scenario
+complete_scenario = pd.read_feather(scenario_file_p)
+# complete_scenario
 
 # %% [markdown]
 # ## Convert to gcages names
 
 # %%
-gcages_scenario = raw_scenario.openscm.update_index_levels(
+gcages_scenario = complete_scenario.openscm.update_index_levels(
     {
         "variable": partial(
             convert_variable_name,
@@ -123,7 +124,9 @@ gcages_history = history.openscm.update_index_levels(
 
 # %%
 annual_scenario = gcages_scenario.copy()
-missing_years = np.setdiff1d(np.arange(raw_scenario.columns.min(), raw_scenario.columns.max()), raw_scenario.columns)
+missing_years = np.setdiff1d(
+    np.arange(gcages_scenario.columns.min(), gcages_scenario.columns.max()), gcages_scenario.columns
+)
 annual_scenario[missing_years] = np.nan
 annual_scenario = annual_scenario.sort_index(axis="columns")
 annual_scenario = annual_scenario.T.interpolate(method="index").T
@@ -146,6 +149,11 @@ sns.relplot(
 
 # %% [markdown]
 # ## Scaling-based infilling
+#
+# Background: originally we only did this here.
+# This was then moved into the emissions team.
+# All we're really doing here is checking
+# that this transfer happened correctly.
 #
 # For some species, we infill by simply assuming a scaling following another emissions's trajectory.
 #
@@ -222,7 +230,11 @@ for follower, leader in scaling_leaders.items():
         msg = f"{f_harmonisation_year=} {l_harmonisation_year=} {f_0=} {l_0=}"
         raise AssertionError(msg)
 
-    lead_df = annual_scenario.loc[pix.isin(variable=leader)]
+    lead_df = annual_scenario.loc[
+        pix.isin(variable=leader),
+        # Don't infill in the historical period
+        harmonisation_year:,
+    ]
     if lead_df.empty:
         raise AssertionError(f"{leader=}")
 
@@ -274,8 +286,25 @@ for follower, leader in scaling_leaders.items():
     plt.show()
 
 
+# %%
+complete_scenario_infilled_scaling = gcages_scenario.loc[
+    pix.isin(variable=infilled_scaling.pix.unique("variable")), infilled_scaling.columns
+]
+# complete_scenario_infilled_scaling
+
+# %%
+comparison = pandas_openscm.comparison.compare_close(
+    complete_scenario_infilled_scaling,
+    infilled_scaling,
+    left_name="complete",
+    right_name="double_check",
+    isclose=partial(np.isclose, atol=0.01),
+)
+if not comparison.empty:
+    raise AssertionError(comparison)
+
 # %% [markdown]
-# ## Join with history
+# ## Compare with inverse emissions
 
 
 # %%
@@ -312,14 +341,35 @@ _ = inverse_emissions_reshaped.openscm.update_index_levels(
 # inverse_emissions_reshaped
 
 # %%
-complete_scenario = pix.concat(
-    [
-        annual_scenario,
-        infilled_scaling,
-        inverse_emissions_reshaped.loc[:, annual_scenario.columns],
-    ]
-).sort_index(axis="columns")
-missing = list(gcages_history.pix.unique("variable").difference(complete_scenario.pix.unique("variable")))
+check_years_inverse_emissions = np.intersect1d(gcages_scenario.columns, inverse_emissions_reshaped.columns)
+complete_scenario_infilled_inverse_emissions = gcages_scenario.loc[
+    pix.isin(variable=inverse_emissions_reshaped.pix.unique("variable")),
+    check_years_inverse_emissions,
+]
+complete_scenario_infilled_inverse_emissions
+
+# %%
+compare_to = inverse_emissions_reshaped.loc[:, check_years_inverse_emissions].reorder_levels(
+    complete_scenario_infilled_inverse_emissions.index.names
+)
+compare_to.columns.name = "year"
+compare_to
+
+# %%
+for (variable, unit), vdf in compare_to.groupby(["variable", "unit"]):
+    comparison = pandas_openscm.comparison.compare_close(
+        complete_scenario_infilled_inverse_emissions.loc[pix.isin(variable=variable)].pix.convert_unit(unit),
+        vdf,
+        left_name="complete",
+        right_name="double_check",
+        isclose=partial(np.isclose, atol=0.01),
+    )
+    if not comparison.empty:
+        raise AssertionError(comparison)
+
+# %%
+out = gcages_scenario
+missing = list(gcages_history.pix.unique("variable").difference(out.pix.unique("variable")))
 if missing:
     raise AssertionError(missing)
 
@@ -327,12 +377,12 @@ if missing:
 
 # %%
 history_aligned_to_scenario = gcages_history.reset_index(["model", "scenario"], drop=True).align(
-    complete_scenario.reset_index("unit", drop=True)
+    out.reset_index("unit", drop=True)
 )[0]
 
 history_aligned_to_scenario_incl_units_l = []
 for variable, unit in (
-    complete_scenario.index.droplevel(complete_scenario.index.names.difference(["variable", "unit"]))
+    out.index.droplevel(out.index.names.difference(["variable", "unit"]))
     .reorder_levels(["variable", "unit"])
     .drop_duplicates()
 ):
@@ -345,22 +395,17 @@ history_aligned_to_scenario_incl_units = pix.concat(history_aligned_to_scenario_
 # history_aligned_to_scenario_incl_units
 
 # %%
-complete_emissions = (
-    pix.concat(
-        [history_aligned_to_scenario_incl_units.loc[:, : complete_scenario.columns.min() - 1], complete_scenario],
-        axis="columns",
-    )
-    .sort_index(axis="columns")
-    .dropna(how="any", axis="columns")
-)
-if complete_emissions.isnull().any().any():
+if out.columns.min() != history_aligned_to_scenario_incl_units.columns.min():
     raise AssertionError
 
-# complete_emissions
+if out.isnull().any().any():
+    raise AssertionError
+
+# complete_scenario
 
 # %%
 # sns.relplot(
-#     data=complete_emissions.openscm.to_long_data(),
+#     data=complete_scenario.openscm.to_long_data(),
 #     x="time",
 #     y="value",
 #     col="variable",
@@ -373,5 +418,7 @@ if complete_emissions.isnull().any().any():
 # ## Save
 
 # %%
+# Bit stupid to re-write.
+# Leaving for now for legacy reasons.
 out_file_p.parent.mkdir(exist_ok=True, parents=True)
-complete_emissions.to_feather(out_file_p)
+out.to_feather(out_file_p)

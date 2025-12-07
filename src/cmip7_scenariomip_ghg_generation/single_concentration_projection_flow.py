@@ -45,6 +45,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     cmip7_historical_ghg_concentration_source_id: str,
     cmip7_historical_ghg_concentration_data_root_dir: Path,
     cmip7_historical_seasonality_lat_gradient_info_extracted: Path,
+    wmo_2022_clean_file: Path,
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
     seasonality_dir: Path,
@@ -79,6 +80,11 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     cmip7_historical_seasonality_lat_gradient_info_extracted
         Root directory in which the historical lat. gradient and seasonality was extracted
+
+    wmo_2022_clean_file
+        Path to the clean WMO 2022 data
+
+        Required to handle Halon-1202, which isn't in the historical CMIP7 data for some reason.
 
     annual_mean_dir
         Path in which to save interim annual-mean data
@@ -169,6 +175,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted
             ),
+            wmo_2022_clean_file=wmo_2022_clean_file,
             out_file=monthly_mean_dir / f"single-concentration-projection_{ghg}_monthly-mean.nc",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,

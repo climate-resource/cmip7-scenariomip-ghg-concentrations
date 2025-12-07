@@ -54,6 +54,7 @@ historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
 )
+wmo_2022_clean_file: str = "not_used"
 out_file: str = (
     "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_ccl4_monthly-mean.nc"
 )
@@ -67,6 +68,10 @@ annual_mean_file_p = Path(annual_mean_file)
 historical_data_root_dir_p = Path(historical_data_root_dir)
 historical_data_seasonality_lat_gradient_info_root_p = Path(historical_data_seasonality_lat_gradient_info_root)
 out_file_p = Path(out_file)
+if wmo_2022_clean_file != "not_used":
+    wmo_2022_clean_file_p = Path(wmo_2022_clean_file)
+else:
+    wmo_2022_clean_file_p = wmo_2022_clean_file
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Set up
@@ -106,6 +111,16 @@ if ghg != "halon1202":
     # No idea why Malte didn't include halon1202 in historical, but there it is
     cmip7_historical_gm_annual_ds = load_file_from_glob(f"*{ghg}_*gm_1750-*.nc", historical_data_root_dir_p)
     cmip7_historical_gm_annual = cmip7_historical_gm_annual_ds[ghg]
+
+else:
+    wmo_2022_raw = pd.read_feather(wmo_2022_clean_file_p)
+    wmo_2022_raw.columns = wmo_2022_raw.columns.astype(int)
+    wmo_2022_raw_halon1202 = wmo_2022_raw.loc[pix.isin(ghg=ghg)]
+    # Extend back to 1750 and put on middle of year
+    wmo_2022_raw_halon1202_mid_year = (wmo_2022_raw_halon1202 + wmo_2022_raw_halon1202.shift(-1, axis="columns")) / 2.0
+    wmo_2022_raw_halon1202_mid_year.loc[:, np.arange(1750, wmo_2022_raw_halon1202_mid_year.columns.min())] = 0.0
+    wmo_2022_raw_halon1202_mid_year = wmo_2022_raw_halon1202_mid_year.sort_index(axis="columns")
+
 # cmip7_historical_gm_annual
 
 # %% editable=true slideshow={"slide_type": ""}
@@ -144,6 +159,13 @@ if ghg != "halon1202":
         rtol=2e-3,
     )
 
+else:
+    np.testing.assert_allclose(
+        wmo_2022_raw_halon1202_mid_year.loc[:, overlap_year],
+        annual_mean.loc[:, overlap_year],
+        rtol=2e-3,
+    )
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Stitch
 
@@ -165,7 +187,13 @@ if ghg != "halon1202":
     )
 
 else:
-    stitched = annual_mean
+    stitched = pix.concat(
+        [
+            wmo_2022_raw_halon1202_mid_year.loc[:, : annual_mean.columns.min() - 1].pix.assign(scenario="all"),
+            annual_mean,
+        ],
+        axis="columns",
+    )
 
 stitched.T.plot()
 # stitched

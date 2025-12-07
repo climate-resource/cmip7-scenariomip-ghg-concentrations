@@ -74,7 +74,11 @@ ALL_GHGS = [
 def main(  # noqa: PLR0912, PLR0913, PLR0915
     emissions_file: Annotated[
         Path, typer.Option(help="Emissions file received from the emissions harmonisation team")
-    ] = (REPO_RAW_DATA_DIR / "input-scenarios" / "0009-zn_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv"),
+    ] = (
+        REPO_RAW_DATA_DIR
+        / "input-scenarios"
+        / "202511281156_202511040855_202511040855_202511040855_complete-emissions.csv"
+    ),
     scenarios_to_run: Annotated[
         str,
         typer.Option(
@@ -179,7 +183,7 @@ Be careful and don't crash your computer."""
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
     fossil_bio_split_file = emissions_file.parent / emissions_file.name.replace(
-        "up-to-sillicone", "fossil-biosphere-aggregation"
+        "complete-emissions", "harmonised-emissions-fossil-biosphere-aggregation"
     )
     if not fossil_bio_split_file.exists():
         raise FileNotFoundError(fossil_bio_split_file)
