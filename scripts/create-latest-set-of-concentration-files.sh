@@ -12,4 +12,4 @@ pixi run python scripts/generate-concentration-files.py \
     --n-workers-multiprocessing 8 \
     --n-workers-multiprocessing-magicc 2 \
     --n-workers-per-magicc-notebook 6 \
-    --emissions-file data/raw/input-scenarios/202512021030_202512071021_202511040855_202511040855_complete-emissions.csv
+    --emissions-file data/raw/input-scenarios/202512021030_202512071232_202511040855_202511040855_complete-emissions.csv

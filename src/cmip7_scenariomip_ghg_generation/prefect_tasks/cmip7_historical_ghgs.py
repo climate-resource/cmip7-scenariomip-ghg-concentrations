@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pooch
+from prefect.tasks import exponential_backoff
 
 from cmip7_scenariomip_ghg_generation.prefect_helpers import (
     create_hash_dict,
@@ -18,6 +19,8 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import (
 @task_standard_path_cache(
     task_run_name="download-cmip7-historical-ghg-concentrations_{ghg}_{source_id}",
     parameters_output=("checklist_file",),
+    retries=10,
+    retry_delay_seconds=exponential_backoff(backoff_factor=2),
 )
 def download_cmip7_historical_ghg_concentrations(
     ghg: str, source_id: str, root_dir: Path, checklist_file: Path
