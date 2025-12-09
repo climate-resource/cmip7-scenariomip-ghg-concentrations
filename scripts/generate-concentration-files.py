@@ -198,7 +198,7 @@ Be careful and don't crash your computer."""
         # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
         # ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
         # ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
-        # ("GCAM 7.1 scenarioMIP", "SSP3 - High Emissions", "h"),
+        ("GCAM 8s", "SSP3 - High Emissions", "h"),
     )
 
     # Choices here are quite arbitrary

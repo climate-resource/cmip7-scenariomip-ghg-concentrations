@@ -7,6 +7,7 @@ from __future__ import annotations
 import datetime as dt
 from collections.abc import Callable, Coroutine, Iterable
 from dataclasses import dataclass
+from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import Any, ParamSpec, TypeVar
@@ -46,6 +47,52 @@ For that, use [submit_output_aware][].
 """
 
 
+class FileHashCachingResult(Enum):
+    """
+    Possible states when getting a file's hash for caching
+    """
+
+    DOES_NOT_EXIST = 1
+    IS_FILE = 2
+    IS_DIR = 3
+
+
+def get_file_hash_for_cache(value: Path) -> tuple[FileHashCachingResult, str | None]:
+    """
+    Get file hash for cache
+
+    See comments for explanation.
+    TODO: clean up once we're happy with this pattern.
+    """
+    if not value.exists():
+        # Return key that will cause a cache miss
+        # (turns out that using None doesn't work
+        # if you're combining multiple caching strategies
+        # because it is just dropped).
+        cache_key = str(dt.datetime.utcnow().timestamp())
+
+        # Note for devs:
+        # This pattern might not be quite right,
+        # because things can end up being run twice
+        # if the value doesn't exist at cache key calculation time.
+        # (Although, as far as I can tell,
+        # the cache key is computed after other tasks have finished
+        # so this might not actually be a problem.)
+        # However, in that case there is no way
+        # to produce a stable cache key
+        # so this might be the best we can do.
+        # Maybe using transactions or clever waits would fix it,
+        # but I can't figure that out how right now.
+        # Transaction docs for reference:
+        # https://docs-3.prefect.io/v3/develop/transactions#idempotency
+        return (FileHashCachingResult.DOES_NOT_EXIST, cache_key)
+
+    if value.is_file():
+        return (FileHashCachingResult.IS_FILE, get_file_hash(value))
+
+    return (FileHashCachingResult.IS_DIR, None)
+
+
 @dataclass
 class PathHashesCP(CachePolicy):
     """
@@ -77,7 +124,7 @@ class PathHashesCP(CachePolicy):
     1. So the task runs again (unnecessarily)
     """
 
-    def compute_key(
+    def compute_key(  # noqa: PLR0912
         self,
         task_ctx: TaskRunContext,
         inputs: dict[str, Any] | None,
@@ -123,35 +170,35 @@ class PathHashesCP(CachePolicy):
             value = inputs[parameter]
 
             if isinstance(value, Path):
-                if not value.exists():
-                    # Return key that will cause a cache miss
-                    # (turns out that using None doesn't work
-                    # if you're combining multiple caching strategies
-                    # because it is just dropped).
-                    return str(dt.datetime.utcnow().timestamp())
+                path_values_to_check = (value,)
 
-                    # Note for devs:
-                    # This pattern might not be quite right,
-                    # because things can end up being run twice
-                    # if the value doesn't exist at cache key calculation time.
-                    # (Although, as far as I can tell,
-                    # the cache key is computed after other tasks have finished
-                    # so this might not actually be a problem.)
-                    # However, in that case there is no way
-                    # to produce a stable cache key
-                    # so this might be the best we can do.
-                    # Maybe using transactions or clever waits would fix it,
-                    # but I can't figure that out how right now.
-                    # Transaction docs for reference:
-                    # https://docs-3.prefect.io/v3/develop/transactions#idempotency
+            elif not isinstance(value, str) and isinstance(value, Iterable):
+                path_values_to_check = [v for v in value if isinstance(v, Path)]
 
-                # Add hash of file values that haven't been ignored
-                if value.is_file():
-                    hash_l.append(get_file_hash(value))
+            else:
+                path_values_to_check = None
+
+            if path_values_to_check:
+                for path_value in path_values_to_check:
+                    file_hash_result = get_file_hash_for_cache(path_value)
+                    if file_hash_result[0] == FileHashCachingResult.DOES_NOT_EXIST:
+                        # Return instantly as we should have a cache miss
+                        return file_hash_result[1]
+
+                    elif file_hash_result[0] == FileHashCachingResult.IS_DIR:
+                        # Do nothing
+                        pass
+
+                    elif file_hash_result[0] == FileHashCachingResult.IS_FILE:
+                        # Add hash of file values that haven't been ignored
+                        hash_l.append(file_hash_result[1])
+
+                    else:
+                        raise NotImplementedError(file_hash_result)
 
         if not hash_l:
             # Only directories
-            # Return static key as we only check for existence
+            # Return static key as we only need to check for existence
             return "static-key"
 
         # All files exist, return concatenated hashes as the hash key

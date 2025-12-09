@@ -15,7 +15,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_
 @task_standard_path_cache(
     task_run_name="download-file_{url}_{out_path}",
     parameters_output=("out_path",),
-    retries=10,
+    retries=7,
     retry_delay_seconds=exponential_backoff(backoff_factor=2),
 )
 def download_file(url: Path, out_path: Path) -> Path:

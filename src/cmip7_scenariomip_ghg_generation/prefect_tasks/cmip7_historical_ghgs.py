@@ -19,7 +19,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import (
 @task_standard_path_cache(
     task_run_name="download-cmip7-historical-ghg-concentrations_{ghg}_{source_id}",
     parameters_output=("checklist_file",),
-    retries=10,
+    retries=7,
     retry_delay_seconds=exponential_backoff(backoff_factor=2),
 )
 def download_cmip7_historical_ghg_concentrations(

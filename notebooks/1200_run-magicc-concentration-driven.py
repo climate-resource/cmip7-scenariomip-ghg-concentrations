@@ -43,6 +43,7 @@ import tqdm.auto
 import xarray as xr
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
 from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
+from IPython import display
 from pymagicc.definitions import convert_magicc7_to_openscm_variables
 from pymagicc.io import MAGICCData
 
@@ -652,7 +653,7 @@ if len(pdf.pix.unique("run_mode")) == n_run_modes_to_show:
     plt.show()
 
     # Not adjusted to assessed warming hence can differ from 'normal' reporting
-    display(peak_warming.groupby(["run_mode"]).describe().round(3))  # noqa: F821
+    display(peak_warming.groupby(["run_mode"]).describe().round(3))
 
 # %% [markdown]
 # ## Save to database

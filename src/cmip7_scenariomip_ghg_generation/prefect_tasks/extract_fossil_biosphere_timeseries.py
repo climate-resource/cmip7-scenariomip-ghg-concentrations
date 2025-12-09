@@ -73,7 +73,7 @@ def extract_fossil_biosphere_timeseries(
     mod_scens_lin_interp = mod_scens_lin_interp.sort_index(axis="columns").T.interpolate(method="index").T
 
     history = db.loc[pix.isin(scenario="historical")].dropna(axis="columns")
-    history_aligned = history.pix.project(["variable", "unit"]).align(mod_scens)[0].dropna(axis="columns")
+    history_aligned = history.pix.project(["variable", "unit"]).align(mod_scens)[0].dropna(axis="columns", how="all")
 
     not_in_history_years = mod_scens_lin_interp.columns.difference(history_aligned.columns)
     mod_scens_keep = mod_scens_lin_interp.loc[:, not_in_history_years]
