@@ -17,8 +17,8 @@
 
 - uploading to NERSC
     - raw docs are pretty good: https://docs.nersc.gov/services/scp/
-    - command is something like `scp -r output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
-        - `-r`: recursive i.e. upload the folder and its structure
+    - command is something like `rsync --partial --progress -avR output-bundles/1.0.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
+        - `-avR`: sets the flags for copying recursively and with the directory structure we want
         - `output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs`: the directory you want to upload
         - `zrjn`: zeb's username, yours will be something like fb.
           You can get this by logging into jupyter then looking at the start of your shell.
