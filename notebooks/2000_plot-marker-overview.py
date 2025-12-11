@@ -38,16 +38,16 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 scenario_info_markers: str = (
-    "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
+    # "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
     "REMIND-MAgPIE 3.5-4.11;SSP1 - Very Low Emissions;vl;;"
-    "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
-    "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
-    "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
-    "AIM 3.0;SSP2 - Low Overshoot;ln;;"
-    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
+    # "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
+    # "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
+    "GCAM 8s;SSP3 - High Emissions;h"
+    # "AIM 3.0;SSP2 - Low Overshoot;ln;;"
+    # "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
-emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
+emissions_complete_dir: str = "../output-bundles/1.0.0/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/1.0.0/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
 
 
@@ -305,6 +305,9 @@ for level in [1.5, 1.7, 1.8, 2.0]:
 axes["mid-century"].grid()
 # TODO: fix legend position
 # plt.tight_layout()
+
+# %%
+gsat.max(axis=1).groupby(gsat.index.names.difference(["run_id"])).median()
 
 # %%
 scenario_order_in_dataset = [v for v in scenario_order if v in pdf.index.get_level_values("cmip_scenario_name")]
