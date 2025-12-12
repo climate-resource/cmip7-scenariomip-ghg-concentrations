@@ -55,7 +55,7 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 equivalent_species: str = "cfc12eq"
 components = "cfc11;;cfc113;;cfc114;;cfc115;;cfc12;;ccl4;;ch2cl2;;ch3br;;ch3ccl3;;ch3cl;;chcl3;;halon1211;;halon1301;;halon2402;;hcfc141b;;hcfc142b;;hcfc22"  # noqa: E501
-cmip_scenario_name: str = "vllo"
+cmip_scenario_name: str = "vl"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 

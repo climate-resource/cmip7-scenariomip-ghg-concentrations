@@ -60,6 +60,57 @@ pixi run jupyter lab
 
 ## Creating the files
 
+### Prefect set up
+
+**Background**: If you use prefect in more than one project,
+you can get yourself in a mess.
+As a precaution, we recommend following this process in all cases,
+even if this is the only project with which you use pixi.
+
+To avoid clashes, you will likely want to make a
+[profile](https://docs.prefect.io/v3/how-to-guides/configuration/manage-settings)
+specific to this project, e.g.
+
+```sh
+pixi run prefect profile create cmip7-scenariomip-ghg-concentrations
+```
+
+Then use it with
+
+```sh
+pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
+```
+
+To avoid clashes with other databases,
+tell prefect to use a database specific to this project
+
+```sh
+mkdir .prefect
+pixi run prefect config set PREFECT_API_DATABASE_CONNECTION_URL='sqlite+aiosqlite:////path/to/this/repo/.prefect/prefect.db'
+```
+
+If you want to run on a specific host/port for this instance,
+you can set that with
+
+```sh
+# Host
+pixi run prefect config set PREFECT_SERVER_API_HOST=<desired-host>
+# e.g.
+pixi run prefect config set PREFECT_SERVER_API_HOST="127.0.0.1"
+# Port
+pixi run prefect config set PREFECT_SERVER_API_PORT=<desired-port>
+# e.g.
+pixi run prefect config set PREFECT_SERVER_API_PORT="4201"
+```
+
+If you do this, make sure that the prefect API URL matches
+
+```sh
+pixi run prefect config set PREFECT_API_URL="http://<desired-host>:<desired-port>/api"
+# e.g.
+pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
+```
+
 ### Process
 
 #### In short
@@ -117,8 +168,8 @@ pixi run jupyter lab
 
 #### Uploading to Nersc
 - raw docs are pretty good: https://docs.nersc.gov/services/scp/
-- command is something like `scp -r output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
-    - `-r`: recursive i.e. upload the folder and its structure
+- command is something like `rsync --partial --progress -avR output-bundles/1.0.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
+    - `-avR`: sets the flags for copying recursively and with the directory structure we want
     - `output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs`: the directory you want to upload
     - `zrjn`: zeb's username, yours will be something like fb.
       You can get this by logging into jupyter then looking at the start of your shell.

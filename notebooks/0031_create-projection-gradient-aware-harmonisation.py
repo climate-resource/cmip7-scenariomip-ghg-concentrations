@@ -47,11 +47,11 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 ghg: str = "ch4"
 scenario_info_markers: str = (
     "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
-    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;"
+    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vl;;"
     "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
     "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
     "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
-    "AIM 3.0;SSP2 - Low Overshoot;vlho;;"
+    "AIM 3.0;SSP2 - Low Overshoot;ln;;"
     "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
@@ -97,8 +97,8 @@ UR.setup_matplotlib(enable=True)
 
 # %%
 palette = {
-    "vllo": "#24a4ff",
-    "vlho": "#4a0daf",
+    "vl": "#24a4ff",
+    "ln": "#4a0daf",
     "l": "#00cc69",
     "ml": "#f5ac00",
     "m": "#ffa9dc",
@@ -107,7 +107,7 @@ palette = {
     "historical": "black",
 }
 
-scenario_order = ["vllo", "vlho", "l", "ml", "m", "hl", "h"]
+scenario_order = ["vl", "ln", "l", "ml", "m", "hl", "h"]
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Load data
@@ -307,7 +307,7 @@ harmonised = pix.concat(harmonised_l)
 # ## Plot
 
 # %%
-fig, axes = plt.subplot_mosaic([["vllo", "vlho", "l"], ["ml", "m", "."], ["hl", "h", "."]], figsize=(20, 20))
+fig, axes = plt.subplot_mosaic([["vl", "ln", "l"], ["ml", "m", "."], ["hl", "h", "."]], figsize=(20, 20))
 for scenario, ax in axes.items():
     pdf = pix.concat(
         [

@@ -29,6 +29,7 @@ def create_esgf_files(  # noqa: PLR0913
     ghg: str,
     internal_processing_scenario_name: str,
     cmip_scenario_name: str,
+    esgf_files_start_year: int,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
@@ -37,6 +38,7 @@ def create_esgf_files(  # noqa: PLR0913
     seasonality_file: Path,
     lat_gradient_file: Path,
     esgf_ready_root_dir: Path,
+    historical_data_root_dir: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     checklist_file: Path,
@@ -61,6 +63,9 @@ def create_esgf_files(  # noqa: PLR0913
     cmip_scenario_name
         CMIP scenario name
 
+    esgf_files_start_year
+        Year in which ESGF files should start
+
     esgf_version
         Version to include in the files for ESGF
 
@@ -84,6 +89,9 @@ def create_esgf_files(  # noqa: PLR0913
 
     esgf_ready_root_dir
         Root directory for writing ESGF-ready files
+
+    historical_data_root_dir
+        Root path in which the historical data was downloaded
 
     raw_notebooks_root_dir
         Directory in which the raw notebooks live
@@ -124,12 +132,14 @@ def create_esgf_files(  # noqa: PLR0913
             "global_mean_monthly_file": str(global_mean_monthly_file),
             "seasonality_file": str(seasonality_file),
             "lat_gradient_file": str(lat_gradient_file),
+            "esgf_files_start_year": esgf_files_start_year,
             "esgf_ready_root_dir": str(esgf_ready_root_dir),
+            "historical_data_root_dir": str(historical_data_root_dir),
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{ghg}_{cmip_scenario_name}",
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 
@@ -223,7 +233,7 @@ def create_esgf_files_equivalence_species(  # noqa: PLR0913
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{equivalent_species}_{cmip_scenario_name}",
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 

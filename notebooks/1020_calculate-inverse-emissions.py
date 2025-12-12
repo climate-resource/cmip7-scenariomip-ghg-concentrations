@@ -39,11 +39,11 @@ from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.annual_to_mo
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "ccl4"
+ghg: str = "halon2402"
 monthly_mean_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_ccl4_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_halon2402_monthly-mean.nc"
 )
-out_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_ccl4_inverse-emissions.feather"  # noqa: E501
+out_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_halon2402_inverse-emissions.feather"  # noqa: E501
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -169,6 +169,15 @@ alpha_emms_high_res = dC_dt + high_res_vals / tau
 years = np.unique(monthly_mean["time"].dt.year)
 alpha_emms_monthly = (alpha_emms_high_res.reshape(-1, res_increase) * dt_approx.reshape(-1, res_increase)).sum(axis=1)
 alpha_emms_yearly = (alpha_emms_monthly.reshape(-1, int(MONTHS_PER_YEAR))).sum(axis=1) / Q(1, "yr")
+# Get rid of small negative values
+small_val = 1e-8
+alpha_emms_yearly[
+    ((alpha_emms_yearly < 0.0) & (alpha_emms_yearly > np.max(alpha_emms_yearly) * -10e-2))
+    | (np.abs(alpha_emms_yearly).m < small_val)
+] = alpha_emms_yearly[0] * 0.0
+if ghg == "halon1202":
+    alpha_emms_yearly[alpha_emms_yearly < 0.0] = alpha_emms_yearly[0] * 0.0
+
 # alpha_emms_yearly
 
 # %%
@@ -213,6 +222,8 @@ out_ppt_yr = pd.DataFrame(
         [(ghg, str(alpha_emms_yearly.u), "inverse_emissions")], names=["ghg", "unit", "variable"]
     ),
 )
+if (out_ppt_yr < 0.0).any().any():
+    raise AssertionError(out_ppt_yr.min().min())
 
 out_ppt_yr
 

@@ -43,11 +43,11 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 ghg: str = "hfc23"
 scenario_info_markers: str = (
     "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
-    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;"
+    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vl;;"
     "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
     "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
     "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
-    "AIM 3.0;SSP2 - Low Overshoot;vlho;;"
+    "AIM 3.0;SSP2 - Low Overshoot;ln;;"
     "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
 emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
@@ -225,8 +225,8 @@ one_box_projections = pix.concat(one_box_projections_l)
 
 # %%
 palette = {
-    "vllo": "#24a4ff",
-    "vlho": "#4a0daf",
+    "vl": "#24a4ff",
+    "ln": "#4a0daf",
     "l": "#00cc69",
     "ml": "#f5ac00",
     "m": "#ffa9dc",
@@ -234,7 +234,7 @@ palette = {
     "hl": "#8f003b",
 }
 
-scenario_order = ["vllo", "vlho", "l", "ml", "m", "hl", "h"]
+scenario_order = ["vl", "ln", "l", "ml", "m", "hl", "h"]
 
 # %%
 for variable, one_box_projection in tqdm.auto.tqdm(one_box_projections.groupby("variable")):

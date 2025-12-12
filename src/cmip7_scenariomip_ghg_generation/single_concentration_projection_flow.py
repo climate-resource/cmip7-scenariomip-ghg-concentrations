@@ -45,12 +45,14 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     cmip7_historical_ghg_concentration_source_id: str,
     cmip7_historical_ghg_concentration_data_root_dir: Path,
     cmip7_historical_seasonality_lat_gradient_info_extracted: Path,
+    wmo_2022_clean_file: Path,
     annual_mean_dir: Path,
     monthly_mean_dir: Path,
     seasonality_dir: Path,
     inverse_emission_dir: Path,
     lat_gradient_dir: Path,
     esgf_ready_root_dir: Path,
+    esgf_files_start_year: int,
     esgf_version: str,
     esgf_institution_id: str,
     input4mips_cvs_source: str,
@@ -79,6 +81,11 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     cmip7_historical_seasonality_lat_gradient_info_extracted
         Root directory in which the historical lat. gradient and seasonality was extracted
 
+    wmo_2022_clean_file
+        Path to the clean WMO 2022 data
+
+        Required to handle Halon-1202, which isn't in the historical CMIP7 data for some reason.
+
     annual_mean_dir
         Path in which to save interim annual-mean data
 
@@ -96,6 +103,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     esgf_ready_root_dir
         Path to use as the root for writing ESGF-ready data
+
+    esgf_files_start_year
+        Year in which ESGF files should start
 
     esgf_version
         Version to include in the files for ESGF
@@ -165,6 +175,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             historical_data_seasonality_lat_gradient_info_root=(
                 cmip7_historical_seasonality_lat_gradient_info_extracted
             ),
+            wmo_2022_clean_file=wmo_2022_clean_file,
             out_file=monthly_mean_dir / f"single-concentration-projection_{ghg}_monthly-mean.nc",
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
@@ -233,6 +244,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             seasonality_file=seasonality_file_futures[ghg],
             lat_gradient_file=lat_gradient_file_futures[ghg],
             esgf_ready_root_dir=esgf_ready_root_dir,
+            esgf_files_start_year=esgf_files_start_year,
+            historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,
             checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",

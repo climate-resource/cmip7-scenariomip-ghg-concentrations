@@ -56,8 +56,8 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "co2"
-cmip_scenario_name: str = "vllo"
-internal_processing_scenario_name: str = "vllo"
+cmip_scenario_name: str = "vl"
+internal_processing_scenario_name: str = "vl"
 esgf_version: str = "0.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:cr-scenariomip"
@@ -69,7 +69,9 @@ seasonality_file: str = (
     "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_co2_seasonality-all-time.nc"
 )
 lat_gradient_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/co2_latitudinal-gradient-info.nc"
+esgf_files_start_year: int = 2022
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
+historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -80,6 +82,7 @@ global_mean_monthly_file_p = Path(global_mean_monthly_file)
 seasonality_file_p = Path(seasonality_file)
 lat_gradient_file_p = Path(lat_gradient_file)
 esgf_ready_root_dir_p = Path(esgf_ready_root_dir)
+historical_data_root_dir_p = Path(historical_data_root_dir)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Set up
@@ -159,6 +162,10 @@ np.testing.assert_allclose(calculate_cos_lat_weighted_mean_latitude_only(lat_gra
 
 # %%
 native_grid_ym = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
+# Cut to intended time axis and check
+native_grid_ym = native_grid_ym.sel(year=native_grid_ym["year"] >= esgf_files_start_year)
+if native_grid_ym["year"].min() != esgf_files_start_year:
+    raise AssertionError(native_grid_ym["year"])
 # native_grid_ym
 
 # %%
@@ -205,6 +212,42 @@ tmp = tmp.assign_coords(time=tmp["time"].dt.year + tmp["time"].dt.month / 12)
 ax.view_init(15, -135, 0)  # type: ignore
 plt.tight_layout()
 plt.show()
+
+
+# %%
+def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
+    """
+    Load a single file based on a glob pattern
+    """
+    file_l = list(base_dir.rglob(glob))
+    if len(file_l) != 1:
+        raise AssertionError(file_l)
+
+    ds = xr.load_dataset(file_l[0])
+
+    return ds
+
+
+# %%
+cmip7_historical_gnz_ds = load_file_from_glob(f"*{ghg}_*gnz_175001-*.nc", historical_data_root_dir_p)
+cmip7_historical_gnz_ds = cmip7_historical_gnz_ds[ghg]
+
+# %%
+fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(16, 8))
+
+min_year = 2018
+max_year = 2030
+
+hist_cut_time = cmip7_historical_gnz_ds.sel(time=cmip7_historical_gnz_ds["time"].dt.year >= min_year)
+hist_cut_time["time"] = hist_cut_time["time"].dt.year + hist_cut_time["time"].dt.month / 12.0 - 1 / 24.0
+native_grid_time = native_grid.sel(time=native_grid["time"].dt.year <= max_year)
+native_grid_time["time"] = native_grid_time["time"].dt.year + native_grid_time["time"].dt.month / 12.0 - 1 / 24.0
+
+for lat, ax in zip(cmip7_historical_gnz_ds["lat"], axes.flatten()):
+    hist_cut_time.sel(lat=lat).plot(ax=ax, label="history")
+    native_grid_time.sel(lat=lat).plot(ax=ax, label="scenario")
+
+plt.tight_layout()
 
 # %% [markdown]
 # ## Create derivative products

@@ -20,6 +20,7 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
     annual_mean_file: Path,
     historical_data_root_dir: Path,
     historical_data_seasonality_lat_gradient_info_root: Path,
+    wmo_2022_clean_file: Path | None,
     out_file: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
@@ -40,6 +41,11 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
 
     historical_data_seasonality_lat_gradient_info_root
         Root path in which the seasonality and lat. gradient info was extracted
+
+    wmo_2022_clean_file
+        Path to the clean WMO 2022 data
+
+        Required to handle Halon-1202, which isn't in the historical CMIP7 data for some reason.
 
     out_file
         File in which to write the monthly-mean file
@@ -64,6 +70,7 @@ def interpolate_annual_mean_to_monthly(  # noqa: PLR0913
             "historical_data_seasonality_lat_gradient_info_root": str(
                 historical_data_seasonality_lat_gradient_info_root
             ),
+            "wmo_2022_clean_file": str(wmo_2022_clean_file) if wmo_2022_clean_file else "not_used",
             "out_file": str(out_file),
         },
         run_notebooks_dir=executed_notebooks_dir,

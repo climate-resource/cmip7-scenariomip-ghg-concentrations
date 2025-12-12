@@ -41,13 +41,14 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 ghg: str = "co2"
 scenario_info_markers: str = (
     "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
-    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;"
+    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vl;;"
     "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
     "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
     "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
-    "AIM 3.0;SSP2 - Low Overshoot;vlho;;"
+    "AIM 3.0;SSP2 - Low Overshoot;ln;;"
     "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
+harmonisation_year: int = 2023
 magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
 historical_data_seasonality_lat_gradient_info_root: str = (
@@ -118,15 +119,6 @@ magiccc_output_median = magiccc_output.openscm.groupby_except("run_id").median()
 # %%
 # magiccc_output_median.pix.project(["model", "scenario"]).T.plot()
 
-# %%
-harmonisation_year = magiccc_output_median.loc[:, np.isclose(magiccc_output_median.std(), 0.0)].columns.max()
-# TODO: figure out how to handle historical future transition better
-# because 2021 shouldn't be needed below.
-# Maybe just prescribe the harmonisation year?
-harmonisation_years_exp = [2021, 2022, 2023]
-if harmonisation_year not in harmonisation_years_exp:
-    raise AssertionError(harmonisation_year)
-
 # Take any scenario, doesn't matter as all the same pre-harmonisation
 magiccc_output_median_historical = magiccc_output_median.loc[:, :harmonisation_year].iloc[:1, :]
 magiccc_output_median_historical
@@ -149,6 +141,16 @@ def load_file_from_glob(glob: str, base_dir: Path) -> xr.Dataset:
 
     return ds
 
+
+# %%
+cmip7_seasonality_base = (
+    load_file_from_glob(
+        f"{ghg}_observational-network_seasonality.nc", historical_data_seasonality_lat_gradient_info_root_p
+    )
+    .pint.quantify(unit_registry=ur)
+    .rename({"__xarray_dataarray_variable__": "seasonality"})
+)
+cmip7_seasonality_base
 
 # %%
 cmip7_seasonality_pieces_ds = load_file_from_glob(
@@ -207,7 +209,7 @@ fig, ax = plt.subplots()
 ax.scatter(x.m, y.m, label="raw data")
 ax.plot(x.m, (m * x + c).m, color="tab:orange", label="regression")
 ax.set_ylabel("PC0")
-ax.set_xlabel("emissions")
+ax.set_xlabel("NPP")
 ax.legend()
 
 # %% [markdown]
@@ -220,7 +222,7 @@ last_hist_year = int(cmip7_seasonality_pieces_ds["year"].max().values)
 # %%
 delta_npp = (
     magiccc_output_median.loc[:, last_hist_year:].subtract(magiccc_output_median[last_hist_year], axis="rows")
-).pix.assign(variable="change_in_emissions")
+).pix.assign(variable="change_in_npp")
 # delta_npp
 
 # %%
@@ -243,11 +245,18 @@ delta_pc = delta_npp_xr * m
 
 # %%
 pc0_extended = delta_pc + pc0.sel(year=last_hist_year).data
+pc0_extended = xr.concat(
+    [
+        pc0.sel(year=pc0["year"] < pc0_extended["year"].min()),
+        pc0_extended,
+    ],
+    dim="year",
+)
 
 fig, axes = plt.subplots(nrows=2, figsize=(8, 8))
 magiccc_output_median.pix.project("scenario").T.plot(ax=axes[0])
 pc0_extended.pint.to("dimensionless").plot(ax=axes[1], hue="scenario")
-pc0.pint.to("dimensionless").plot(ax=axes[1])
+pc0.pint.to("dimensionless").plot(ax=axes[1], linestyle="--", alpha=0.5, marker="x")
 for ax in axes:
     sns.move_legend(ax, loc="center left", bbox_to_anchor=(1.05, 0.5))
 
@@ -255,7 +264,9 @@ for ax in axes:
 # ## Prepare output
 
 # %%
-out = (cmip7_seasonality_pieces_ds["eofs"] * pc0_extended).sum("eof").pint.dequantify()
+out_seasonality_delta = (cmip7_seasonality_pieces_ds["eofs"] * pc0_extended).sum("eof")
+out = out_seasonality_delta + cmip7_seasonality_base["seasonality"]
+out = out.pint.dequantify()
 # out
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}

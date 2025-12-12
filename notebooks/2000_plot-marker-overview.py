@@ -38,16 +38,16 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 scenario_info_markers: str = (
-    "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
-    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vllo;;"
-    "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
-    "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
-    "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
-    "AIM 3.0;SSP2 - Low Overshoot;vlho;;"
-    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
+    # "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
+    "REMIND-MAgPIE 3.5-4.11;SSP1 - Very Low Emissions;vl;;"
+    # "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
+    # "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
+    "GCAM 8s;SSP3 - High Emissions;h"
+    # "AIM 3.0;SSP2 - Low Overshoot;ln;;"
+    # "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
-emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
+emissions_complete_dir: str = "../output-bundles/1.0.0/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/1.0.0/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
 
 
@@ -86,17 +86,25 @@ pandas_openscm.register_pandas_accessor()
 # ## Load data
 
 # %%
-emissions = pix.concat(
-    [pd.read_feather(emissions_complete_dir_p / f"{si.to_file_stem()}.feather") for si in scenario_info_markers_p]
-)
+emissions_l = []
+for si in scenario_info_markers_p:
+    try:
+        tmp = pd.read_feather(emissions_complete_dir_p / f"{si.to_file_stem()}.feather")
+    except FileNotFoundError:
+        print(f"No output for {si=}")
+        continue
+
+    emissions_l.append(tmp)
+
+emissions = pix.concat(emissions_l)
 
 # emissions
 
 # %%
 magiccc_output_l = []
 for si in tqdm.auto.tqdm(scenario_info_markers_p):
-    magiccc_output_l.append(
-        magicc_output_db.load(
+    try:
+        tmp = magicc_output_db.load(
             pix.isin(
                 model=si.model,
                 scenario=si.scenario,
@@ -105,7 +113,11 @@ for si in tqdm.auto.tqdm(scenario_info_markers_p):
             & pix.ismatch(variable=["Surface Air Temperature Change", "Effective Radiative Forcing**"]),
             # progress=True,
         )
-    )
+    except ValueError:
+        print(f"No output for {si=}")
+        continue
+
+    magiccc_output_l.append(tmp)
 
 magiccc_output = pix.concat(magiccc_output_l)
 # magiccc_output
@@ -142,8 +154,8 @@ magiccc_output_pdf = add_cmip_scenario_name(magiccc_output)
 
 # %%
 palette = {
-    "vllo": "#24a4ff",
-    "vlho": "#4a0daf",
+    "vl": "#24a4ff",
+    "ln": "#4a0daf",
     "l": "#00cc69",
     "ml": "#f5ac00",
     "m": "#ffa9dc",
@@ -151,7 +163,7 @@ palette = {
     "hl": "#8f003b",
 }
 
-scenario_order = ["vllo", "vlho", "l", "ml", "m", "hl", "h"]
+scenario_order = ["vl", "ln", "l", "ml", "m", "hl", "h"]
 
 # %% [markdown]
 # ### Just temperatures
@@ -295,9 +307,16 @@ axes["mid-century"].grid()
 # plt.tight_layout()
 
 # %%
+gsat.max(axis=1).groupby(gsat.index.names.difference(["run_id"])).median()
+
+# %%
+scenario_order_in_dataset = [v for v in scenario_order if v in pdf.index.get_level_values("cmip_scenario_name")]
+scenario_order_in_dataset
+
+# %%
 pdf.index.droplevel(pdf.index.names.difference(["model", "scenario", "cmip_scenario_name"])).drop_duplicates().to_frame(
     index=False
-).set_index("cmip_scenario_name").loc[scenario_order]
+).set_index("cmip_scenario_name").loc[scenario_order_in_dataset]
 
 # %% [markdown]
 # ### Overview

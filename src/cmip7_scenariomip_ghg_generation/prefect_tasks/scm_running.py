@@ -120,7 +120,7 @@ def run_magicc(  # noqa: PLR0913
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{magicc_version}_{scenario_info.model}_{scenario_info.scenario}",
         logger=get_run_logger(),
-        kwargs_to_show_in_logging=("identity",),
+        kwargs_to_show_in_logging=("identity", "notebook"),
         timeout=res_timeout,
     )
 

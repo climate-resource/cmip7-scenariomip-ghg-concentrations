@@ -74,7 +74,11 @@ ALL_GHGS = [
 def main(  # noqa: PLR0912, PLR0913, PLR0915
     emissions_file: Annotated[
         Path, typer.Option(help="Emissions file received from the emissions harmonisation team")
-    ] = (REPO_RAW_DATA_DIR / "input-scenarios" / "0009-zn_0003_0003_0002_harmonised-emissions-up-to-sillicone.csv"),
+    ] = (
+        REPO_RAW_DATA_DIR
+        / "input-scenarios"
+        / "202511281156_202511040855_202511040855_202511040855_complete-emissions.csv"
+    ),
     scenarios_to_run: Annotated[
         str,
         typer.Option(
@@ -88,6 +92,9 @@ Options:
 - custom: run whatever custom selection is in the script""",
         ),
     ] = "markers",
+    harmonisation_year: Annotated[
+        int, typer.Option(help="Year in which the scenarios are harmonised to history")
+    ] = 2023,
     ghg: Annotated[list[str], typer.Option(help="GHG to process")] = ALL_GHGS,
     run_id: Annotated[
         str,
@@ -107,6 +114,7 @@ this will lead to a new run being done
     ],
     magicc_root_folder: Annotated[Path, typer.Option(help="Root folder for MAGICC versions")] = REPO_ROOT_DIR
     / "magicc",
+    esgf_files_start_year: Annotated[int, typer.Option(help="Year in which ESGF files should start")] = 2022,
     esgf_version: Annotated[
         str,
         typer.Option(help="""Version to use when writing the files for ESGF"""),
@@ -175,20 +183,22 @@ Be careful and don't crash your computer."""
     # Honestly, making it all run from the CLI is an unnecessary headache.
     # If you want to change it, just edit this script.
     fossil_bio_split_file = emissions_file.parent / emissions_file.name.replace(
-        "up-to-sillicone", "fossil-biosphere-aggregation"
+        "complete-emissions", "harmonised-emissions-fossil-biosphere-aggregation"
     )
     if not fossil_bio_split_file.exists():
         raise FileNotFoundError(fossil_bio_split_file)
 
     markers = (
         # (model, scenario, cmip7 experiment name)
-        ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vllo"),
-        ("AIM 3.0", "SSP2 - Low Overshoot_e", "vlho"),
-        ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
-        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
-        ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
-        ("GCAM 7.1 scenarioMIP", "SSP3 - High Emissions", "h"),
-        ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+        # Decision: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
+        # vl likely to be finalised first
+        ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
+        # ("AIM 3.0", "SSP2 - Low Overshoot_e", "ln"),
+        # ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
+        # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
+        # ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
+        # ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+        ("GCAM 8s", "SSP3 - High Emissions", "h"),
     )
 
     # Choices here are quite arbitrary
@@ -238,7 +248,9 @@ Be careful and don't crash your computer."""
     cvs = load_cvs_known_loader(raw_cvs_loader)
     for marker_info in markers:
         marker_source_id = create_source_id(
-            esgf_institution_id=esgf_institution_id, cmip_scenario_name=marker_info[-1], esgf_version=esgf_version
+            esgf_institution_id=esgf_institution_id,
+            cmip_scenario_name=marker_info[-1],
+            esgf_version=esgf_version,
         )
         # Check that source ID is in the CVs
         if marker_source_id not in cvs.source_id_entries.source_ids:
@@ -355,13 +367,14 @@ Be careful and don't crash your computer."""
         scenario_infos = tuple(
             v
             for v in scenario_infos_l
-            if (v.cmip_scenario_name in ["vllo", "l"])
+            if (v.cmip_scenario_name in ["vl", "l"])
             or (v.model == "WITCH 6.0" and v.scenario == "SSP1 - Very Low Emissions")
         )
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
         emissions_file=emissions_file,
+        harmonisation_year=harmonisation_year,
         scenario_infos=scenario_infos,
         run_id=run_id,
         raw_notebooks_root_dir=raw_notebooks_root_dir,
@@ -395,6 +408,7 @@ Be careful and don't crash your computer."""
         single_variable_dir=single_variable_dir,
         plot_complete_dir=plot_complete_dir,
         esgf_ready_root_dir=esgf_ready_root_dir,
+        esgf_files_start_year=esgf_files_start_year,
         esgf_version=esgf_version,
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,

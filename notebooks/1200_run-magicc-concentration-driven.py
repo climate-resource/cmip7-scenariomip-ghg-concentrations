@@ -24,9 +24,12 @@
 # ## Imports
 
 # %% editable=true slideshow={"slide_type": ""}
+import json
 import os
+import platform
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,6 +42,8 @@ import seaborn as sns
 import tqdm.auto
 import xarray as xr
 from gcages.renaming import SupportedNamingConventions, convert_variable_name
+from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
+from IPython import display
 from pymagicc.definitions import convert_magicc7_to_openscm_variables
 from pymagicc.io import MAGICCData
 
@@ -48,14 +53,17 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-cmip_scenario_name: str = "vllo"
-model: str = "REMIND-MAgPIE 3.5-4.10"
-scenario: str = "SSP1 - Very Low Emissions"
-emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
+# cmip_scenario_name: str = "vl"
+# model: str = "REMIND-MAgPIE 3.5-4.11"
+# scenario: str = "SSP1 - Very Low Emissions"
+cmip_scenario_name: str = "h"
+model: str = "GCAM 8s"
+scenario: str = "SSP3 - High Emissions"
+emissions_complete_dir: str = "../output-bundles/1.0.0/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/1.0.0/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
-esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
-historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
+esgf_ready_root_dir: str = "../output-bundles/1.0.0/data/processed/esgf-ready"
+historical_data_root_dir: str = "../output-bundles/1.0.0/data/raw/historical-ghg-concs"
 magicc_version: str = "MAGICCv7.6.0a3"
 magicc_exe: str = "../magicc/magicc-v7.6.0a3/bin/magicc-darwin-arm64"
 magicc_prob_distribution: str = "../magicc/magicc-v7.6.0a3/configs/magicc-ar7-fast-track-drawnset-v0-3-0.json"
@@ -116,13 +124,9 @@ historical_concentrations_xr
 # #### Future
 
 # %%
-# TODO: remove small hack
-esgf_ready_root_dir_p = Path("../output-bundles/v0.1.0a2/data/processed/esgf-ready")
-
-# %%
 concentrations_xr_l = []
 source_id = None
-for fp in tqdm.auto.tqdm(esgf_ready_root_dir_p.rglob(f"**/yr/**/*{cmip_scenario_name}*gm*.nc")):
+for fp in tqdm.auto.tqdm(esgf_ready_root_dir_p.rglob(f"**/yr/**/*-{cmip_scenario_name}-*gm*.nc")):
     source_id_fp = fp.name.split("_")[4]
     if source_id is None:
         source_id = source_id_fp
@@ -193,6 +197,9 @@ CONC_MAGICC_FLAG_MAP = {
 
 # %%
 def to_df(da: xr.DataArray, variable: str) -> pd.DataFrame:
+    """
+    Convert to pandas DataFrame
+    """
     return (
         da.groupby("time.year")
         .mean()
@@ -231,7 +238,12 @@ for ghg in tqdm.auto.tqdm(concentrations_xr.data_vars):
 
     complete_timeseries = pix.concat(
         [
-            to_df(historical_concentrations_xr[ghg], variable=openscm_runner_variable),
+            to_df(
+                historical_concentrations_xr[ghg].sel(
+                    time=historical_concentrations_xr[ghg].time.dt.year < concentrations_xr[ghg].time.dt.year.min()
+                ),
+                variable=openscm_runner_variable,
+            ),
             to_df(concentrations_xr[ghg], variable=openscm_runner_variable),
         ],
         axis="columns",
@@ -396,9 +408,6 @@ output_variables = (
     # "Sea Level Rise",
 )
 
-# %%
-from typing import Any
-
 
 # %%
 def load_magicc_cfgs(
@@ -455,11 +464,6 @@ def load_magicc_cfgs(
 
 
 # %%
-import json
-
-from gcages.scm_running import convert_openscm_runner_output_names_to_magicc_output_names, run_scms
-
-# %%
 climate_models_cfgs = load_magicc_cfgs(
     prob_distribution_path=magicc_prob_distribution_p,
     output_variables=output_variables,
@@ -511,9 +515,9 @@ for ghg in tqdm.auto.tqdm(concentrations_xr.data_vars):
 
     np.testing.assert_allclose(
         np.broadcast_to(
-            concentrations_xr[ghg].values, res.loc[pix.isin(variable=openscm_runner_variable), 2023:].shape
+            concentrations_xr[ghg].values, res.loc[pix.isin(variable=openscm_runner_variable), 2022:].shape
         ),
-        res.loc[pix.isin(variable=openscm_runner_variable), 2023:].values,
+        res.loc[pix.isin(variable=openscm_runner_variable), 2022:].values,
         rtol=1e-4,
     )
 
@@ -553,6 +557,7 @@ for yrs in (range(2005, 2035 + 1), slice(None, None, None)):
         style_var="scenario",
         hue_var="run_mode",
     )
+    plt.grid()
     plt.show()
 
 # %%
@@ -583,6 +588,14 @@ pdf.loc[pix.isin(variable="Effective Radiative Forcing|CH4"), :].openscm.plot_pl
 
 # %%
 pdf.loc[pix.isin(variable="Effective Radiative Forcing|Ozone"), :].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+
+# %%
+pdf.loc[pix.isin(variable="Atmospheric Concentrations|N2O"), :].openscm.plot_plume_after_calculating_quantiles(
     quantile_over="run_id",
     quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
     style_var="scenario",
@@ -624,7 +637,8 @@ pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot
 )
 
 # %%
-if len(pdf.pix.unique("run_mode")) == 2:
+n_run_modes_to_show = 2
+if len(pdf.pix.unique("run_mode")) == n_run_modes_to_show:
     tmp = pdf.loc[pix.isin(variable="Surface Air Temperature Change")].openscm.groupby_except("run_id").median()
     ax = (
         tmp.loc[pix.isin(run_mode="concentration-driven")]
@@ -656,7 +670,7 @@ if len(pdf.pix.unique("run_mode")) == 2:
     plt.show()
 
     # Not adjusted to assessed warming hence can differ from 'normal' reporting
-    display(peak_warming.groupby(["run_mode"]).describe().round(3))
+    display.display(peak_warming.groupby(["run_mode"]).describe().round(3))
 
 # %% [markdown]
 # ## Save to database

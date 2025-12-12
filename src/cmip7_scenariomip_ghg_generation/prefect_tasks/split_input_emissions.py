@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import tqdm.auto
+from gcages.harmonisation.common import assert_harmonised
 from pandas_openscm.io import load_timeseries_csv
 
 from cmip7_scenariomip_ghg_generation.prefect_helpers import (
@@ -20,8 +21,8 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
     parameters_output=("out_dir",),
     # refresh_cache=True,
 )
-def split_input_emissions_into_individual_files(
-    emissions_file: Path, scenario_infos: tuple[ScenarioInfo, ...], out_dir: Path
+def split_input_emissions_into_individual_files_and_check_harmonisation(
+    emissions_file: Path, scenario_infos: tuple[ScenarioInfo, ...], harmonisation_year: int, out_dir: Path
 ) -> dict[ScenarioInfo | str, Path]:
     """
     Split the input emissions into invidiual files
@@ -33,6 +34,9 @@ def split_input_emissions_into_individual_files(
 
     scenario_infos
         Info about the scenarios we want to use in this run
+
+    harmonisation_year
+        Year in which the scenarios are harmonised to historical emissions
 
     out_dir
         Directory in which to write the split files
@@ -66,9 +70,16 @@ def split_input_emissions_into_individual_files(
             scenarios.groupby(["model", "scenario"]), desc="Splitting scenarios into individual DataFrame's"
         )
     }
+    history_check_harmonisation = history.reset_index(["model", "scenario"], drop=True)
     for si in tqdm.auto.tqdm(scenario_infos, desc="Saving scenarios into individual scenarios"):
         out_file = out_dir / f"{si.to_file_stem()}.feather"
         msdf = scenarios_d[(si.model, si.scenario)].dropna(how="all", axis="columns")
+        assert_harmonised(
+            msdf,
+            history=history_check_harmonisation,
+            harmonisation_time=harmonisation_year,
+        )
+
         msdf.to_feather(out_file)
         res[si] = out_file
 
