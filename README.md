@@ -132,8 +132,7 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
 1. Receive emissions from the emissions team
     - they should send two files.
       They produce these files with the script
-      [here](https://github.com/iiasa/emissions_harmonization_historical/blob/extract-silicone-infilled/scripts/extract-for-ghg-concs.py)
-      (hopefully merged into main soon).
+      [here](https://github.com/iiasa/emissions_harmonization_historical/blob/main/scripts/extract-for-ghg-concs.py).
       The two files are:
         1. the emissions for each scenario,
            except for emissions of species
@@ -151,7 +150,7 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
 1. Run with a new run ID and ESGF version (using the command line argument `--run-id` and `--esgf-version`).
    Pick whatever makes sense here (we don't have strong rules about our versioning yet)
     - This will also require creating entries for the controlled vocabularies (CVs).
-      This requires updating [this file](https://github.com/PCMDI/input4MIPs_CVs/blob/cr-scenariomip/CVs/input4MIPs_source_id.json)
+      This requires updating [this file](https://github.com/PCMDI/input4MIPs_CVs/blob/main/CVs/input4MIPs_source_id.json)
       to include source IDs of the form "CR-scenario-esgf-version".
       In practice, simply copy the existing "CR-scenario-esgf-version"
       entries and update their version to match the ESGF version you used above.
@@ -166,6 +165,22 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
    `pixi run python scripts/upload-to-llnl.py --unique-upload-id-dir <unique-value-here> output-bundles/<run-id>/data/processed/esgf-ready/input4MIPs`
    e.g. `pixi run python scripts/upload-to-llnl.py --unique-upload-id-dir cr-scenario-concs-20250701-1 output-bundles/v0.1.0a2/data/processed/esgf-ready/input4MIPs`
 1. Tell the publication team that the results are uploaded and the folder in which to find them i.e. the value of `--unique-upload-id-dir`
+
+#### Uploading to Nersc
+- raw docs are pretty good: https://docs.nersc.gov/services/scp/
+- command is something like `rsync --partial --progress -avR output-bundles/1.0.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
+    - `-avR`: sets the flags for copying recursively and with the directory structure we want
+    - `output-bundles/0.1.0/data/processed/esgf-ready/input4MIPs`: the directory you want to upload
+    - `zrjn`: zeb's username, yours will be something like fb.
+      You can get this by logging into jupyter then looking at the start of your shell.
+    - `dtn01.nersc.gov:`: where we want to upload to
+      get this from the docs https://docs.nersc.gov/services/scp/
+    - `/global/u2/z/zrjn/`: the path we want to upload to. This is just my home directory
+- move files to `/global/cfs/projectdirs/m4931/zrjn-tmp`, the 'staging' area effectively
+- update permissions
+    - make all directories readable by anyone: `find /global/cfs/projectdirs/m4931/zrjn-tmp/input4MIPs/ -type d -exec chmod 755 {} \;`
+    - make all files readable by anyone: `find /global/cfs/projectdirs/m4931/zrjn-tmp/input4MIPs/ -type f -exec chmod 644 {} \;`
+- send an email to Sasha (I'll give you email separately) to say, "Hi, these files are ready to be published"
 
 #### Parallelisation
 
@@ -259,6 +274,16 @@ In this repository, we use the following tools:
     [tips and tricks: Jupytext](https://gitlab.com/znicholls/mullet-rse/-/blob/main/book/tips-and-tricks/managing-notebooks-jupytext.md))
         - this avoids nasty merge conflicts and incomprehensible diffs
 - [prefect](https://docs.prefect.io/v3/get-started) for workflow orchestration
+
+### General background
+
+- relationship between this repo and https://github.com/PCMDI/input4MIPs_CVs
+    - this repo pulls information from the 'source ID' fine in input4MIPs_CVs,
+      this file: https://github.com/PCMDI/input4MIPs_CVs/blob/main/CVs/input4MIPs_source_id.json
+    - in there, it is looking for keys like 'CR-*', to make sure that the 'source ID' (think unique ID) we use is 'registered'/known to in input4MIPs_CVs
+    - the trick we play is that we can point to a specific commit or branch of input4MIPs_CVs, and then this repo is still happy.
+    - the idea of input4MIPs_CVs is make sure that the wider forcings team is aware of what is coming and can manage some of the metadata around all of these different contributions (that come from different people)
+    - we write the files using this information, so we can't really get it wrong but doing it this way means this metadata is defined in one spot, so it's a bit easier to manage
 
 ## Original template
 
