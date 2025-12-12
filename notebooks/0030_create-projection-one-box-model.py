@@ -173,8 +173,6 @@ def add_cmip_scenario_name(indf: pd.DataFrame) -> pd.DataFrame:
 
 
 # %%
-
-# %%
 emissions_pdf = add_cmip_scenario_name(emissions)
 # emissions_pdf
 
