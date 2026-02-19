@@ -105,6 +105,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     pool_multiprocessing: multiprocessing.pool.Pool | None,
     pool_multiprocessing_magicc: multiprocessing.pool.Pool | None,
     n_workers_per_magicc_notebook: int,
+    any_zenodo_deposition_id: str,
 ) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -245,6 +246,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     n_workers_per_magicc_notebook
         Number of MAGICC workers to use in each MAGICC-related step/notebook
 
+    any_zenodo_deposition_id
+        A deposition ID from the sequence of Zenodo versions we want to upload to
+
     Returns
     -------
     :
@@ -263,7 +267,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         tar_file=downloaded_cmip7_historical_seasonality_lat_gradient_info,
         extract_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
     )
-    doi = get_doi.submit()
+    doi = get_doi.submit(any_deposition_id=any_zenodo_deposition_id)
 
     ### WMO 2022
     all_wmo_2022_ghgs = {
@@ -851,6 +855,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     n_workers_multiprocessing_magicc: int,
     n_workers_per_magicc_notebook: int,
     plot_complete_dir: Path,
+    any_zenodo_deposition_id: str,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -998,6 +1003,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     n_workers_per_magicc_notebook
         Number of MAGICC workers to use per MAGICC-running task
 
+    any_zenodo_deposition_id
+        A deposition ID from the sequence of Zenodo versions we want to upload to
+
     Returns
     -------
     :
@@ -1092,6 +1100,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             pool_multiprocessing=pool_multiprocessing,
             pool_multiprocessing_magicc=pool_multiprocessing_magicc,
             n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
+            any_zenodo_deposition_id=any_zenodo_deposition_id,
         )
 
     return res_flow

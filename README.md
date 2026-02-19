@@ -125,7 +125,6 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
 
 #### In long
 
-[TODO: update]
 1. Receive markers from the emissions team
     - the markers are defined in `scripts/generate-concentration-files.py`.
       If there are changes, make sure you update this variable.
@@ -146,7 +145,7 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
 1. Update the emissions file you use for your run.
    There are two options for how to do this:
     1. specify this from the command line via the `--emissions-file` option
-    1. change the value of the `emissions_file` variable in `scripts/generate-concentration-files.py`
+    1. change the value of the `emissions_file` variable in `scripts/create-latest-set-of-concentration-files.sh`
 1. Run with a new run ID and ESGF version (using the command line argument `--run-id` and `--esgf-version`).
    Pick whatever makes sense here (we don't have strong rules about our versioning yet)
     - This will also require creating entries for the controlled vocabularies (CVs).

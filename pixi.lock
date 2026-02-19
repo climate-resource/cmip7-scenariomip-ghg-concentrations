@@ -188,6 +188,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/76/98b9b37a2117ea8c4daab698b73657115c5fee8a01600923155c60df504b/openscm_runner-0.13.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/9f/f48e406b4f92741f50350abeb054ed960bb2b1265bd4d21c3eb4906600c9/openscm_units-0.6.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/17/08/97926b870ec546106df82f8554d01208bfa19f17da574af851fd8818761f/openscm_zenodo-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/05/44/4c45a34def3506122ae61ad684139f0bbc4e00c39555d4f7e20e0e001c8a/opentelemetry_api-1.33.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d2/78/ddd3ee7873f2b5f90f016bc04062713d567435c53ecc8783aab3a4d34915/orjson-3.10.18-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/2c/ab/fc8290c6a4c722e5514d80f62b2dc4c4df1a68a41d1364e625c35990fcf3/overrides-7.7.0-py3-none-any.whl
@@ -479,6 +480,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/76/98b9b37a2117ea8c4daab698b73657115c5fee8a01600923155c60df504b/openscm_runner-0.13.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/9f/f48e406b4f92741f50350abeb054ed960bb2b1265bd4d21c3eb4906600c9/openscm_units-0.6.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/17/08/97926b870ec546106df82f8554d01208bfa19f17da574af851fd8818761f/openscm_zenodo-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/05/44/4c45a34def3506122ae61ad684139f0bbc4e00c39555d4f7e20e0e001c8a/opentelemetry_api-1.33.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/4e/f7d1bdd983082216e414e6d7ef897b0c2957f99c545826c06f371d52337e/orjson-3.10.18-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/2c/ab/fc8290c6a4c722e5514d80f62b2dc4c4df1a68a41d1364e625c35990fcf3/overrides-7.7.0-py3-none-any.whl
@@ -762,6 +764,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/76/98b9b37a2117ea8c4daab698b73657115c5fee8a01600923155c60df504b/openscm_runner-0.13.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/9f/f48e406b4f92741f50350abeb054ed960bb2b1265bd4d21c3eb4906600c9/openscm_units-0.6.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/17/08/97926b870ec546106df82f8554d01208bfa19f17da574af851fd8818761f/openscm_zenodo-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/05/44/4c45a34def3506122ae61ad684139f0bbc4e00c39555d4f7e20e0e001c8a/opentelemetry_api-1.33.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/97/c7/c54a948ce9a4278794f669a353551ce7db4ffb656c69a6e1f2264d563e50/orjson-3.10.18-cp311-cp311-macosx_10_15_x86_64.macosx_11_0_arm64.macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/2c/ab/fc8290c6a4c722e5514d80f62b2dc4c4df1a68a41d1364e625c35990fcf3/overrides-7.7.0-py3-none-any.whl
@@ -1045,6 +1048,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/86/76/98b9b37a2117ea8c4daab698b73657115c5fee8a01600923155c60df504b/openscm_runner-0.13.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b2/9f/f48e406b4f92741f50350abeb054ed960bb2b1265bd4d21c3eb4906600c9/openscm_units-0.6.3-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/17/08/97926b870ec546106df82f8554d01208bfa19f17da574af851fd8818761f/openscm_zenodo-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/05/44/4c45a34def3506122ae61ad684139f0bbc4e00c39555d4f7e20e0e001c8a/opentelemetry_api-1.33.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/97/c7/c54a948ce9a4278794f669a353551ce7db4ffb656c69a6e1f2264d563e50/orjson-3.10.18-cp311-cp311-macosx_10_15_x86_64.macosx_11_0_arm64.macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/2c/ab/fc8290c6a4c722e5514d80f62b2dc4c4df1a68a41d1364e625c35990fcf3/overrides-7.7.0-py3-none-any.whl
@@ -2006,7 +2010,7 @@ packages:
 - pypi: ./
   name: cmip7-scenariomip-ghg-generation
   version: 0.1.0
-  sha256: c355f23050d5b775353bdb4c5471d4c416a072ee495dc0cee078058457e0ae52
+  sha256: b0dc11f25d4553b673bc30db4a0400189e05239ee63874ff80e35714a1ead06e
   requires_dist:
   - bokeh>=3.7.3,<4
   - continuous-timeseries>=0.4.3,<0.5
@@ -2023,6 +2027,7 @@ packages:
   - openpyxl>=3.1.5
   - openscm-runner>=0.13.0,<0.14
   - openscm-units>=0.6.3
+  - openscm-zenodo>=0.5.0,<0.6
   - pandas>=2.2.3
   - pandas-indexing>=0.6.3
   - pandas-openscm>=0.5.1
@@ -6306,6 +6311,35 @@ packages:
   - six==1.16.0 ; extra == 'locked'
   - typing-extensions==4.12.2 ; extra == 'locked'
   - tzdata==2024.2 ; extra == 'locked'
+  requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/17/08/97926b870ec546106df82f8554d01208bfa19f17da574af851fd8818761f/openscm_zenodo-0.5.0-py3-none-any.whl
+  name: openscm-zenodo
+  version: 0.5.0
+  sha256: 27c847a699f928c324e24d5b0896fb432901061aa7302d6bc45cf657aee97906
+  requires_dist:
+  - attrs>=22.0
+  - loguru>=0.5
+  - requests>=2.26
+  - tqdm>=4.50
+  - typer>=0.10
+  - attrs==24.3.0 ; extra == 'locked'
+  - certifi==2025.1.31 ; extra == 'locked'
+  - charset-normalizer==3.4.1 ; extra == 'locked'
+  - click==8.1.8 ; extra == 'locked'
+  - colorama==0.4.6 ; extra == 'locked'
+  - idna==3.10 ; extra == 'locked'
+  - loguru==0.7.3 ; extra == 'locked'
+  - markdown-it-py==3.0.0 ; extra == 'locked'
+  - mdurl==0.1.2 ; extra == 'locked'
+  - pygments==2.19.1 ; extra == 'locked'
+  - requests==2.32.3 ; extra == 'locked'
+  - rich==13.9.4 ; extra == 'locked'
+  - shellingham==1.5.4 ; extra == 'locked'
+  - tqdm==4.67.1 ; extra == 'locked'
+  - typer==0.15.1 ; extra == 'locked'
+  - typing-extensions==4.12.2 ; extra == 'locked'
+  - urllib3==2.3.0 ; extra == 'locked'
+  - win32-setctime==1.2.0 ; sys_platform == 'win32' and extra == 'locked'
   requires_python: '>=3.9'
 - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.5.0-h7b32b05_1.conda
   sha256: b4491077c494dbf0b5eaa6d87738c22f2154e9277e5293175ec187634bd808a0

@@ -56,14 +56,17 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 # cmip_scenario_name: str = "vl"
 # model: str = "REMIND-MAgPIE 3.5-4.11"
 # scenario: str = "SSP1 - Very Low Emissions"
-cmip_scenario_name: str = "h"
-model: str = "GCAM 8s"
-scenario: str = "SSP3 - High Emissions"
-emissions_complete_dir: str = "../output-bundles/1.0.0/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/1.0.0/data/interim/magicc-output/db"
+# cmip_scenario_name: str = "h"
+# model: str = "GCAM 8s"
+# scenario: str = "SSP3 - High Emissions"
+cmip_scenario_name: str = "ln"
+model: str = "AIM 3.0"
+scenario: str = "SSP2 - Low Overshoot_a"
+emissions_complete_dir: str = "../output-bundles/1.0.0_lower-priority/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/1.0.0_lower-priority/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
-esgf_ready_root_dir: str = "../output-bundles/1.0.0/data/processed/esgf-ready"
-historical_data_root_dir: str = "../output-bundles/1.0.0/data/raw/historical-ghg-concs"
+esgf_ready_root_dir: str = "../output-bundles/1.0.0_lower-priority/data/processed/esgf-ready"
+historical_data_root_dir: str = "../output-bundles/1.0.0_lower-priority/data/raw/historical-ghg-concs"
 magicc_version: str = "MAGICCv7.6.0a3"
 magicc_exe: str = "../magicc/magicc-v7.6.0a3/bin/magicc-darwin-arm64"
 magicc_prob_distribution: str = "../magicc/magicc-v7.6.0a3/configs/magicc-ar7-fast-track-drawnset-v0-3-0.json"
@@ -229,6 +232,9 @@ magicc_concentration_cfg = {
 }
 # Halon1202, just ignore essentially
 magicc_concentration_cfg["mhalo_files_conc"][17] = ""
+
+# %%
+len(sorted(concentrations_xr.data_vars))
 
 # %%
 for ghg in tqdm.auto.tqdm(concentrations_xr.data_vars):
@@ -629,12 +635,15 @@ pdf.loc[pix.isin(variable="Effective Radiative Forcing|Aerosols"), :].openscm.pl
 )
 
 # %%
-pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot_plume_after_calculating_quantiles(
+ax = pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm.plot_plume_after_calculating_quantiles(
     quantile_over="run_id",
     quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
     style_var="scenario",
     hue_var="run_mode",
 )
+ax.grid()
+
+# %%
 
 # %%
 n_run_modes_to_show = 2
@@ -671,6 +680,35 @@ if len(pdf.pix.unique("run_mode")) == n_run_modes_to_show:
 
     # Not adjusted to assessed warming hence can differ from 'normal' reporting
     display.display(peak_warming.groupby(["run_mode"]).describe().round(3))
+
+# %%
+tmp = pdf.loc[pix.isin(variable="Surface Air Temperature Change"), :]
+tmp = tmp.subtract(tmp.loc[:, 1850:1900].mean(axis="columns"), axis="rows")
+tmp = (
+    tmp.subtract(
+        tmp.loc[:, 1995:2014].mean(axis="columns").groupby(["model", "scenario", "run_mode"]).median(),
+        axis="rows",
+    )
+    + 0.85
+)
+
+
+ax = tmp.loc[:, 2000:].openscm.plot_plume_after_calculating_quantiles(
+    quantile_over="run_id",
+    quantiles_plumes=((0.5, 0.9), ((1.0 / 4, 3.0 / 4), 0.7), ((1.0 / 6, 5.0 / 6), 0.5), ((0.05, 0.95), 0.2)),
+    style_var="scenario",
+    hue_var="run_mode",
+)
+ax.grid()
+plt.show()
+
+print("Peak warming")
+peak_warming = tmp.max(axis="columns")
+display.display(peak_warming.groupby(["run_mode"]).describe(percentiles=[0.33, 0.5, 0.67]).round(3))
+
+print("2100 warming")
+eoc_warming = tmp[2100]
+display.display(eoc_warming.groupby(["run_mode"]).describe(percentiles=[0.33, 0.5, 0.67]).round(3))
 
 # %% [markdown]
 # ## Save to database

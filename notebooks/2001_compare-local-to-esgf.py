@@ -66,6 +66,10 @@ def get_esgf_url(local_fp: Path) -> str:
     r = session.get(url_index, params=params)
     r_json = r.json()
 
+    if r_json["response"]["numFound"] == 0:
+        msg = f"No ESGF results for {local_fp}. {params=} {r_json=}"
+        raise AssertionError(msg)
+
     if r_json["response"]["numFound"] != 1:
         print(f"Be careful, didn't find only one response for {local_fp}")
 
@@ -86,7 +90,11 @@ def get_esgf_url(local_fp: Path) -> str:
 
 # %%
 for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
-    if "co2" not in str(fp):
+    if "cfc12" not in str(fp):
+        continue
+
+    if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
+        print(f"Not checking {fp.name} yet as scenarios haven't been upload to ESGF")
         continue
 
     url, checksum = get_esgf_url(fp)
@@ -99,3 +107,5 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     except AssertionError as exc:
         print(f"Issue for {fp=}")
         print(exc)
+
+# %%

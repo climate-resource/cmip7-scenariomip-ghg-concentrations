@@ -7,7 +7,7 @@
 pixi run python scripts/generate-concentration-files.py \
     --run-id "1.0.0_lower-priority" \
     --esgf-version 1.0.0 \
-    --input4mips-cvs-source "gh:ghg-concs-vl-final" \
+    --input4mips-cvs-source "gh:ghg-concs-lower-priority" \
     --n-workers 2 \
     --n-workers-multiprocessing 8 \
     --n-workers-multiprocessing-magicc 2 \

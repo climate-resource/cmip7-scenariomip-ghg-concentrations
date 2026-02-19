@@ -8,6 +8,7 @@ from typing import Annotated
 import click
 import typer
 from attrs import evolve
+from dotenv import load_dotenv
 from input4mips_validation.cvs.loading import load_cvs_known_loader
 from input4mips_validation.cvs.loading_raw import get_raw_cvs_loader
 from pandas_openscm.io import load_timeseries_csv
@@ -169,12 +170,19 @@ will be the *product* of the two levels of parallelisation.
 Be careful and don't crash your computer."""
         ),
     ] = 1,
+    any_zenodo_deposition_id: Annotated[
+        str,
+        typer.Option(
+            help="A deposition ID from the sequence of Zenodo versions we want to upload to",
+        ),
+    ] = "18690745",
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
+
+    Secrets are passed via a `.env` file, see `.env.sample`.
     """
-    # # TODO: activate this
-    # load_dotenv()
+    load_dotenv()
 
     ghgs = tuple(ghg)
     magicc_versions_to_run = tuple(magicc_version_to_run)
@@ -192,7 +200,7 @@ Be careful and don't crash your computer."""
         # (model, scenario, cmip7 experiment name)
         # Decision: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
         ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
-        ("AIM 3.0", "SSP2 - Low Overshoot_e", "ln"),
+        ("AIM 3.0", "SSP2 - Low Overshoot_a", "ln"),
         ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
         # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
         ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
@@ -415,6 +423,7 @@ Be careful and don't crash your computer."""
         n_workers_multiprocessing=n_workers_multiprocessing,
         n_workers_multiprocessing_magicc=n_workers_multiprocessing_magicc,
         n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
+        any_zenodo_deposition_id=any_zenodo_deposition_id,
     )
 
 
