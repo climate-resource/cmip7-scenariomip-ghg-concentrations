@@ -121,7 +121,7 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
 1. Commit
 1. Start your prefect server in a separate terminal, `pixi run prefect server start`
 1. Run
-1. [TODO: update] Send data to the publication team using `scripts/upload-to-llnl.py`
+1. Upload the results to NERSC for the publication team (see [Uploading to NERSC](#uploading-to-nersc)).
 
 #### In long
 
@@ -161,12 +161,10 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
       or just update the value in `scripts/generate-concentration-files.py`.
       The value should be of the form `"gh:[commit-id]"`
       e.g. `"gh:c75a54d0af36dbedf654ad2eeba66e9c1fbce2a2"`.
-1. When the run is finished, upload the results for the publication team with
-   `pixi run python scripts/upload-to-llnl.py --unique-upload-id-dir <unique-value-here> output-bundles/<run-id>/data/processed/esgf-ready/input4MIPs`
-   e.g. `pixi run python scripts/upload-to-llnl.py --unique-upload-id-dir cr-scenario-concs-20250701-1 output-bundles/v0.1.0a2/data/processed/esgf-ready/input4MIPs`
-1. Tell the publication team that the results are uploaded and the folder in which to find them i.e. the value of `--unique-upload-id-dir`
+1. When the run is finished, upload the results to NERSC for the publication team (see [Uploading to NERSC](#uploading-to-nersc)).
 
-#### Uploading to Nersc
+#### Uploading to NERSC
+
 - raw docs are pretty good: https://docs.nersc.gov/services/scp/
 - command is something like `rsync --partial --progress -avR output-bundles/1.0.0/data/processed/esgf-ready/input4MIPs zrjn@dtn01.nersc.gov:/global/u2/z/zrjn/`
     - `-avR`: sets the flags for copying recursively and with the directory structure we want
@@ -180,7 +178,7 @@ pixi run prefect config set PREFECT_API_URL="http://127.0.0.1:4201/api"
 - update permissions
     - make all directories readable by anyone: `find /global/cfs/projectdirs/m4931/zrjn-tmp/input4MIPs/ -type d -exec chmod 755 {} \;`
     - make all files readable by anyone: `find /global/cfs/projectdirs/m4931/zrjn-tmp/input4MIPs/ -type f -exec chmod 644 {} \;`
-- send an email to Sasha (I'll give you email separately) to say, "Hi, these files are ready to be published"
+- message Sasha on slack with something like, "Hi, the files in `/path/to/suitable/level/dir` are ready to be published"
 
 #### Parallelisation
 

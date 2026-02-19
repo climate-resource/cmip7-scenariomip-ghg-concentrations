@@ -191,13 +191,12 @@ Be careful and don't crash your computer."""
     markers = (
         # (model, scenario, cmip7 experiment name)
         # Decision: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
-        # vl likely to be finalised first
         ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
-        # ("AIM 3.0", "SSP2 - Low Overshoot_e", "ln"),
-        # ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
+        ("AIM 3.0", "SSP2 - Low Overshoot_e", "ln"),
+        ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
         # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
-        # ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
-        # ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+        ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
+        ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
         ("GCAM 8s", "SSP3 - High Emissions", "h"),
     )
 
