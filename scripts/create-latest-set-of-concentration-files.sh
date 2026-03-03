@@ -5,8 +5,8 @@
 # but the commands should be easy to copy-paste
 # (if they're not, we've made the script too complex).
 pixi run python scripts/generate-concentration-files.py \
-    --run-id "1.0.0_lower-priority" \
-    --esgf-version 1.0.0 \
+    --run-id "1.0.1" \
+    --esgf-version 1.0.1 \
     --input4mips-cvs-source "gh:ghg-concs-lower-priority" \
     --n-workers 2 \
     --n-workers-multiprocessing 8 \
