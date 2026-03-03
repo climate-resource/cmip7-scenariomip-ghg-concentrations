@@ -1,5 +1,5 @@
 """
-Upload a bundle to Zenodo
+Create a bundle ready to upload to Zenodo
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ from functools import partial
 from pathlib import Path
 from typing import Annotated
 
+import netCDF4
+import tqdm.auto
 import typer
 from attrs import define
 from dotenv import load_dotenv
@@ -170,6 +172,21 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
         )
 
 
+def get_draft_deposition_id(esgf_ready_files_root: Path) -> str:
+    dois = []
+    for nc_file in tqdm.auto.tqdm(esgf_ready_files_root.rglob("**/*.nc"), desc="Retrieving DOIs from netCDF files"):
+        with netCDF4.Dataset(nc_file) as ds:
+            dois.append(ds.getncattr("doi"))
+
+    if len(set(dois)) != 1:
+        msg = f"More than one DOI in the files, {set(dois)=}"
+        raise ValueError(msg)
+
+    draft_deposition_id = dois[0].replace("10.5281/zenodo.", "")
+
+    return draft_deposition_id
+
+
 def main(
     bundle_path: Annotated[Path, typer.Argument(help="Path to the bundle to prepare for zenodo")],
     zenodo_bundle_root_path: Annotated[Path, typer.Option(help="Root path in which to save the Zenodo bundle")] = Path(
@@ -179,6 +196,9 @@ def main(
     zenodo_metadata_file: Annotated[
         str, typer.Option(help="Name of the file in which the zenodo metadata was written")
     ] = "zenodo.json",
+    reserved_zenodo_doi_file: Annotated[
+        str, typer.Option(help="Name of the file in which to write the reserved Zenodo DOI")
+    ] = "reserved-zenodo-doi.txt",
     # dependencies_table_file: Annotated[
     #     Path, typer.Option(help="Path from which to read the dependencies table")
     # ] = Path("data/processed/dependencies.db"),
@@ -216,7 +236,11 @@ def main(
     #     metadata=zenodo_metadata,
     # )
 
-    create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
+    # create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
+
+    draft_deposition_id = get_draft_deposition_id(bundle_path / "data/processed/esgf-ready/input4MIPs")
+    with open(zenodo_bundle_path / reserved_zenodo_doi_file, "w") as fh:
+        fh.write(draft_deposition_id)
 
 
 if __name__ == "__main__":
