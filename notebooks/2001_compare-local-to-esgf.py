@@ -27,10 +27,8 @@ import tqdm.auto
 import xarray as xr
 
 # %%
-# # !ls ../output-bundles/
-
-# %%
-output_bundle = "1.0.0_lower-priority"
+# Double check these values before running
+output_bundle = "1.0.1"
 local_out_root = Path(f"../output-bundles/{output_bundle}/data/processed/esgf-ready/")
 
 
@@ -90,12 +88,9 @@ def get_esgf_url(local_fp: Path) -> str:
 
 # %%
 for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
-    if "cfc12" not in str(fp):
-        continue
-
-    if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
-        print(f"Not checking {fp.name} yet as scenarios haven't been upload to ESGF")
-        continue
+    # if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
+    #     print(f"Not checking {fp.name} yet as these scenarios haven't been upload to ESGF")
+    #     continue
 
     url, checksum = get_esgf_url(fp)
     esgf_file = pooch.retrieve(url, known_hash=checksum)
@@ -107,5 +102,3 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     except AssertionError as exc:
         print(f"Issue for {fp=}")
         print(exc)
-
-# %%

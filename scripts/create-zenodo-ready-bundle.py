@@ -53,7 +53,12 @@ def create_tar_file(
                 continue
 
             print(f"    - Adding {file_to_keep_candidate}")
-            tar.add(file_to_keep_candidate, recursive=True, filter=partial(tar_filter, filters=filters))
+            tar.add(
+                file_to_keep_candidate,
+                arcname=file_to_keep_candidate.relative_to(original_bundle_path),
+                recursive=True,
+                filter=partial(tar_filter, filters=filters),
+            )
 
 
 def create_level_aware_tar(  # noqa: PLR0913
