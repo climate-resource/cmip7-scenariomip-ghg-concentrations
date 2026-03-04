@@ -436,6 +436,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,
         doi=doi,
+        reference_db=reference_db,
         pool_multiprocessing=pool_multiprocessing,
     )
 
@@ -792,6 +793,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     lat_gradient_file=lat_gradient_file_future,
                     esgf_ready_root_dir=esgf_ready_root_dir,
                     references_short_names=references_short_names,
+                    reference_db=reference_db,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     raw_notebooks_root_dir=raw_notebooks_root_dir,
                     executed_notebooks_dir=executed_notebooks_dir,
