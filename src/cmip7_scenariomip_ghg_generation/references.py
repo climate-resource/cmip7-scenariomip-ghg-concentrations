@@ -149,7 +149,7 @@ SCENARIO_REFERENCES = {
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
-    ("AIM", "ln"): ReferenceInfo(
+    ("AIM 3.0", "ln"): ReferenceInfo(
         short_name="AIM integrated assessment modelling team, 2026 (in-prep)",
         licence="Paper, NA",
         reference=("AIM team, ...: " "Low to negative scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
