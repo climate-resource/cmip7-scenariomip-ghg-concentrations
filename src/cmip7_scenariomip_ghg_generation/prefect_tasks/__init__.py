@@ -34,6 +34,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.one_box_projection import (
     create_one_box_annual_mean_file,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.plotting import plot_marker_overview
+from cmip7_scenariomip_ghg_generation.prefect_tasks.references import save_references_info_to_db
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
     scale_lat_gradient_based_on_emissions,
     scale_lat_gradient_eofs,
@@ -82,6 +83,7 @@ __all__ = [
     "make_complete_scenario",
     "plot_marker_overview",
     "run_magicc",
+    "save_references_info_to_db",
     "scale_lat_gradient_based_on_emissions",
     "scale_lat_gradient_eofs",
     "scale_seasonality_based_on_annual_mean",

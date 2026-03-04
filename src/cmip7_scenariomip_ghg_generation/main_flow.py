@@ -38,12 +38,24 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     make_complete_scenario,
     plot_marker_overview,
     run_magicc,
+    save_references_info_to_db,
     scale_lat_gradient_based_on_emissions,
     scale_lat_gradient_eofs,
     scale_seasonality_based_on_annual_mean,
     scale_seasonality_based_on_magicc_npp,
     split_input_emissions_into_individual_files_and_check_harmonisation,
     write_zenodo_json,
+)
+from cmip7_scenariomip_ghg_generation.references import (
+    FORSTER_ET_AL_AR6_WG1_CH7,
+    MEINSHAUSEN_ET_AL_2009,
+    MEINSHAUSEN_ET_AL_2011,
+    MEINSHAUSEN_ET_AL_SCENARIOS,
+    NICHOLLS_ET_AL_HISTORICAL,
+    NICHOLLS_ET_AL_SCENARIOS,
+    SCENARIO_REFERENCES,
+    WESTERN_ET_AL_2024,
+    WMO_2022,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -111,6 +123,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     in_zenodo_json: Path,
     output_bundle_root_dir: Path,
     repo_root_dir: Path,
+    reference_db: Path,
 ) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -266,6 +279,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         Root directory of the repository
 
         Used to ensure we can copy inputs into the output bundle
+
+    reference_db
+        Database in which reference information is saved
 
     Returns
     -------
@@ -424,9 +440,19 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     )
 
     if wmo_2022_ghgs:
+        references_short_names_wmo_2022_ghgs = save_references_info_to_db(
+            [
+                NICHOLLS_ET_AL_HISTORICAL,
+                NICHOLLS_ET_AL_SCENARIOS,
+                MEINSHAUSEN_ET_AL_SCENARIOS,
+                WMO_2022,
+            ],
+            db=reference_db,
+        )
         wmo_2022_futures = create_single_concentration_projection(
             ghgs=wmo_2022_ghgs,
             cleaned_data_path=wmo_2022_cleaned,
+            references_short_names=references_short_names_wmo_2022_ghgs,
         )
 
     western_2024_futures = {}
@@ -450,11 +476,20 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 executed_notebooks_dir=executed_notebooks_dir,
             )
 
+            references_short_names_western_2024_ghgs = save_references_info_to_db(
+                [
+                    NICHOLLS_ET_AL_HISTORICAL,
+                    NICHOLLS_ET_AL_SCENARIOS,
+                    MEINSHAUSEN_ET_AL_SCENARIOS,
+                    WESTERN_ET_AL_2024,
+                ]
+            )
             western_2024_futures = {
                 **western_2024_futures,
                 **create_single_concentration_projection(
                     ghgs=[ghg],
                     cleaned_data_path=western_et_al_2024_extended_ghg,
+                    references_short_names=references_short_names_western_2024_ghgs,
                 ),
             }
 
@@ -547,6 +582,11 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         )
         magicc_based_futures_d = defaultdict(list)
         for ghg in magicc_based_ghgs:
+            references_short_names_modelling_based_ghg = [
+                NICHOLLS_ET_AL_HISTORICAL,
+                NICHOLLS_ET_AL_SCENARIOS,
+                MEINSHAUSEN_ET_AL_SCENARIOS,
+            ]
             global_mean_yearly_common_kwargs = dict(
                 ghg=ghg,
                 scenario_info_markers=scenario_info_markers,
@@ -564,6 +604,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                         create_gradient_aware_harmonisation_annual_mean_file,
                         out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
                         **global_mean_yearly_common_kwargs,
+                    )
+                    references_short_names_modelling_based_ghg.extend(
+                        [
+                            MEINSHAUSEN_ET_AL_2009,
+                            MEINSHAUSEN_ET_AL_2011,
+                            FORSTER_ET_AL_AR6_WG1_CH7,
+                        ]
                     )
 
                 else:
@@ -585,9 +632,17 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                         out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
                         **global_mean_yearly_common_kwargs,
                     )
+                    references_short_names_modelling_based_ghg.extend(
+                        [
+                            MEINSHAUSEN_ET_AL_2009,
+                            MEINSHAUSEN_ET_AL_2011,
+                            FORSTER_ET_AL_AR6_WG1_CH7,
+                        ]
+                    )
 
                 elif magicc_based_ghgs_projection_method[ghg] == "one-box":
                     global_mean_yearly_file_future = one_box_annual_mean_file
+                    # Nothing to add to references_short_names_modelling_based_ghg
 
                 else:
                     raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
@@ -704,8 +759,25 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     executed_notebooks_dir=executed_notebooks_dir,
                 )
 
-            esgf_ready_files_future = {
-                (ghg, si.cmip_scenario_name): submit_output_aware(
+            references_short_names_western_2024_ghgs = save_references_info_to_db(
+                [
+                    NICHOLLS_ET_AL_HISTORICAL,
+                    NICHOLLS_ET_AL_SCENARIOS,
+                    MEINSHAUSEN_ET_AL_SCENARIOS,
+                    WESTERN_ET_AL_2024,
+                ]
+            )
+
+            esgf_ready_files_future = {}
+            for si in scenario_info_markers:
+                references_short_names = save_references_info_to_db(
+                    [
+                        SCENARIO_REFERENCES[(si.model, si.cmip_scenario_name)],
+                        references_short_names_modelling_based_ghg,
+                    ]
+                )
+
+                esgf_ready_files_future[(ghg, si.cmip_scenario_name)] = submit_output_aware(
                     create_esgf_files,
                     ghg=ghg,
                     cmip_scenario_name=si.cmip_scenario_name,
@@ -719,14 +791,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     seasonality_file=seasonality_all_time_file_future,
                     lat_gradient_file=lat_gradient_file_future,
                     esgf_ready_root_dir=esgf_ready_root_dir,
+                    references_short_names=references_short_names,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     raw_notebooks_root_dir=raw_notebooks_root_dir,
                     executed_notebooks_dir=executed_notebooks_dir,
                     checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
                     pool=pool_multiprocessing,
                 )
-                for si in scenario_info_markers
-            }
 
             for key, v in esgf_ready_files_future.items():
                 magicc_based_futures_d[key[0]].append(v)
@@ -910,6 +981,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     in_zenodo_json: Path,
     output_bundle_root_dir: Path,
     repo_root_dir: Path,
+    reference_db: Path,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -1073,6 +1145,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
 
         Used to ensure we can copy inputs into the output bundle
 
+    reference_db
+        Database in which reference information is saved
+
     Returns
     -------
     :
@@ -1171,6 +1246,7 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             in_zenodo_json=in_zenodo_json,
             output_bundle_root_dir=output_bundle_root_dir,
             repo_root_dir=repo_root_dir,
+            reference_db=reference_db,
         )
 
     return res_flow

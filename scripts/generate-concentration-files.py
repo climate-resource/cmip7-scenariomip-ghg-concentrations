@@ -177,6 +177,9 @@ Be careful and don't crash your computer."""
         ),
     ] = "18690745",
     in_zenodo_json: Annotated[Path, typer.Option(help="Input `zenodo.json` file")] = (REPO_ROOT_DIR / "zenodo.json"),
+    reference_db_name: Annotated[Path, typer.Option(help="Name of the database in which to save references")] = (
+        "references.db"
+    ),
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
@@ -279,6 +282,8 @@ Be careful and don't crash your computer."""
     data_processed_root = data_root / "processed"
 
     executed_notebooks_dir = output_bundle_root_dir / "notebooks-executed"
+
+    reference_db = data_interim_root / "references.db"
 
     ### Historical GHG
     cmip7_historical_ghg_concentration_source_id = "CR-CMIP-1-0-0"
@@ -428,6 +433,7 @@ Be careful and don't crash your computer."""
         in_zenodo_json=in_zenodo_json,
         output_bundle_root_dir=output_bundle_root_dir,
         repo_root_dir=REPO_ROOT_DIR,
+        reference_db=reference_db,
     )
 
 
