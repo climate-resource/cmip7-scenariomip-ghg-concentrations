@@ -4,11 +4,13 @@ Zenodo related tasks
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 from openscm_zenodo.zenodo import ZenodoDomain, ZenodoInteractor, get_reserved_doi
 
-from cmip7_scenariomip_ghg_generation.prefect_helpers import task_basic_cache
+from cmip7_scenariomip_ghg_generation.prefect_helpers import task_basic_cache, task_standard_path_cache
 
 
 @task_basic_cache(task_run_name="get-doi")
@@ -49,3 +51,42 @@ def get_doi(any_deposition_id: str) -> str:
     doi = get_reserved_doi(update_metadata_response)
 
     return doi
+
+
+@task_standard_path_cache(
+    task_run_name="write_zenodo_json",
+    parameters_output=("out_path",),
+    # refresh_cache=True,
+)
+def write_zenodo_json(
+    in_zenodo_json: Path,
+    out_path: Path,
+    version: str,
+) -> Path:
+    """
+    Write zenodo JSON, updating metadata along the way
+
+    Parameters
+    ----------
+    in_zenodo_json
+        Input `zenodo.json` file
+
+    out_path
+        Output path to write the updated `zenodo.json` into
+
+    version
+        Version to put in the updated `zenodo.json`
+
+    Returns
+    -------
+    :
+        Written path
+    """
+    with open(in_zenodo_json) as fh:
+        zenodo_raw = json.load(fh)
+
+    zenodo_raw["metadata"]["version"] = version
+    with open(out_path, "w") as fh:
+        json.dump(zenodo_raw, fh)
+
+    return out_path

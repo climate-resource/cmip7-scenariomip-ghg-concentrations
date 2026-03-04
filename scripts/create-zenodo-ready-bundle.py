@@ -19,8 +19,20 @@ from attrs import define
 from dotenv import load_dotenv
 from loguru import logger
 
-
 # ruff: noqa: D101, D102, D103
+
+
+def tar_filter(
+    tarinfo: tarfile.TarInfo,
+    filters: list[Callable[[Path], bool]],
+) -> tarfile.TarInfo | None:
+    if any(filter(Path(tarinfo.name)) for filter in filters):
+        print(f"    - Not bundling {tarinfo.name}")
+        return None
+
+    return tarinfo
+
+
 def create_tar_file(
     original_bundle_path: Path,
     current_level_path_rel_to_original_bundle_path: Path,
@@ -41,7 +53,7 @@ def create_tar_file(
                 continue
 
             print(f"    - Adding {file_to_keep_candidate}")
-            tar.add(file_to_keep_candidate)
+            tar.add(file_to_keep_candidate, recursive=True, filter=partial(tar_filter, filters=filters))
 
 
 def create_level_aware_tar(  # noqa: PLR0913
@@ -114,14 +126,13 @@ class DirectoryBundlingSpecs:
 
 
 def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -> None:
-    zenodo_bundle_path.mkdir(exist_ok=True, parents=True)
-
     files_to_bundle_at_root_level = (
-        # original_bundle_path / "Makefile",
-        # original_bundle_path / "README.md",
-        # original_bundle_path / "pixi.lock",
-        # original_bundle_path / "pyproject.toml",
-        # *original_bundle_path.glob("*.yaml")
+        original_bundle_path / "Makefile",
+        original_bundle_path / "README.md",
+        original_bundle_path / "pixi.lock",
+        original_bundle_path / "pyproject.toml",
+        original_bundle_path / "zenodo.json",
+        # *original_bundle_path.glob("*.yaml"),
     )
 
     for file in files_to_bundle_at_root_level:
@@ -134,6 +145,43 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
     data_out_filter = partial(name_contains_filter, blacklist=[".complete", "chk"])
 
     directories_to_bundle = [
+        DirectoryBundlingSpecs(
+            dir=Path("magicc"),
+            level=1,
+            filters=[
+                universal_filter,
+                partial(
+                    name_contains_filter,
+                    blacklist=[
+                        "cmip7-ghgs",
+                        "openscm-runner",
+                    ],
+                ),
+            ],
+        ),
+        DirectoryBundlingSpecs(
+            dir=Path("notebooks"),
+            level=0,
+            filters=[
+                universal_filter,
+                partial(name_contains_filter, blacklist=[".ipynb"]),
+            ],
+        ),
+        DirectoryBundlingSpecs(
+            dir=Path("scripts"),
+            level=0,
+            filters=[
+                universal_filter,
+            ],
+        ),
+        DirectoryBundlingSpecs(
+            dir=Path("src"),
+            level=0,
+            filters=[
+                universal_filter,
+                lambda p: not p.name.endswith(".py"),
+            ],
+        ),
         DirectoryBundlingSpecs(
             dir=Path("data/raw"),
             level=1,
@@ -151,12 +199,12 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
         ),
         DirectoryBundlingSpecs(
             dir=Path("data/interim"),
-            level=0,
+            level=1,
             filters=[universal_filter, data_out_filter],
         ),
         DirectoryBundlingSpecs(
             dir=Path("data/processed"),
-            level=0,
+            level=1,
             filters=[universal_filter, data_out_filter],
         ),
     ]
@@ -236,7 +284,9 @@ def main(
     #     metadata=zenodo_metadata,
     # )
 
-    # create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
+    zenodo_bundle_path.mkdir(exist_ok=True, parents=True)
+
+    create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
 
     draft_deposition_id = get_draft_deposition_id(bundle_path / "data/processed/esgf-ready/input4MIPs")
     with open(zenodo_bundle_path / reserved_zenodo_doi_file, "w") as fh:

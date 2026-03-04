@@ -4,8 +4,13 @@
 # May not work on windows as this is a shell script,
 # but the commands should be easy to copy-paste
 # (if they're not, we've made the script too complex).
+RUN_ID="1.0.1"
+
+echo "============================"
+echo "Generating ESGF-ready files"
+echo "============================"
 pixi run python scripts/generate-concentration-files.py \
-    --run-id "1.0.1" \
+    --run-id "${RUN_ID}" \
     --esgf-version 1.0.1 \
     --input4mips-cvs-source "gh:ghg-concs-lower-priority" \
     --n-workers 2 \
@@ -13,3 +18,13 @@ pixi run python scripts/generate-concentration-files.py \
     --n-workers-multiprocessing-magicc 2 \
     --n-workers-per-magicc-notebook 6 \
     --emissions-file data/raw/input-scenarios/202601301330_202512071232_202511040855_202511040855_complete-emissions.csv
+
+echo "============================"
+echo "Creating zenodo-ready bundle"
+echo "============================"
+pixi run pixi run python scripts/create-zenodo-ready-bundle.py "output-bundles/${RUN_ID}"
+
+echo "==================="
+echo "Uploading to zenodo"
+echo "==================="
+pixi run pixi run python scripts/upload-to-zenodo.py "zenodo-bundles/${RUN_ID}"

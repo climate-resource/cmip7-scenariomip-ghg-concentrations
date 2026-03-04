@@ -20,6 +20,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_wmo_data,
     compile_inverse_emissions,
+    copy_to,
     create_esgf_files,
     create_esgf_files_equivalence_species,
     create_gradient_aware_harmonisation_annual_mean_file,
@@ -42,6 +43,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     scale_seasonality_based_on_annual_mean,
     scale_seasonality_based_on_magicc_npp,
     split_input_emissions_into_individual_files_and_check_harmonisation,
+    write_zenodo_json,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -106,6 +108,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     pool_multiprocessing_magicc: multiprocessing.pool.Pool | None,
     n_workers_per_magicc_notebook: int,
     any_zenodo_deposition_id: str,
+    in_zenodo_json: Path,
+    output_bundle_root_dir: Path,
+    repo_root_dir: Path,
 ) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -248,6 +253,19 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     any_zenodo_deposition_id
         A deposition ID from the sequence of Zenodo versions we want to upload to
+
+    in_zenodo_json
+        Input `zenodo.json` file
+
+    output_bundle_root_dir
+        Root directory of the output bundle
+
+        Used to ensure we can copy inputs into the output bundle
+
+    repo_root_dir
+        Root directory of the repository
+
+        Used to ensure we can copy inputs into the output bundle
 
     Returns
     -------
@@ -781,15 +799,48 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         for pt in plotting_futures_l:
             pt.wait()
 
+    copy_inputs_to_output_bundle_futures = [
+        submit_output_aware(
+            copy_to,
+            to_copy=repo_root_dir / to_copy,
+            out_path=output_bundle_root_dir / to_copy,
+        )
+        for to_copy in (
+            "Makefile",
+            "README.md",
+            "data/raw",
+            "magicc",
+            "notebooks",
+            "pixi.lock",
+            "pyproject.toml",
+            "scripts",
+            "src",
+            "zenodo.json",
+        )
+    ]
+    copy_inputs_to_output_bundle_futures.append(
+        submit_output_aware(
+            write_zenodo_json,
+            in_zenodo_json=in_zenodo_json,
+            out_path=output_bundle_root_dir / "zenodo.json",
+            version=esgf_version,
+        )
+    )
+
     # Ensure all paths finish
-    done, not_done = wait(
-        (
+    wait_futures = (
+        *(
             vv
             for v in esgf_ready_futures_all_variables.values()
             for vv in v.esgf_ready_files_futures
             # Urgh this bloody halon1202 business
             if vv is not None
         ),
+        *copy_inputs_to_output_bundle_futures,
+    )
+
+    done, not_done = wait(
+        wait_futures,
         # 4 hours
         timeout=4 * 60 * 60,
     )
@@ -856,6 +907,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     n_workers_per_magicc_notebook: int,
     plot_complete_dir: Path,
     any_zenodo_deposition_id: str,
+    in_zenodo_json: Path,
+    output_bundle_root_dir: Path,
+    repo_root_dir: Path,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -1006,6 +1060,19 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     any_zenodo_deposition_id
         A deposition ID from the sequence of Zenodo versions we want to upload to
 
+    in_zenodo_json
+        Input `zenodo.json` file
+
+    output_bundle_root_dir
+        Root directory of the output bundle
+
+        Used to ensure we can copy inputs into the output bundle
+
+    repo_root_dir
+        Root directory of the repository
+
+        Used to ensure we can copy inputs into the output bundle
+
     Returns
     -------
     :
@@ -1101,6 +1168,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             pool_multiprocessing_magicc=pool_multiprocessing_magicc,
             n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
             any_zenodo_deposition_id=any_zenodo_deposition_id,
+            in_zenodo_json=in_zenodo_json,
+            output_bundle_root_dir=output_bundle_root_dir,
+            repo_root_dir=repo_root_dir,
         )
 
     return res_flow

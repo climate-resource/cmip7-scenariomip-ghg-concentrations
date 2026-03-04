@@ -1,6 +1,8 @@
 # Zenodo bundles
 zenodo-bundles
 
+scripts-ignore
+
 # Prefect stuff
 .prefect
 

@@ -176,6 +176,7 @@ Be careful and don't crash your computer."""
             help="A deposition ID from the sequence of Zenodo versions we want to upload to",
         ),
     ] = "18690745",
+    in_zenodo_json: Annotated[Path, typer.Option(help="Input `zenodo.json` file")] = (REPO_ROOT_DIR / "zenodo.json"),
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
@@ -424,6 +425,9 @@ Be careful and don't crash your computer."""
         n_workers_multiprocessing_magicc=n_workers_multiprocessing_magicc,
         n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
         any_zenodo_deposition_id=any_zenodo_deposition_id,
+        in_zenodo_json=in_zenodo_json,
+        output_bundle_root_dir=output_bundle_root_dir,
+        repo_root_dir=REPO_ROOT_DIR,
     )
 
 
