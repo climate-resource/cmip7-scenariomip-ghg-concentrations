@@ -9,6 +9,8 @@ RUN_ID="1.0.1"
 echo "============================"
 echo "Generating ESGF-ready files"
 echo "============================"
+# Use this to refresh the cache for all tasks
+# PREFECT_TASKS_REFRESH_CACHE=true
 pixi run python scripts/generate-concentration-files.py \
     --run-id "${RUN_ID}" \
     --esgf-version 1.0.1 \

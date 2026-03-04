@@ -11,7 +11,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_
 
 
 @task_standard_path_cache(
-    task_run_name="copy-inputs-to-output-bundle_{to_copy}",
+    task_run_name="copy-inputs-to-output-bundle_{out_path}",
     parameters_output=("out_path",),
     # refresh_cache=True,
 )

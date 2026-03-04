@@ -79,6 +79,8 @@ Then use it with
 
 ```sh
 pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
+# Check with
+pixi run prefect profile ls
 ```
 
 To avoid clashes with other databases,
@@ -87,6 +89,8 @@ tell prefect to use a database specific to this project
 ```sh
 mkdir .prefect
 pixi run prefect config set PREFECT_API_DATABASE_CONNECTION_URL='sqlite+aiosqlite:////path/to/this/repo/.prefect/prefect.db'
+# Check with
+pixi run prefect config view --show-secrets
 ```
 
 If you want to run on a specific host/port for this instance,
