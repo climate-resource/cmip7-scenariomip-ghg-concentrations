@@ -483,7 +483,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     NICHOLLS_ET_AL_SCENARIOS,
                     MEINSHAUSEN_ET_AL_SCENARIOS,
                     WESTERN_ET_AL_2024,
-                ]
+                ],
+                db=reference_db,
             )
             western_2024_futures = {
                 **western_2024_futures,
@@ -766,7 +767,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     NICHOLLS_ET_AL_SCENARIOS,
                     MEINSHAUSEN_ET_AL_SCENARIOS,
                     WESTERN_ET_AL_2024,
-                ]
+                ],
+                db=reference_db,
             )
 
             esgf_ready_files_future = {}
@@ -774,8 +776,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 references_short_names = save_references_info_to_db(
                     [
                         SCENARIO_REFERENCES[(si.model, si.cmip_scenario_name)],
-                        references_short_names_modelling_based_ghg,
-                    ]
+                        *references_short_names_modelling_based_ghg,
+                    ],
+                    db=reference_db,
                 )
 
                 esgf_ready_files_future[(ghg, si.cmip_scenario_name)] = submit_output_aware(

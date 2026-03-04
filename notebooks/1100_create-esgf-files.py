@@ -20,6 +20,7 @@
 
 # %% editable=true slideshow={"slide_type": ""}
 import itertools
+import sqlite3
 from functools import partial
 from pathlib import Path
 
@@ -27,6 +28,7 @@ import cftime
 import matplotlib.pyplot as plt
 import numpy as np
 import openscm_units
+import pandas as pd
 import pandas_indexing as pix  # noqa: F401
 import pandas_openscm
 import pint_xarray
@@ -55,23 +57,32 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "co2"
-cmip_scenario_name: str = "vl"
-internal_processing_scenario_name: str = "vl"
-esgf_version: str = "0.0.1"
+ghg: str = "cfc11"
+cmip_scenario_name: str = "hl"
+internal_processing_scenario_name: str = "all"
+esgf_version: str = "1.0.1"
 esgf_institution_id: str = "CR"
-input4mips_cvs_source: str = "gh:cr-scenariomip"
+input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_co2_monthly-mean.nc"
+    "../output-bundles/1.0.1/data/interim/monthly-means/single-concentration-projection_cfc11_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_co2_seasonality-all-time.nc"
+    "../output-bundles/1.0.1/data/interim/seasonality/single-concentration-projection_cfc11_seasonality-all-time.nc"
 )
-lat_gradient_file: str = "../output-bundles/dev-test/data/interim/latitudinal-gradient/co2_latitudinal-gradient-info.nc"
+lat_gradient_file: str = (
+    "../output-bundles/dev-test/data/interim/latitudinal-gradient/cfc11_latitudinal-gradient-info.nc"
+)
 esgf_files_start_year: int = 2022
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
+references_short_names = [
+    "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
+    "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
+    "Meinshausen et al., 2020",
+    "WMO 2022",
+]
+reference_db = "../output-bundles/1.0.1/data/interim/references.db"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -83,6 +94,7 @@ seasonality_file_p = Path(seasonality_file)
 lat_gradient_file_p = Path(lat_gradient_file)
 esgf_ready_root_dir_p = Path(esgf_ready_root_dir)
 historical_data_root_dir_p = Path(historical_data_root_dir)
+reference_db_p = Path(reference_db)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Set up
@@ -365,46 +377,12 @@ comment = (
 )
 
 # %%
-# TODO: handle this better
-# Probably just pass in short names
-# from scripts and then just load the rest from a hard-coded DB
-gas_deps = (
-    dict(
-        short_name="Nicholls et al., 2025 (in-prep)",
-        licence="Paper, NA",
-        reference=(
-            "Nicholls, Z., Meinshausen, M., Lewis, J., Pflueger, M., Menking, A., ...: "
-            "Greenhouse gas concentrations for climate modelling (CMIP7), "
-            "in-prep, 2025."
-        ),
-        url="https://github.com/climate-resource/CMIP-GHG-Concentration-Generation",
-        # resource_type="publication-article",
-    ),
-    dict(
-        short_name="Nicholls et al., 2025 (in-prep)",
-        licence="Paper, NA",
-        reference=(
-            "Nicholls, Z., Meinshausen, M., Lewis, J., Pflueger, M., Menking, A., ...: "
-            "Future greenhouse gas concentrations for climate modelling (CMIP7 ScenarioMIP), "
-            "in-prep, 2025."
-        ),
-        url="https://github.com/climate-resource/cmip7-scenariomip-ghg-concentrations",
-        # resource_type="publication-article",
-    ),
-    dict(
-        short_name="Meinshausen et al., 2020",
-        licence="Paper, NA",
-        reference=(
-            "Meinshausen, M., Nicholls, Z. R. J., ..., Vollmer, M. K., and Wang, R. H. J.: "
-            "The shared socio-economic pathway (SSP) greenhouse gas concentrations "
-            "and their extensions to 2500, "
-            "Geosci. Model Dev., 13, 3571-3605, https://doi.org/10.5194/gmd-13-3571-2020, 2020."
-        ),
-        doi="https://doi.org/10.5194/gmd-13-3571-2020",
-        url="https://doi.org/10.5194/gmd-13-3571-2020",
-        # resource_type="publication-article",
-    ),
-)
+db_connection = sqlite3.connect(reference_db_p)
+references_all = pd.read_sql("SELECT * FROM data_references", con=db_connection).set_index("short_name")
+db_connection.close()
+
+gas_deps = references_all.loc[references_short_names].reset_index().to_dict(orient="records")
+gas_deps
 
 # %%
 non_input4mips_metadata_common = {
