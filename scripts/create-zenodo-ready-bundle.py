@@ -309,6 +309,7 @@ from pathlib import Path
 # If you don't have pooch already, get it with `pip install pooch`
 # (we recommend using a a virtual environment
 # rather than installing globally, but ultimately it's up to you).
+import pooch
 
 # If you want progress bars, `pip install tqdm`
 has_tqdm = importlib.util.find_spec("tqdm")

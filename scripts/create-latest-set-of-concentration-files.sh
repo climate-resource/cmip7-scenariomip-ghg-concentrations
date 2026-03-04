@@ -11,6 +11,7 @@ echo "Generating ESGF-ready files"
 echo "============================"
 # Use this to refresh the cache for all tasks
 # PREFECT_TASKS_REFRESH_CACHE=true
+pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
 pixi run python scripts/generate-concentration-files.py \
     --run-id "${RUN_ID}" \
     --esgf-version 1.0.1 \
