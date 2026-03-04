@@ -39,7 +39,7 @@ def create_tar_file(
     zenodo_bundle_path: Path,
     filters: list[Callable[[Path], bool]],
     files_only: bool = False,
-) -> None:
+) -> Path:
     tar_id = "--".join(current_level_path_rel_to_original_bundle_path.parts)
     tar_path = zenodo_bundle_path / f"{tar_id}.tar.gz"
     print(f"Writing to {tar_path}")
@@ -60,6 +60,8 @@ def create_tar_file(
                 filter=partial(tar_filter, filters=filters),
             )
 
+    return tar_path.relative_to(zenodo_bundle_path)
+
 
 def create_level_aware_tar(  # noqa: PLR0913
     original_bundle_path: Path,
@@ -68,17 +70,18 @@ def create_level_aware_tar(  # noqa: PLR0913
     bundle_at_level: int,
     filters: list[Callable[[Path], bool]],
     current_level: int,
-) -> None:
+) -> list[Path]:
     if bundle_at_level == current_level:
-        create_tar_file(
+        tar_path = create_tar_file(
             original_bundle_path=original_bundle_path,
             current_level_path_rel_to_original_bundle_path=current_level_path_rel_to_original_bundle_path,
             zenodo_bundle_path=zenodo_bundle_path,
             filters=filters,
         )
 
-        return
+        return [tar_path]
 
+    tar_paths = []
     level_files = []
     for level_component in (original_bundle_path / current_level_path_rel_to_original_bundle_path).iterdir():
         if any(filter(level_component) for filter in filters):
@@ -86,7 +89,7 @@ def create_level_aware_tar(  # noqa: PLR0913
             continue
 
         if level_component.is_dir():
-            create_level_aware_tar(
+            tar_path = create_level_aware_tar(
                 original_bundle_path=original_bundle_path,
                 current_level_path_rel_to_original_bundle_path=level_component.relative_to(original_bundle_path),
                 zenodo_bundle_path=zenodo_bundle_path,
@@ -94,18 +97,22 @@ def create_level_aware_tar(  # noqa: PLR0913
                 bundle_at_level=bundle_at_level,
                 filters=filters,
             )
+            tar_paths.extend(tar_path)
 
         else:
             level_files.append(level_component)
 
     if level_files:
-        create_tar_file(
+        tar_path = create_tar_file(
             original_bundle_path=original_bundle_path,
             current_level_path_rel_to_original_bundle_path=current_level_path_rel_to_original_bundle_path,
             zenodo_bundle_path=zenodo_bundle_path,
             filters=filters,
             files_only=True,
         )
+        tar_paths.append(tar_path)
+
+    return tar_paths
 
 
 @define
@@ -130,10 +137,12 @@ class DirectoryBundlingSpecs:
     """
 
 
-def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -> None:
+def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -> tuple[Path, ...]:
+    bundled_files = []
+
     files_to_bundle_at_root_level = (
         original_bundle_path / "Makefile",
-        original_bundle_path / "README.md",
+        # original_bundle_path / "README.md",
         original_bundle_path / "pixi.lock",
         original_bundle_path / "pyproject.toml",
         original_bundle_path / "zenodo.json",
@@ -141,7 +150,9 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
     )
 
     for file in files_to_bundle_at_root_level:
-        shutil.copyfile(file, zenodo_bundle_path / file.name)
+        out_path = zenodo_bundle_path / file.name
+        shutil.copy2(file, out_path)
+        bundled_files.append(out_path.relative_to(zenodo_bundle_path))
 
     def name_contains_filter(fp: Path, blacklist: list[str]) -> bool:
         return any(s in fp.name for s in blacklist)
@@ -184,7 +195,7 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
             level=0,
             filters=[
                 universal_filter,
-                lambda p: not p.name.endswith(".py"),
+                lambda p: "egg-info" in p.name,
             ],
         ),
         DirectoryBundlingSpecs(
@@ -215,7 +226,7 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
     ]
 
     for dbs in directories_to_bundle:
-        create_level_aware_tar(
+        written_tars = create_level_aware_tar(
             original_bundle_path=original_bundle_path,
             current_level_path_rel_to_original_bundle_path=dbs.dir,
             zenodo_bundle_path=zenodo_bundle_path,
@@ -223,13 +234,18 @@ def create_zenodo_bundle(zenodo_bundle_path: Path, original_bundle_path: Path) -
             bundle_at_level=dbs.level,
             filters=dbs.filters,
         )
+        bundled_files.extend(written_tars)
+
+    return bundled_files
 
 
-def get_draft_deposition_id(esgf_ready_files_root: Path) -> str:
+def get_draft_deposition_id_and_version(esgf_ready_files_root: Path) -> tuple[str, str]:
     dois = []
-    for nc_file in tqdm.auto.tqdm(esgf_ready_files_root.rglob("**/*.nc"), desc="Retrieving DOIs from netCDF files"):
+    versions = []
+    for nc_file in tqdm.auto.tqdm(esgf_ready_files_root.rglob("**/*.nc"), desc="Retrieving metadata from netCDF files"):
         with netCDF4.Dataset(nc_file) as ds:
             dois.append(ds.getncattr("doi"))
+            versions.append(ds.getncattr("source_version"))
 
     if len(set(dois)) != 1:
         msg = f"More than one DOI in the files, {set(dois)=}"
@@ -237,7 +253,110 @@ def get_draft_deposition_id(esgf_ready_files_root: Path) -> str:
 
     draft_deposition_id = dois[0].replace("10.5281/zenodo.", "")
 
-    return draft_deposition_id
+    if len(set(versions)) != 1:
+        msg = f"More than one version in the files, {set(versions)=}"
+        raise ValueError(msg)
+
+    version = versions[0]
+
+    return draft_deposition_id, version
+
+
+def write_zenodo_readme(out_path: Path, version: str, zenodo_record_id: str, zenodo_bundle_files: list[Path]) -> Path:
+    """
+    Write README for the zenodo page
+
+    Parameters
+    ----------
+    out_path
+        Output path to write the README
+
+    version
+        Version to put in the README
+
+    zenodo_record_id
+        The record ID of the zenodo upload in which this README will appear
+
+    zenodo_bundle_files
+        Files that are included in the zenodo bundle
+
+    Returns
+    -------
+    :
+        Written path
+    """
+    zenodo_bundle_files_formatted = "\n        ".join(f'"{f.name}",' for f in zenodo_bundle_files)
+    readme_content = f'''# CMIP7 ScenarioMIP GHG Concentrations
+
+This archive contains the workflow and outputs
+used to create the CMIP7 ScenarioMIP GHG concentrations version {version}.
+
+To reproduce the results, please follow the steps below.
+
+## Download data
+
+Download all the data files you need using the script below
+
+```python
+"""
+Get files from zenodo and extract them
+"""
+
+import importlib.util
+import tarfile
+from pathlib import Path
+
+# If you don't have pooch already, get it with `pip install pooch`
+# (we recommend using a a virtual environment
+# rather than installing globally, but ultimately it's up to you).
+
+# If you want progress bars, `pip install tqdm`
+has_tqdm = importlib.util.find_spec("tqdm")
+
+
+def main():
+    record_id = "{zenodo_record_id}"
+    out_path = Path(record_id)
+
+    for file in [
+        {zenodo_bundle_files_formatted}
+    ]:
+        downloaded = pooch.retrieve(
+            f"https://zenodo.org/records/{{record_id}}/files/{{file}}?download=1",
+            fname=file,
+            path=out_path,
+            progressbar=has_tqdm is not None,
+        )
+
+        downloaded = out_path / file
+        if file.endswith(".tar.gz"):
+            with tarfile.open(downloaded, "r:gz") as tar:
+                tar.extractall(path=out_path)
+
+    print(f"The downloaded data is available in {{out_path}}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Run the workflow
+
+Move into the directory in which the data files were downloaded,
+then run `pixi run prefect server start`.
+Open a new terminal, move into the directory in which the data files were downloaded again,
+then run `bash scripts/create-latest-set-of-concentration-files.sh`.
+This will run the workflow and create the ESGF-equivalent* files.
+
+*We say ESGF-equivalent because each file has the time at which it was written in its metadata.
+Hence, the files will not be identical, although the data within them should be.
+You can confirm this with `notebooks/2001_compare-local-to-esgf.py`.
+'''
+
+    with open(out_path, "w") as fh:
+        fh.write(readme_content)
+
+    return out_path
 
 
 def main(
@@ -263,39 +382,23 @@ def main(
 
     bundle_id = bundle_path.parts[-1]
     zenodo_bundle_path = zenodo_bundle_root_path / bundle_id
-    # zenodo_interactor = ZenodoInteractor(token=os.environ["ZENODO_TOKEN"])
-
-    # with open(bundle_path / zenodo_metadata_file) as fh:
-    #     zenodo_metadata = json.load(fh)
-
-    # with open(bundle_path / f"{bundle_id}-config.yaml") as fh:
-    #     config = yaml.safe_load(fh)
-
-    # draft_deposition_id = config["doi"].split("10.5281/zenodo.")[1]
-
-    # # Helpful if you need to work out how identifiers look in Zenodo JSON
-    # tmp = zenodo_interactor.get_metadata("14892947")
-    # tmp["metadata"]["related_identifiers"]
-
-    # db_connection = sqlite3.connect(bundle_path / dependencies_table_file)
-    # sources = pd.read_sql("SELECT * FROM source", con=db_connection)
-    # dependencies = pd.read_sql("SELECT * FROM dependencies", con=db_connection)
-    # db_connection.close()
-
-    # sources_used = sources[sources["short_name"].isin(dependencies["short_name"])]
-
-    # zenodo_metadata_incl_refs = add_dependencies_to_metadata(
-    #     dependencies_table=sources_used,
-    #     metadata=zenodo_metadata,
-    # )
 
     zenodo_bundle_path.mkdir(exist_ok=True, parents=True)
 
-    create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
+    zenodo_bundle_files = create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
 
-    draft_deposition_id = get_draft_deposition_id(bundle_path / "data/processed/esgf-ready/input4MIPs")
+    draft_deposition_id, version = get_draft_deposition_id_and_version(
+        bundle_path / "data/processed/esgf-ready/input4MIPs"
+    )
     with open(zenodo_bundle_path / reserved_zenodo_doi_file, "w") as fh:
         fh.write(draft_deposition_id)
+
+    write_zenodo_readme(
+        out_path=zenodo_bundle_path / "README.md",
+        version=version,
+        zenodo_record_id=draft_deposition_id,
+        zenodo_bundle_files=zenodo_bundle_files,
+    )
 
 
 if __name__ == "__main__":

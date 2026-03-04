@@ -28,10 +28,15 @@ def get_doi(any_deposition_id: str) -> str:
     :
         DOI of draft deposit
     """
-    zenoodo_interactor = ZenodoInteractor(
-        token=os.environ["ZENODO_TOKEN"],
-        zenodo_domain=ZenodoDomain.production.value,
-    )
+    try:
+        zenoodo_interactor = ZenodoInteractor(
+            token=os.environ["ZENODO_TOKEN"],
+            zenodo_domain=ZenodoDomain.production.value,
+        )
+    except KeyError:
+        msg = "==============\n" "No zenodo token provided, DOI will just be a placeholder\n" "=============="
+        print(msg)
+        return "no-zenodo-token"
 
     latest_deposition_id = zenoodo_interactor.get_latest_deposition_id(
         any_deposition_id=any_deposition_id,
@@ -88,5 +93,6 @@ def write_zenodo_json(
     zenodo_raw["metadata"]["version"] = version
     with open(out_path, "w") as fh:
         json.dump(zenodo_raw, fh)
+        fh.write("\n")
 
     return out_path

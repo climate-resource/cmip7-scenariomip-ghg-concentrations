@@ -800,8 +800,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             pt.wait()
 
     copy_inputs_to_output_bundle_futures = [
-        submit_output_aware(
-            copy_to,
+        copy_to.submit(
             to_copy=repo_root_dir / to_copy,
             out_path=output_bundle_root_dir / to_copy,
         )
@@ -818,12 +817,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             "zenodo.json",
         )
     ]
-    copy_inputs_to_output_bundle_futures.append(
-        submit_output_aware(
-            write_zenodo_json,
-            in_zenodo_json=in_zenodo_json,
-            out_path=output_bundle_root_dir / "zenodo.json",
-            version=esgf_version,
+    copy_inputs_to_output_bundle_futures.extend(
+        (
+            write_zenodo_json.submit(
+                in_zenodo_json=in_zenodo_json,
+                out_path=output_bundle_root_dir / "zenodo.json",
+                version=esgf_version,
+            ),
         )
     )
 
