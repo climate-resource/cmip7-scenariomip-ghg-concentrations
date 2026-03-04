@@ -87,6 +87,7 @@ def get_esgf_url(local_fp: Path) -> str:
 
 
 # %%
+checked = []
 for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     # if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
     #     print(f"Not checking {fp.name} yet as these scenarios haven't been upload to ESGF")
@@ -99,6 +100,9 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
 
     try:
         xr.testing.assert_equal(local, esgf)
+        checked.append(fp)
     except AssertionError as exc:
         print(f"Issue for {fp=}")
         print(exc)
+
+print(f"{len(checked)=}")
