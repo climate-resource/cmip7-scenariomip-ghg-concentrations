@@ -45,7 +45,7 @@ from input4mips_validation.dataset.metadata_data_producer_minimum import (
 from input4mips_validation.xarray_helpers import add_time_bounds
 
 from cmip7_scenariomip_ghg_generation.constants import VARIABLE_TO_STANDARD_NAME_RENAMING
-from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id
+from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id, create_source_id_extension
 from cmip7_scenariomip_ghg_generation.xarray_helpers import (
     calculate_cos_lat_weighted_mean_latitude_only,
     convert_time_to_year_month,
@@ -58,17 +58,17 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "cfc11"
-cmip_scenario_name: str = "hl"
+cmip_scenario_name: str = "vl"
 internal_processing_scenario_name: str = "all"
 esgf_version: str = "1.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/1.0.1/data/interim/monthly-means/single-concentration-projection_cfc11_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_cfc11_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/1.0.1/data/interim/seasonality/single-concentration-projection_cfc11_seasonality-all-time.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/single-concentration-projection_cfc11_seasonality-all-time.nc"
 )
 lat_gradient_file: str = (
     "../output-bundles/dev-test/data/interim/latitudinal-gradient/cfc11_latitudinal-gradient-info.nc"
@@ -82,7 +82,7 @@ references_short_names = [
     "Meinshausen et al., 2020",
     "WMO 2022",
 ]
-reference_db = "../output-bundles/1.0.1/data/interim/references.db"
+reference_db = "../output-bundles/dev-test/data/interim/references.db"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -347,18 +347,6 @@ plt.show()
 # ### Set common metadata
 
 # %%
-# source_id = f"{esgf_institution_id}-{cmip_scenario_name}-{esgf_version.replace('.', '-')}"
-source_id = create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
-source_id
-
-# %%
-metadata_minimum_common = dict(
-    source_id=source_id,
-    target_mip="ScenarioMIP",
-)
-metadata_minimum_common
-
-# %%
 funding_info = (
     {
         "name": "GHG Forcing For CMIP",
@@ -408,11 +396,8 @@ raw_cvs_loader = get_raw_cvs_loader(
     # force_download=True,
 )
 # raw_cvs_loader
-
-# %%
 cvs = load_cvs_known_loader(raw_cvs_loader)
-if source_id not in cvs.source_id_entries.source_ids:
-    raise AssertionError(source_id)
+# cvs
 
 # %% [markdown]
 # ### Set up time ranges
@@ -425,13 +410,46 @@ time_dimension = "time"
 
 # %%
 # Extensions will be a different thing hence hard-code end for now
-time_ranges_to_write = [range(int(global_mean_annual_mean[time_dimension].dt.year[0]), 2100 + 1)]
-# time_ranges_to_write = [range(1750, int(global_mean_annual_mean.time.dt.year[-1].values) + 1)]
+time_ranges_to_write = [
+    range(int(global_mean_annual_mean[time_dimension].dt.year[0]), 2100 + 1),
+]
 
 for start, end in itertools.pairwise(time_ranges_to_write):
-    assert start[-1] == end[0] - 1
+    assert start[-1] == end[0] - 1, (start[-1], end[0] - 1)
 
-time_ranges_to_write
+time_ranges_to_write_ext = []
+dat_last_year = int(global_mean_annual_mean.time.dt.year[-1].values)
+chunk_size = 100
+for i, sy in enumerate(range(2101, dat_last_year, chunk_size)):
+    er = sy + chunk_size
+    if er > dat_last_year:
+        er = dat_last_year + 1
+
+    time_ranges_to_write_ext.append(range(sy, er))
+
+for start, end in itertools.pairwise(time_ranges_to_write_ext):
+    assert start[-1] == end[0] - 1, (start[-1], end[0] - 1)
+
+time_ranges_to_write_ext
+
+# %% [markdown]
+# ### Set up source IDs
+#
+# Also associate them with time ranges.
+
+# %%
+source_id = create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
+source_id
+
+# %%
+source_id_extension = create_source_id_extension(source_id, cmip_scenario_name)
+source_id_extension
+
+# %%
+source_id_time_ranges = (
+    (source_id, time_ranges_to_write),
+    (source_id_extension, time_ranges_to_write_ext),
+)
 
 # %% [markdown]
 # ### Get standard name
@@ -487,69 +505,80 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
     if "lat" in dimensions:
         ds_to_write["lat"].encoding = {"dtype": np.dtypes.Float16DType}
 
-    metadata_minimum = Input4MIPsDatasetMetadataDataProducerMinimum(
-        grid_label=grid_label,
-        nominal_resolution=nominal_resolution,
-        **metadata_minimum_common,
-    )
+    for source_id_l, time_ranges_l in source_id_time_ranges:
+        metadata_minimum_common = dict(
+            source_id=source_id_l,
+            target_mip="ScenarioMIP",
+        )
+        if source_id not in cvs.source_id_entries.source_ids:
+            raise AssertionError(source_id)
 
-    for time_range in time_ranges_to_write:
-        ds_to_write_time_section = ds_to_write.sel(time=ds_to_write.time.dt.year.isin(time_range))
+        metadata_minimum = Input4MIPsDatasetMetadataDataProducerMinimum(
+            grid_label=grid_label,
+            nominal_resolution=nominal_resolution,
+            **metadata_minimum_common,
+        )
 
-        input4mips_ds = Input4MIPsDataset.from_data_producer_minimum_information(
-            data=ds_to_write_time_section,
-            prepare_func=partial(
-                prepare_ds_and_get_frequency,
-                dimensions=dimensions,
-                time_dimension=time_dimension,
-                standard_and_or_long_names={
-                    variable_name_output: {
-                        "standard_name": standard_name,
-                        "long_name": variable_name_raw,
+        for time_range_l in time_ranges_l:
+            ds_to_write_time_section = ds_to_write.sel(time=ds_to_write.time.dt.year.isin(time_range_l))
+
+            input4mips_ds = Input4MIPsDataset.from_data_producer_minimum_information(
+                data=ds_to_write_time_section,
+                prepare_func=partial(
+                    prepare_ds_and_get_frequency,
+                    dimensions=dimensions,
+                    time_dimension=time_dimension,
+                    standard_and_or_long_names={
+                        variable_name_output: {
+                            "standard_name": standard_name,
+                            "long_name": variable_name_raw,
+                        },
                     },
-                },
-                add_time_bounds=partial(
-                    add_time_bounds,
-                    monthly_time_bounds=not yearly_time_bounds,
-                    yearly_time_bounds=yearly_time_bounds,
+                    add_time_bounds=partial(
+                        add_time_bounds,
+                        monthly_time_bounds=not yearly_time_bounds,
+                        yearly_time_bounds=yearly_time_bounds,
+                    ),
                 ),
-            ),
-            metadata_minimum=metadata_minimum,
-            cvs=cvs,
-            dataset_category="GHGConcentrations",
-            realm="atmos",
-        )
+                metadata_minimum=metadata_minimum,
+                cvs=cvs,
+                dataset_category="GHGConcentrations",
+                realm="atmos",
+            )
 
-        metadata_evolved = evolve(
-            input4mips_ds.metadata,
-            product="derived",
-            comment=comment,
-            doi=doi,
-        )
+            metadata_evolved = evolve(
+                input4mips_ds.metadata,
+                product="derived",
+                comment=comment,
+                doi=doi,
+            )
 
-        ds = input4mips_ds.data
-        ds[variable_name_output].attrs["cell_methods"] = "area: time: mean"
-        input4mips_ds = Input4MIPsDataset(
-            data=ds,
-            metadata=metadata_evolved,
-            cvs=cvs,
-            non_input4mips_metadata=non_input4mips_metadata_common,
-        )
+            ds = input4mips_ds.data
+            ds[variable_name_output].attrs["cell_methods"] = "area: time: mean"
+            input4mips_ds = Input4MIPsDataset(
+                data=ds,
+                metadata=metadata_evolved,
+                cvs=cvs,
+                non_input4mips_metadata=non_input4mips_metadata_common,
+            )
 
-        print("Writing")
-        written = input4mips_ds.write(esgf_ready_root_dir_p)
-        print(f"Wrote: {written.relative_to(esgf_ready_root_dir_p)}")
+            print("Writing")
+            written = input4mips_ds.write(esgf_ready_root_dir_p)
+            print(f"Wrote: {written.relative_to(esgf_ready_root_dir_p)}")
 
-    print("")
+        print("")
 
 # %% [markdown]
 # ## Validate the written files
 
 # %%
-# papermill_description=validate-written-files
+# # # papermill_description=validate-written-files
 # # Turn this off for now, very slow hence waste of time.
 # # Probably move into another step at some point
 # # (and just validate the entire written tree at once).
+# from input4mips_validation.inference.from_data import BoundsInfo, FrequencyMetadataKeys
+# from input4mips_validation.xarray_helpers.variables import XRVariableHelper
+# from input4mips_validation.cli import validate_tree
 # bounds_info = BoundsInfo(
 #     time_bounds="time_bnds",
 #     bounds_dim="bnds",
@@ -564,7 +593,7 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
 #     bounds_coord_indicators=("bounds", "bnds"),
 #     climatology_bounds_coord_indicators=("climatology",),
 # )
-#
+
 # validate_tree(
 #     tree_root=esgf_ready_root_dir_p,
 #     cv_source=input4mips_cvs_source,
