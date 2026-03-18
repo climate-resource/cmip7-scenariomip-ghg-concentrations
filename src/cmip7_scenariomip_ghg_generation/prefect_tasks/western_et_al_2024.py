@@ -76,6 +76,7 @@ def clean_western_et_al_2024_data(
 @task_standard_path_cache(
     task_run_name="extend-western-et-al-2024_{ghg}",
     parameters_output=("out_file",),
+    refresh_cache=True,
 )
 def extend_western_et_al_2024(  # noqa: PLR0913
     ghg: str,
@@ -125,7 +126,7 @@ def extend_western_et_al_2024(  # noqa: PLR0913
             "out_file": str(out_file),
         },
         run_notebooks_dir=executed_notebooks_dir,
-        identity="only",
+        identity=ghg,
     )
 
     return out_file

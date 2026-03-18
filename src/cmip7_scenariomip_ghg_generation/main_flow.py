@@ -440,6 +440,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         pool_multiprocessing=pool_multiprocessing,
     )
 
+    wmo_2022_futures = {}
     if wmo_2022_ghgs:
         references_short_names_wmo_2022_ghgs = save_references_info_to_db(
             [

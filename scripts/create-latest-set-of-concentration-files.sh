@@ -20,7 +20,9 @@ pixi run python scripts/generate-concentration-files.py \
     --n-workers-multiprocessing 8 \
     --n-workers-multiprocessing-magicc 2 \
     --n-workers-per-magicc-notebook 6 \
-    --ghg cfc12 \
+    --ghg hcfc141b \
+    --ghg hcfc142b \
+    --ghg hcfc22 \
     --emissions-file data/raw/input-scenarios/202603081555_202512071232_202511040855_202511040855_complete-emissions.csv
 # --run-id "${RUN_ID}"
 # --emissions-file data/raw/input-scenarios/202601301330_202512071232_202511040855_202511040855_complete-emissions.csv
