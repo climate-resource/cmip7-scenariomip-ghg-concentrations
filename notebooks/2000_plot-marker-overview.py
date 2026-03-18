@@ -38,16 +38,16 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 scenario_info_markers: str = (
-    # "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
+    "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
     "REMIND-MAgPIE 3.5-4.11;SSP1 - Very Low Emissions;vl;;"
-    # "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
-    # "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
-    "GCAM 8s;SSP3 - High Emissions;h"
-    # "AIM 3.0;SSP2 - Low Overshoot;ln;;"
-    # "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
+    "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
+    "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
+    "GCAM 8s;SSP3 - High Emissions;h;;"
+    "AIM 3.0;SSP2 - Low Overshoot_a;ln;;"
+    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
 )
-emissions_complete_dir: str = "../output-bundles/1.0.0/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/1.0.0/data/interim/magicc-output/db"
+emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
 
 
@@ -109,6 +109,7 @@ for si in tqdm.auto.tqdm(scenario_info_markers_p):
                 model=si.model,
                 scenario=si.scenario,
                 climate_model="MAGICCv7.6.0a3",
+                run_mode="magicc-concentration-to-emissions-switch",
             )
             & pix.ismatch(variable=["Surface Air Temperature Change", "Effective Radiative Forcing**"]),
             # progress=True,
@@ -181,11 +182,12 @@ pdf = magiccc_output_pdf_q.loc[pix.isin(variable="Surface Air Temperature Change
 quantiles_plumes = [(0.5, 0.95), ((0.05, 0.95), 0.3)]
 quantiles_plumes = [(0.5, 0.95), ((0.17, 0.83), 0.5)]
 
-fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
+fig, axes = plt.subplots(ncols=3, figsize=(15, 4))
 
 for ax, xlim, yticks, ylim, show_legend in (
     (axes[0], (2015, 2100), np.arange(1.0, 2.51, 0.1), (1.0, 2.5), False),
-    (axes[1], (1950, 2100), np.arange(0.5, 5.51, 0.5), None, True),
+    (axes[1], (1950, 2100), np.arange(0.5, 5.51, 0.5), None, False),
+    (axes[2], (1950, 2500), np.arange(-1.5, 10.51, 1.0), None, True),
 ):
     pdf.loc[:, xlim[0] : xlim[1]].openscm.plot_plume(
         quantiles_plumes=quantiles_plumes,
@@ -351,7 +353,7 @@ emissions_pdf_incl_extras = pix.concat(
 # emissions_pdf_incl_extras
 
 # %%
-xlim = (2015, 2100)
+xlim = (2015, 2500)
 quantiles_plumes = [
     (0.5, 0.95),
     # ((0.05, 0.95), 0.2),
@@ -471,6 +473,7 @@ for variable, ax in tqdm.auto.tqdm(axes.items()):
     unit = unit_l[0]
     ax.set_ylabel(unit)
     ax.set_xlim(xlim)
+    ax.grid()
 
 # %%
 # Other notebooks to write:

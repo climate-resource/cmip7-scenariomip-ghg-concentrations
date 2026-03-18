@@ -87,11 +87,12 @@ def load_component_da(component: str) -> xr.DataArray:
     """
     # Start from 15-degree data
     candidates = list(esgf_ready_root_dir_p.rglob(f"**/{component}/gnz/**/*-{cmip_scenario_name}-*.nc"))
-    if len(candidates) != 1:
+    exp_n_files = 5  # scenario plus extensions
+    if len(candidates) != exp_n_files:
         msg = f"{component=} {candidates=}"
         raise AssertionError(msg)
 
-    res = xr.open_dataset(candidates[0])[component]
+    res = xr.open_mfdataset(candidates, combine_attrs="drop_conflicts", use_cftime=True)[component].sortby("time")
     # Pop out lat units to avoid pint quantification issues
     res["lat"].attrs.pop("units")
     res = res.pint.quantify(unit_registry=ur)
@@ -100,8 +101,8 @@ def load_component_da(component: str) -> xr.DataArray:
 
 
 # %%
-component_das = {ghg: load_component_da(ghg) for ghg in tqdm.auto.tqdm(components_p)}
-# components
+component_das = {ghg: load_component_da(ghg).compute() for ghg in tqdm.auto.tqdm(components_p)}
+# component_das
 
 # %% [markdown]
 # ## Create 15-degree grid equivalent product
@@ -149,6 +150,9 @@ equiv_erf_df = pd.concat([equiv_erf_df, tmp], axis="columns")
 ax = equiv_erf_df.plot()
 ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
 plt.show()
+
+# %%
+equiv_erf_df
 
 # %%
 native_grid = equiv_erf / GHG_RADIATIVE_EFFICIENCIES[equivalent_species.replace("eq", "")]
@@ -273,6 +277,9 @@ plt.show()
 
 # %% [markdown]
 # ## Write to ESGF-ready
+
+# %%
+assert False, "Re-write like other write esgf-ready notebook"
 
 # %% [markdown]
 # ### Set common metadata

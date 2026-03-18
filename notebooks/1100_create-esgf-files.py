@@ -157,10 +157,14 @@ global_mean_monthly_ym = convert_time_to_year_month(global_mean_monthly_no_seaso
 
 # %%
 seasonality_ym = convert_time_to_year_month(seasonality)
+# Need some rounding here or in
+# `1010_scale-seasonality-based-on-annual-mean`
 # seasonality_ym
 
 # %%
 lat_grad_ym = convert_time_to_year_month(lat_grad)
+# Need some rounding here or in
+# `1030_scale-latitudinal-gradient-based-on-emissions`
 # lat_grad_ym
 
 # %%
