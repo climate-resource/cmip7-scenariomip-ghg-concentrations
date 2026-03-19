@@ -516,7 +516,6 @@ cvs = load_cvs_known_loader(raw_cvs_loader)
 time_dimension = "time"
 
 # %%
-# Extensions will be a different thing hence hard-code end for now
 time_ranges_to_write = [
     range(int(global_mean_annual_mean[time_dimension].dt.year[0]), 2100 + 1),
 ]
