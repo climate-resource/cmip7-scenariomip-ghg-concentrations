@@ -57,21 +57,21 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "hfc125"
-cmip_scenario_name: str = "h"
-internal_processing_scenario_name: str = "h"
+ghg: str = "so2f2"
+cmip_scenario_name: str = "vl"
+internal_processing_scenario_name: str = "vl"
 esgf_version: str = "1.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_hfc125_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_so2f2_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_hfc125_seasonality-all-time.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_so2f2_seasonality-all-time.nc"
 )
 lat_gradient_file: str = (
-    "../output-bundles/dev-test/data/interim/latitudinal-gradient/hfc125_latitudinal-gradient-info.nc"
+    "../output-bundles/dev-test/data/interim/latitudinal-gradient/so2f2_latitudinal-gradient-info.nc"
 )
 esgf_files_start_year: int = 2022
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
@@ -237,7 +237,7 @@ checker = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
 # Cut to intended time axis and check
 checker = checker.sel(year=lat_grad_ym["year"] >= esgf_files_start_year)
 if checker.min() < 0:
-    if ghg != "hfc125":
+    if ghg not in ["hfc125", "hfc134a", "hfc152a", "hfc245fa", "hfc32", "hfc4310mee", "so2f2"]:
         # I haven't thought this through for other gases
         raise NotImplementedError
 
@@ -309,7 +309,8 @@ plt.show()
 
 # %%
 print("Concs at different latitudes")
-native_grid.sel(lat=[-87.5, 0, 87.5], method="nearest").plot.line(hue="lat", alpha=0.4)
+ax = native_grid.sel(lat=[-87.5, 0, 87.5], method="nearest").plot.line(hue="lat", alpha=0.4)
+plt.axhline(0.0, color="tab:gray", linestyle="--")
 plt.show()
 
 # %%

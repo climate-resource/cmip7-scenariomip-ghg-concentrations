@@ -57,7 +57,7 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 equivalent_species: str = "cfc12eq"
 components = "cfc11;;cfc113;;cfc114;;cfc115;;cfc12;;ccl4;;ch2cl2;;ch3br;;ch3ccl3;;ch3cl;;chcl3;;halon1211;;halon1301;;halon2402;;hcfc141b;;hcfc142b;;hcfc22"  # noqa: E501
 cmip_scenario_name: str = "vl"
-input4mips_cvs_source: str = "gh:cr-scenariomip"
+input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 
 
@@ -279,15 +279,16 @@ plt.show()
 # %% [markdown]
 # ## Write to ESGF-ready
 
-# %%
-assert False, "Re-write like other write esgf-ready notebook"
-
 # %% [markdown]
 # ### Set common metadata
 
 # %%
 metadata_helper = xr.open_mfdataset(
-    esgf_ready_root_dir_p.rglob(f"**/{equivalent_species.replace('eq', '')}/gnz/**/*-{cmip_scenario_name}-*.nc")
+    v
+    for v in esgf_ready_root_dir_p.rglob(
+        f"**/{equivalent_species.replace('eq', '')}/gnz/**/*-{cmip_scenario_name}-*.nc"
+    )
+    if "ext" not in str(v)
 )
 # metadata_helper
 
