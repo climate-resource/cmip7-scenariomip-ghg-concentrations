@@ -22,4 +22,3 @@ pixi run python scripts/generate-concentration-files.py \
     --n-workers-per-magicc-notebook 6 \
     --emissions-file data/raw/input-scenarios/202603081555_202512071232_202511040855_202511040855_complete-emissions.csv
 # --run-id "${RUN_ID}"
-# --emissions-file data/raw/input-scenarios/202601301330_202512071232_202511040855_202511040855_complete-emissions.csv

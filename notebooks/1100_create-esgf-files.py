@@ -57,30 +57,30 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "cfc11"
-cmip_scenario_name: str = "vl"
-internal_processing_scenario_name: str = "all"
+ghg: str = "hfc125"
+cmip_scenario_name: str = "h"
+internal_processing_scenario_name: str = "h"
 esgf_version: str = "1.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/single-concentration-projection_cfc11_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_hfc125_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/single-concentration-projection_cfc11_seasonality-all-time.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_hfc125_seasonality-all-time.nc"
 )
 lat_gradient_file: str = (
-    "../output-bundles/dev-test/data/interim/latitudinal-gradient/cfc11_latitudinal-gradient-info.nc"
+    "../output-bundles/dev-test/data/interim/latitudinal-gradient/hfc125_latitudinal-gradient-info.nc"
 )
 esgf_files_start_year: int = 2022
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 references_short_names = [
+    "GCAM integrated assessment modelling team, 2026 (in-prep)",
     "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
     "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
     "Meinshausen et al., 2020",
-    "WMO 2022",
 ]
 reference_db = "../output-bundles/dev-test/data/interim/references.db"
 
@@ -149,7 +149,7 @@ lat_grad = (lat_grad_info["eofs"] * lat_grad_info["principal-components-monthly"
 # lat_grad
 
 # %% [markdown]
-# ### Combine
+# ### Prepare to combine
 
 # %%
 global_mean_monthly_ym = convert_time_to_year_month(global_mean_monthly_no_seasonality)
@@ -167,14 +167,113 @@ lat_grad_ym = convert_time_to_year_month(lat_grad)
 # `1030_scale-latitudinal-gradient-based-on-emissions`
 # lat_grad_ym
 
+# %% [markdown]
+# ### Get rid of spots that will lead to unphysical values
+
 # %%
-# Quick checks
+abs_checker_seasonality = (global_mean_monthly_ym + seasonality_ym).min(["lat", "month"])
+unphysical_years_seasonality = abs_checker_seasonality.where(abs_checker_seasonality < 0.0, drop=True)["year"]
+unphysical_years_seasonality
+
+# %%
+abs_checker_latitudinal_gradient = (global_mean_monthly_ym + lat_grad_ym).min(["lat", "month"])
+unphysical_years_latitudinal_gradient = abs_checker_latitudinal_gradient.where(
+    abs_checker_latitudinal_gradient < 0.0, drop=True
+)["year"]
+unphysical_years_latitudinal_gradient
+
+# %%
+global_mean_monthly_ym_in_unphysical_years_seasonality = global_mean_monthly_ym.sel(year=unphysical_years_seasonality)
+all_unphysical_seasonality_years_are_zero_gm = (
+    global_mean_monthly_ym_in_unphysical_years_seasonality.min("month") == 0.0
+).all()
+if unphysical_years_seasonality.size == 0:
+    # Nothing to do
+    pass
+
+elif unphysical_years_seasonality.size and all_unphysical_seasonality_years_are_zero_gm:
+    seasonality_ym = xr.where(
+        seasonality_ym["year"].isin(global_mean_monthly_ym_in_unphysical_years_seasonality["year"]), 0.0, seasonality_ym
+    )
+
+else:
+    raise NotImplementedError
+
+# %%
+if unphysical_years_latitudinal_gradient.size:
+    print(f"Adjusting unphysical latitudinal gradient in years: {unphysical_years_latitudinal_gradient.values}")
+    global_mean_monthly_ym.mean("month").plot()
+    global_mean_monthly_ym.sel(year=unphysical_years_latitudinal_gradient).mean("month").plot(
+        label="Unphysical latitudinal gradient years"
+    )
+    plt.legend()
+    plt.show()
+
+    # Scale the latitudinal gradient down
+    # in the years where unphysical values are found.
+    # Iterate to avoid stupid rounding errors
+    for i in range(10):
+        lat_grad_ym_neg_only = xr.where(lat_grad_ym < 0, lat_grad_ym, 0.0)
+        scale_factor_all_time = (global_mean_monthly_ym / np.absolute(lat_grad_ym_neg_only).max(["lat"])).min("month")
+        scale_factor_all_time = xr.where(
+            scale_factor_all_time.isnull() | np.isinf(scale_factor_all_time),
+            1.0,
+            scale_factor_all_time,
+        )
+        scale_factor = xr.where(
+            scale_factor_all_time["year"].isin(unphysical_years_latitudinal_gradient), scale_factor_all_time, 1.0
+        )
+        if ((scale_factor >= 1.0) | (global_mean_monthly_ym == 0.0)).all():
+            break
+
+        lat_grad_ym = lat_grad_ym * scale_factor
+
+    else:
+        msg = "Need more iterations to get rid of rounding errors"
+        raise AssertionError
+
+# %%
+checker = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
+# Cut to intended time axis and check
+checker = checker.sel(year=lat_grad_ym["year"] >= esgf_files_start_year)
+if checker.min() < 0:
+    if ghg != "hfc125":
+        # I haven't thought this through for other gases
+        raise NotImplementedError
+
+    unphysical_years_combo = checker.where(checker < 0, drop=True)["year"]
+    # Adjust the latitudinal gradient further
+    # in the years where unphysical values are found.
+    # Iterate to avoid stupid rounding errors
+    for i in range(10):
+        lat_grad_ym_neg_only = xr.where(lat_grad_ym < 0, lat_grad_ym, 0.0)
+        scale_factor_all_time = ((global_mean_monthly_ym + seasonality_ym) / np.absolute(lat_grad_ym_neg_only)).min(
+            ["month", "lat"]
+        )
+        scale_factor_all_time = xr.where(
+            scale_factor_all_time.isnull() | np.isinf(scale_factor_all_time),
+            1.0,
+            scale_factor_all_time,
+        )
+        scale_factor = xr.where(scale_factor_all_time["year"].isin(unphysical_years_combo), scale_factor_all_time, 1.0)
+        if ((scale_factor >= 1.0) | ((global_mean_monthly_ym + seasonality_ym) == 0.0)).all():
+            break
+
+        lat_grad_ym = lat_grad_ym * scale_factor
+
+# checker
+
+# %% [markdown]
+# ### Quick checks
 
 # %%
 np.testing.assert_allclose(seasonality_ym.mean("month").data.m, 0.0, atol=1e-5)
 
 # %%
 np.testing.assert_allclose(calculate_cos_lat_weighted_mean_latitude_only(lat_grad_ym).data.m, 0.0, atol=1e-8)
+
+# %% [markdown]
+# ### Combine
 
 # %%
 native_grid_ym = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
@@ -183,6 +282,10 @@ native_grid_ym = native_grid_ym.sel(year=native_grid_ym["year"] >= esgf_files_st
 if native_grid_ym["year"].min() != esgf_files_start_year:
     raise AssertionError(native_grid_ym["year"])
 # native_grid_ym
+
+# %%
+if native_grid_ym.min() < 0:
+    raise AssertionError(native_grid_ym.min())
 
 # %%
 ym_to_time = partial(convert_year_month_to_time, day=15)
