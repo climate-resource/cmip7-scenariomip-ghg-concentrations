@@ -11,6 +11,13 @@ echo "Creating zenodo-ready bundle"
 echo "============================"
 pixi run pixi run python scripts/create-zenodo-ready-bundle.py "output-bundles/${RUN_ID}"
 
+create_bundle_rc=$?
+
+if [ "$create_bundle_rc" -ne 0 ]; then
+    echo "Creating zenodo-ready bundle failed"
+    exit $create_bundle_rc
+fi
+
 echo "==================="
 echo "Uploading to zenodo"
 echo "==================="
