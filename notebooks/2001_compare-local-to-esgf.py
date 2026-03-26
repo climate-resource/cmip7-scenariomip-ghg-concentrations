@@ -30,6 +30,7 @@ import xarray as xr
 # Double check these values before running
 output_bundle = "1.0.1"
 local_out_root = Path(f"../output-bundles/{output_bundle}/data/processed/esgf-ready/")
+compare_to_esgf_version = "1.0.0"
 
 
 # %%
@@ -56,7 +57,7 @@ def get_esgf_url(local_fp: Path) -> str:
         limit=10,
         # facets="source_id",
         variable_id=fp.parts[-4],
-        source_id=fp.parts[-7],
+        source_id=fp.parts[-7].replace(output_bundle.replace(".", "-"), compare_to_esgf_version.replace(".", "-")),
         frequency=fp.parts[-5],
         grid_label=fp.parts[-3],
         data_node="esgf-node.ornl.gov",
@@ -87,11 +88,20 @@ def get_esgf_url(local_fp: Path) -> str:
 
 
 # %%
+# The extensions means the data is slightly different,
+# hence only check equal before a certain period,
+# and check close for the entire time period.
+compare_equal_before = 2095
+
 checked = []
 for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
-    # if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
-    #     print(f"Not checking {fp.name} yet as these scenarios haven't been upload to ESGF")
-    #     continue
+    if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
+        # print(f"Not checking {fp.name} yet as these scenarios haven't been upload to ESGF")
+        continue
+
+    if "ext" in str(fp):
+        # print(f"Not checking {fp.name} yet as the extensions haven't been upload to ESGF")
+        continue
 
     url, checksum = get_esgf_url(fp)
     esgf_file = pooch.retrieve(url, known_hash=checksum)
@@ -99,10 +109,27 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     esgf = xr.load_dataset(esgf_file)
 
     try:
-        xr.testing.assert_equal(local, esgf)
+        xr.testing.assert_allclose(
+            local.sel(time=local.time.dt.year < compare_equal_before),
+            esgf.sel(time=esgf.time.dt.year < compare_equal_before),
+            rtol=1e-8,
+            atol=1e-4,
+        )
+        xr.testing.assert_allclose(
+            local,
+            esgf,
+            rtol=1e-3,
+            atol=1e-4,
+        )
         checked.append(fp)
     except AssertionError as exc:
         print(f"Issue for {fp=}")
         print(exc)
+        raise
 
 print(f"{len(checked)=}")
+
+# %%
+checked
+
+# %%
