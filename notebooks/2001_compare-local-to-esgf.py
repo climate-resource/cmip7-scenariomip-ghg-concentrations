@@ -19,6 +19,7 @@
 
 # %%
 import functools
+import json
 from pathlib import Path
 
 import pooch
@@ -88,12 +89,19 @@ def get_esgf_url(local_fp: Path) -> str:
 
 
 # %%
-# The extensions means the data is slightly different,
-# hence only check equal before a certain period,
-# and check close for the entire time period.
-compare_equal_before = 2095
+try:
+    with open("esgf-url-checksums.json") as fh:
+        esgf_url_checksums = json.load(fh)
+except FileNotFoundError:
+    esgf_url_checksums = {}
 
-checked = []
+# %%
+# The extensions means the data is slightly different,
+# particularly because of the mean-preserving interpolation,
+# hence check closeness with different thresholds for different periods.
+compare_closer_before = 2095
+
+to_check = []
 for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
         # print(f"Not checking {fp.name} yet as these scenarios haven't been upload to ESGF")
@@ -103,33 +111,78 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
         # print(f"Not checking {fp.name} yet as the extensions haven't been upload to ESGF")
         continue
 
-    url, checksum = get_esgf_url(fp)
+    # if not any (ghg in str(fp) for ghg in ("hfc32",)):
+    #     continue
+
+    if not any(sid in str(fp) for sid in ("-h-",)):
+        continue
+
+    if not any(sid in str(fp) for sid in ("gm", "gr1z")):
+        continue
+
+    if not any(sid in str(fp) for sid in ("yr",)):
+        continue
+
+    to_check.append(fp)
+
+to_check = sorted(to_check)
+
+checked = []
+for fp in tqdm.auto.tqdm(to_check):
+    if str(fp) in esgf_url_checksums:
+        url, checksum = esgf_url_checksums[str(fp)]
+    else:
+        url, checksum = get_esgf_url(fp)
+        esgf_url_checksums[str(fp)] = (url, checksum)
+
     esgf_file = pooch.retrieve(url, known_hash=checksum)
     local = xr.load_dataset(fp)
     esgf = xr.load_dataset(esgf_file)
 
     try:
         xr.testing.assert_allclose(
-            local.sel(time=local.time.dt.year < compare_equal_before),
-            esgf.sel(time=esgf.time.dt.year < compare_equal_before),
+            local.sel(time=local.time.dt.year < compare_closer_before),
+            esgf.sel(time=esgf.time.dt.year < compare_closer_before),
             rtol=1e-8,
-            atol=1e-4,
+            atol=1e-8,
         )
         xr.testing.assert_allclose(
             local,
             esgf,
-            rtol=1e-3,
-            atol=1e-4,
+            rtol=1e-6,
+            atol=1e-6,
         )
         checked.append(fp)
+
     except AssertionError as exc:
         print(f"Issue for {fp=}")
         print(exc)
-        raise
+        # raise
+
+    # print(f"Checked {fp=}")
 
 print(f"{len(checked)=}")
 
 # %%
-checked
+with open("esgf-url-checksums.json", "w") as fh:
+    json.dump(esgf_url_checksums, fh)
+
+# %%
+import numpy as np
+
+ghg = fp.name.split("_")[0]
+
+loc = np.where(
+    ~np.isclose(
+        local[ghg].values,
+        esgf[ghg].values,
+        rtol=1e-4,
+        atol=1e-4,
+    )
+)
+
+print(f"{local[ghg].values[loc]=}")
+print(f"{esgf[ghg].values[loc]=}")
+print(f"{local[ghg].time[loc[0]].values=}")
 
 # %%

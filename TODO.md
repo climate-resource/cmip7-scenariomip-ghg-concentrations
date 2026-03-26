@@ -1,0 +1,7 @@
+- [x] update bash check for number of produced files
+- [x] generate files
+- [ ] compare h against zenodo
+- [ ] compare vl against zenodo
+- [ ] generate complete file myself and check same as what Marit gave me
+- [ ] check emissions file against previous version (used for vl and h)
+- [ ] put in publication queue
