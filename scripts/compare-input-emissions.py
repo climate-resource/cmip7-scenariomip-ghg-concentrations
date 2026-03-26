@@ -21,10 +21,6 @@ def main():
         new_p, index_columns=["model", "scenario", "variable", "region", "unit"], out_columns_type=int
     )
 
-    wdf = pd.concat(
-        [base.openscm.set_index_levels({"source": "base"}), new.openscm.set_index_levels({"source": "new"})]
-    )
-
     for (model, scenario), msdf_base in base.groupby(["model", "scenario"]):
         msdf_new = new.openscm.mi_loc(pd.MultiIndex.from_tuples([(model, scenario)], names=["model", "scenario"]))
 

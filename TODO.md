@@ -1,7 +1,13 @@
 - [x] update bash check for number of produced files
 - [x] generate files
-- [ ] compare h against zenodo
-- [ ] compare vl against zenodo
-- [ ] generate complete file myself and check same as what Marit gave me
-- [ ] check emissions file against previous version (used for vl and h)
+- [x] check emissions file against previous version (used for vl and h)
+- [x] compare h against zenodo
+- [x] get answer about whether vl needs to update or not
+    - [x] if no, done
+    - [x] if yes, update, check emissions file against previous version again, then compare vl against zenodo
+- [ ] generate complete file myself and check the result is the same as what Marit gave me
+- [ ] update citation information based on https://docs.google.com/document/d/16i5A0ocpJ6EcoemNT_W7DkZ1LNfnPjYezKiUU0Rq2jw/edit?tab=t.0
+- [ ] generate files
 - [ ] put in publication queue
+- [ ] input4MIPs-CV PR:
+    - [ ] 1.0.1 has slight differences (<1e-3) in vl and h because of the introduction of extensions (which define concentrations out to the end of 2100, whereas previously assumed constant emissions to get from June 2100 to December 2100) and a fix to an input file (no need to re-run if you've already run with 1.0.0)
