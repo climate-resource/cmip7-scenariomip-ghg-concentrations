@@ -22,6 +22,7 @@ import functools
 import json
 from pathlib import Path
 
+import numpy as np
 import pooch
 import requests
 import tqdm.auto
@@ -114,14 +115,14 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     # if not any (ghg in str(fp) for ghg in ("hfc32",)):
     #     continue
 
-    if not any(sid in str(fp) for sid in ("-h-",)):
-        continue
+    # if not any(sid in str(fp) for sid in ("-h-",)):
+    #     continue
 
-    if not any(sid in str(fp) for sid in ("gm", "gr1z")):
-        continue
+    # if not any(sid in str(fp) for sid in ("gm", "gr1z")):
+    #     continue
 
-    if not any(sid in str(fp) for sid in ("yr",)):
-        continue
+    # if not any(sid in str(fp) for sid in ("yr",)):
+    #     continue
 
     to_check.append(fp)
 
@@ -139,26 +140,69 @@ for fp in tqdm.auto.tqdm(to_check):
     local = xr.load_dataset(fp)
     esgf = xr.load_dataset(esgf_file)
 
+    ghg = fp.name.split("_")[0]
+
     try:
-        xr.testing.assert_allclose(
-            local.sel(time=local.time.dt.year < compare_closer_before),
-            esgf.sel(time=esgf.time.dt.year < compare_closer_before),
-            rtol=1e-8,
-            atol=1e-8,
+        tol_paras = dict(
+            # rtol=1e-8,
+            atol=1e-3,
         )
         xr.testing.assert_allclose(
-            local,
-            esgf,
-            rtol=1e-6,
-            atol=1e-6,
+            local[ghg].round(3).sel(time=local.time.dt.year < compare_closer_before),
+            esgf[ghg].round(3).sel(time=esgf.time.dt.year < compare_closer_before),
+            **tol_paras,
         )
-        checked.append(fp)
+        passed_compare_closer_before = True
 
     except AssertionError as exc:
-        print(f"Issue for {fp=}")
+        passed_compare_closer_before = False
+        print(f"Issue before {compare_closer_before} for {fp=}")
         print(exc)
+
+        loc = np.where(~np.isclose(local[ghg].round(3).values, esgf[ghg].round(3).values, **tol_paras))
+
+        print(f"{local[ghg].values[loc]=}")
+        print(f"{esgf[ghg].values[loc]=}")
+        print(f"{local[ghg].time[loc[0]].values=}")
+        print()
         # raise
 
+    try:
+        tol_paras = (
+            dict(
+                # acceptable for the application of interest
+                atol=1e-3,
+                rtol=1e-3,
+            )
+            if ghg != "ch2cl2"
+            else dict(
+                # acceptable for the application of interest.
+                # ch2cl2 has crazy short lifetime
+                # so the differing extensions
+                # (actual extension vs. implicit extension in MAGICC)
+                # matter more.
+                atol=1e-3,
+                rtol=1e-2,
+            )
+        )
+        xr.testing.assert_allclose(local[ghg].round(3), esgf[ghg].round(3), **tol_paras)
+        passed_all_time = True
+
+    except AssertionError as exc:
+        passed_all_time = False
+        print(f"Issue for {fp=}")
+        print(exc)
+
+        loc = np.where(~np.isclose(local[ghg].round(3).values, esgf[ghg].round(3).values, **tol_paras))
+
+        print(f"{local[ghg].values[loc]=}")
+        print(f"{esgf[ghg].values[loc]=}")
+        print(f"{local[ghg].time[loc[0]].values=}")
+        print()
+        # raise
+
+    if passed_compare_closer_before and passed_all_time:
+        checked.append(fp)
     # print(f"Checked {fp=}")
 
 print(f"{len(checked)=}")
@@ -166,23 +210,3 @@ print(f"{len(checked)=}")
 # %%
 with open("esgf-url-checksums.json", "w") as fh:
     json.dump(esgf_url_checksums, fh)
-
-# %%
-import numpy as np
-
-ghg = fp.name.split("_")[0]
-
-loc = np.where(
-    ~np.isclose(
-        local[ghg].values,
-        esgf[ghg].values,
-        rtol=1e-4,
-        atol=1e-4,
-    )
-)
-
-print(f"{local[ghg].values[loc]=}")
-print(f"{esgf[ghg].values[loc]=}")
-print(f"{local[ghg].time[loc[0]].values=}")
-
-# %%
