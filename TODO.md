@@ -5,8 +5,9 @@
 - [x] get answer about whether vl needs to update or not
     - [x] if no, done
     - [x] if yes, update, check emissions file against previous version again, then compare vl against zenodo
-- [ ] generate complete file myself and check the result is the same as what Marit gave me
-- [ ] update citation information based on https://docs.google.com/document/d/16i5A0ocpJ6EcoemNT_W7DkZ1LNfnPjYezKiUU0Rq2jw/edit?tab=t.0
+- [x] generate complete file myself and check the result is the same as what Marit gave me
+- [x] update citation information based on https://docs.google.com/document/d/16i5A0ocpJ6EcoemNT_W7DkZ1LNfnPjYezKiUU0Rq2jw/edit?tab=t.0
+- [x] add extension citation information
 - [ ] generate files
 - [ ] put in publication queue
 - [ ] input4MIPs-CV PR:

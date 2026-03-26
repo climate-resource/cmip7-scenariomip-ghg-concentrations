@@ -1,3 +1,9 @@
+"""
+Compare input emissions to what is on Zenodo
+
+https://zenodo.org/records/18497404
+"""
+
 from functools import partial
 from pathlib import Path
 
@@ -10,6 +16,7 @@ from pandas_openscm.io import load_timeseries_csv
 
 
 def main():
+    """Run the comparison"""
     register_pandas_accessor()
 
     # Get from https://zenodo.org/records/18497404
@@ -55,11 +62,11 @@ def main():
         # msdf_zenodo.loc[pix.ismatch(variable="**43**")]
 
         overlapping_cols = np.intersect1d(msdf_zenodo.columns, msdf_new.columns)
-        msdf_zenodo = msdf_zenodo.loc[:, overlapping_cols].reset_index("scenario", drop=True)
+        msdf_zenodo_l = msdf_zenodo.loc[:, overlapping_cols].reset_index("scenario", drop=True)
         msdf_new = msdf_new.loc[:, overlapping_cols].reset_index("scenario", drop=True)
 
         diffs = compare_close(
-            left=msdf_zenodo,
+            left=msdf_zenodo_l,
             left_name=zenodo_p.name,
             right=msdf_new,
             right_name=local_p.name,

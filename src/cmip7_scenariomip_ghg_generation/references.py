@@ -141,53 +141,89 @@ WESTERN_ET_AL_2024 = ReferenceInfo(
     resource_type="publication-article",
 )
 
+SANDSTAD_ET_AL_2026 = ReferenceInfo(
+    short_name="Sandstad et al., 2026 (in-prep)",
+    licence="Paper, NA",
+    reference=("Sandstad, Sanderson et al: " "Emissions extensions for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+    url="https://github.com/maritsandstad/emissions_harmonization_historical",
+    resource_type="publication-article",
+)
+
 SCENARIO_REFERENCES = {
     ("REMIND-MAgPIE 3.5-4.11", "vl"): ReferenceInfo(
-        short_name="REMIND-MAgPIE integrated assessment modelling team, 2026 (in-prep)",
+        short_name="Very low scenario for CMIP7 ScenarioMIP based on the REMIND-MAgPIE model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("REMIND-MAgPIE team, ...: " "High to low scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "Kriegler, Luderer, Popp, Abrahão, ... and Strefler: "
+            "Very low scenario for CMIP7 ScenarioMIP based on the REMIND-MAgPIE model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
     ("AIM 3.0", "ln"): ReferenceInfo(
-        short_name="AIM integrated assessment modelling team, 2026 (in-prep)",
+        short_name="Low to negative scenario for CMIP7 ScenarioMIP based on the AIM model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("AIM team, ...: " "Low to negative scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "Fujimori, Nishiura, Hasegawa, Mori, ... and Takahashi: "
+            "Low to negative scenario for CMIP7 ScenarioMIP based on the AIM model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
     ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "l"): ReferenceInfo(
-        short_name="MESSAGEix-GLOBIOM-GAINS integrated assessment modelling team, 2026 (in-prep)",
+        short_name="Low scenario for CMIP7 ScenarioMIP based on the MESSAGEix-GLOBIOM-GAINS model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("MESSAGEix-GLOBIOM-GAINS team, ...: " "Low scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "Fricko, Wu, Zhang, Frank, ... and Krey: "
+            "Low scenario for CMIP7 ScenarioMIP based on the MESSAGEix-GLOBIOM-GAINS model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
     ("COFFEE 1.6", "ml"): ReferenceInfo(
-        short_name="COFFEE integrated assessment modelling team, 2026 (in-prep)",
+        short_name="Medium low scenario for CMIP7 ScenarioMIP based on the COFFEE model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("COFFEE team, ...: " "Medium scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "Schaeffer, Baptista, Angelkorte, Rochedo, ... and Szklo: "
+            "Medium low scenario for CMIP7 ScenarioMIP based on the COFFEE model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
     ("IMAGE 3.4", "m"): ReferenceInfo(
-        short_name="IMAGE integrated assessment modelling team, 2026 (in-prep)",
+        short_name="Medium scenario for CMIP7 ScenarioMIP based on the IMAGE model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("IMAGE team, ...: " "Medium scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "van Vuuren, Daioglou, Tagomori, de Boer, ... and Luchtenbelt: "
+            "Medium scenario for CMIP7 ScenarioMIP based on the IMAGE model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
     ("WITCH 6.0", "hl"): ReferenceInfo(
-        short_name="WITCH integrated assessment modelling team, 2026 (in-prep)",
+        short_name="High to low scenario for CMIP7 ScenarioMIP based on the WITCH model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("WITCH team, ...: " "High to low scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "Drouet, Reis, Gambarini, Azuero, ... and Tavoni: "
+            "High to low scenario for CMIP7 ScenarioMIP based on the WITCH model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),
     ("GCAM 8s", "h"): ReferenceInfo(
-        short_name="GCAM integrated assessment modelling team, 2026 (in-prep)",
+        short_name="High scenario for CMIP7 ScenarioMIP based on the GCAM model, 2026 (in-prep)",
         licence="Paper, NA",
-        reference=("GCAM team, ...: " "High scenario for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+        reference=(
+            "George, Bertram, Miller, Zhao, ... and Cui: "
+            "High scenario for CMIP7 ScenarioMIP based on the GCAM model, "
+            "in-prep, 2026."
+        ),
         url="https://zenodo.org/records/18497404",
         resource_type="publication-article",
     ),

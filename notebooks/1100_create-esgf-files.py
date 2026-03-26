@@ -82,6 +82,13 @@ references_short_names = [
     "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
     "Meinshausen et al., 2020",
 ]
+references_extensions_short_names = [
+    "High scenario for CMIP7 ScenarioMIP based on the GCAM model, 2026 (in-prep)",
+    "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
+    "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
+    "Meinshausen et al., 2020",
+    "Sandstad et al., 2026 (in-prep)",
+]
 reference_db = "../output-bundles/dev-test/data/interim/references.db"
 
 
@@ -478,21 +485,31 @@ references_all = pd.read_sql("SELECT * FROM data_references", con=db_connection)
 db_connection.close()
 
 gas_deps = references_all.loc[references_short_names].reset_index().to_dict(orient="records")
+gas_deps_extensions = references_all.loc[references_extensions_short_names].reset_index().to_dict(orient="records")
 gas_deps
 
 # %%
 non_input4mips_metadata_common = {
+    "funding": " ".join([v["long_text"] for v in funding_info]),
+    "funding_short_names": " --- ".join([v["name"] for v in funding_info]),
+    "funding_urls": " --- ".join([v["url"] for v in funding_info]),
+}
+references_input4mips_metadata = {
     "references": " --- ".join([v["reference"] for v in gas_deps]),
     "references_short_names": " --- ".join([v["short_name"] for v in gas_deps]),
     "references_dois": " --- ".join(
         [v["doi"] if ("doi" in v and v["doi"] is not None) else "No DOI" for v in gas_deps]
     ),
     "references_urls": " --- ".join([v["url"] for v in gas_deps]),
-    "funding": " ".join([v["long_text"] for v in funding_info]),
-    "funding_short_names": " --- ".join([v["name"] for v in funding_info]),
-    "funding_urls": " --- ".join([v["url"] for v in funding_info]),
 }
-non_input4mips_metadata_common
+references_input4mips_metadata_extensions = {
+    "references": " --- ".join([v["reference"] for v in gas_deps_extensions]),
+    "references_short_names": " --- ".join([v["short_name"] for v in gas_deps_extensions]),
+    "references_dois": " --- ".join(
+        [v["doi"] if ("doi" in v and v["doi"] is not None) else "No DOI" for v in gas_deps_extensions]
+    ),
+    "references_urls": " --- ".join([v["url"] for v in gas_deps_extensions]),
+}
 
 # %% [markdown]
 # ### Grab the CVs
@@ -617,14 +634,23 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
             source_id=source_id_l,
             target_mip="ScenarioMIP",
         )
-        if source_id not in cvs.source_id_entries.source_ids:
-            raise AssertionError(source_id)
+        if source_id_l not in cvs.source_id_entries.source_ids:
+            raise AssertionError(source_id_l)
 
         metadata_minimum = Input4MIPsDatasetMetadataDataProducerMinimum(
             grid_label=grid_label,
             nominal_resolution=nominal_resolution,
             **metadata_minimum_common,
         )
+
+        # Yuck implicit coupling
+        references_metadata = (
+            references_input4mips_metadata if "ext" not in source_id_l else references_input4mips_metadata_extensions
+        )
+        non_input4mips_metadata = {
+            **non_input4mips_metadata_common,
+            **references_metadata,
+        }
 
         for time_range_l in time_ranges_l:
             ds_to_write_time_section = ds_to_write.sel(time=ds_to_write.time.dt.year.isin(time_range_l))
@@ -666,7 +692,7 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
                 data=ds,
                 metadata=metadata_evolved,
                 cvs=cvs,
-                non_input4mips_metadata=non_input4mips_metadata_common,
+                non_input4mips_metadata=non_input4mips_metadata,
             )
 
             print("Writing")

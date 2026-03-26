@@ -53,6 +53,7 @@ from cmip7_scenariomip_ghg_generation.references import (
     MEINSHAUSEN_ET_AL_SCENARIOS,
     NICHOLLS_ET_AL_HISTORICAL,
     NICHOLLS_ET_AL_SCENARIOS,
+    SANDSTAD_ET_AL_2026,
     SCENARIO_REFERENCES,
     WESTERN_ET_AL_2024,
     WMO_2022,
@@ -455,6 +456,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             ghgs=wmo_2022_ghgs,
             cleaned_data_path=wmo_2022_cleaned,
             references_short_names=references_short_names_wmo_2022_ghgs,
+            references_extensions_short_names=references_short_names_wmo_2022_ghgs,
         )
 
     western_2024_futures = {}
@@ -493,6 +495,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     ghgs=[ghg],
                     cleaned_data_path=western_et_al_2024_extended_ghg,
                     references_short_names=references_short_names_western_2024_ghgs,
+                    references_extensions_short_names=references_short_names_western_2024_ghgs,
                 ),
             }
 
@@ -589,6 +592,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 NICHOLLS_ET_AL_HISTORICAL,
                 NICHOLLS_ET_AL_SCENARIOS,
                 MEINSHAUSEN_ET_AL_SCENARIOS,
+            ]
+            references_extensions_only_short_names_modelling_based_ghg = [
+                SANDSTAD_ET_AL_2026,
             ]
             global_mean_yearly_common_kwargs = dict(
                 ghg=ghg,
@@ -762,16 +768,6 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     executed_notebooks_dir=executed_notebooks_dir,
                 )
 
-            references_short_names_western_2024_ghgs = save_references_info_to_db(
-                [
-                    NICHOLLS_ET_AL_HISTORICAL,
-                    NICHOLLS_ET_AL_SCENARIOS,
-                    MEINSHAUSEN_ET_AL_SCENARIOS,
-                    WESTERN_ET_AL_2024,
-                ],
-                db=reference_db,
-            )
-
             esgf_ready_files_future = {}
             for si in scenario_info_markers:
                 references_short_names = save_references_info_to_db(
@@ -781,6 +777,15 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     ],
                     db=reference_db,
                 )
+                references_extensions_short_names = [
+                    *references_short_names,
+                    *save_references_info_to_db(
+                        [
+                            *references_extensions_only_short_names_modelling_based_ghg,
+                        ],
+                        db=reference_db,
+                    ),
+                ]
 
                 esgf_ready_files_future[(ghg, si.cmip_scenario_name)] = submit_output_aware(
                     create_esgf_files,
@@ -797,6 +802,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     lat_gradient_file=lat_gradient_file_future,
                     esgf_ready_root_dir=esgf_ready_root_dir,
                     references_short_names=references_short_names,
+                    references_extensions_short_names=references_extensions_short_names,
                     reference_db=reference_db,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     raw_notebooks_root_dir=raw_notebooks_root_dir,

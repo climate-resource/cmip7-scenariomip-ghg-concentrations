@@ -138,7 +138,7 @@ def save_reference_info_to_db(
     # (and no database existing).
     # TODO: when we clean up, caching is the biggest pain point.
     # Somehow figure out how to test and make it behave.
-    # refresh_cache=True,
+    refresh_cache=True,
 )
 def save_references_info_to_db(
     references_info: list[ReferenceInfo],

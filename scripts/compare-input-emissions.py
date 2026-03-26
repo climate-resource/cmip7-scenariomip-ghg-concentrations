@@ -1,3 +1,7 @@
+"""
+Compare different versions of input emissions
+"""
+
 from functools import partial
 from pathlib import Path
 
@@ -9,10 +13,17 @@ from pandas_openscm.io import load_timeseries_csv
 
 
 def main():
+    """Run the comparison"""
     register_pandas_accessor()
 
-    base_p = Path("data/raw/input-scenarios/202601301330_202512071232_202511040855_202511040855_complete-emissions.csv")
-    new_p = Path("data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv")
+    # base_p = Path(
+    #    "data/raw/input-scenarios/202601301330_202512071232_202511040855_202511040855_complete-emissions.csv"
+    # )
+    # new_p = Path(
+    #     "data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv"
+    # )
+    base_p = Path("data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv")
+    new_p = Path("data/raw/input-scenarios/202603261207_202512071232_202511040855_202511040855_complete-emissions.csv")
 
     base = load_timeseries_csv(
         base_p, index_columns=["model", "scenario", "variable", "region", "unit"], out_columns_type=int
@@ -25,11 +36,11 @@ def main():
         msdf_new = new.openscm.mi_loc(pd.MultiIndex.from_tuples([(model, scenario)], names=["model", "scenario"]))
 
         overlapping_cols = np.intersect1d(msdf_base.columns, msdf_new.columns)
-        msdf_base = msdf_base.loc[:, overlapping_cols]
+        msdf_base_l = msdf_base.loc[:, overlapping_cols]
         msdf_new = msdf_new.loc[:, overlapping_cols]
 
         diffs = compare_close(
-            left=msdf_base,
+            left=msdf_base_l,
             left_name=base_p.name,
             right=msdf_new,
             right_name=new_p.name,
