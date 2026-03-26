@@ -130,11 +130,11 @@ to_check = sorted(to_check)
 
 checked = []
 for fp in tqdm.auto.tqdm(to_check):
-    if str(fp) in esgf_url_checksums:
-        url, checksum = esgf_url_checksums[str(fp)]
+    if fp.name in esgf_url_checksums:
+        url, checksum = esgf_url_checksums[fp.name]
     else:
         url, checksum = get_esgf_url(fp)
-        esgf_url_checksums[str(fp)] = (url, checksum)
+        esgf_url_checksums[fp.name] = (url, checksum)
 
     esgf_file = pooch.retrieve(url, known_hash=checksum)
     local = xr.load_dataset(fp)
