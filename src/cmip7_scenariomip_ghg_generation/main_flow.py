@@ -20,6 +20,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import submit_output_aware
 from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     clean_wmo_data,
     compile_inverse_emissions,
+    copy_to,
     create_esgf_files,
     create_esgf_files_equivalence_species,
     create_gradient_aware_harmonisation_annual_mean_file,
@@ -37,11 +38,25 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     make_complete_scenario,
     plot_marker_overview,
     run_magicc,
+    save_references_info_to_db,
     scale_lat_gradient_based_on_emissions,
     scale_lat_gradient_eofs,
     scale_seasonality_based_on_annual_mean,
     scale_seasonality_based_on_magicc_npp,
     split_input_emissions_into_individual_files_and_check_harmonisation,
+    write_zenodo_json,
+)
+from cmip7_scenariomip_ghg_generation.references import (
+    FORSTER_ET_AL_AR6_WG1_CH7,
+    MEINSHAUSEN_ET_AL_2009,
+    MEINSHAUSEN_ET_AL_2011,
+    MEINSHAUSEN_ET_AL_SCENARIOS,
+    NICHOLLS_ET_AL_HISTORICAL,
+    NICHOLLS_ET_AL_SCENARIOS,
+    SANDSTAD_ET_AL_2026,
+    SCENARIO_REFERENCES,
+    WESTERN_ET_AL_2024,
+    WMO_2022,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -105,6 +120,11 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     pool_multiprocessing: multiprocessing.pool.Pool | None,
     pool_multiprocessing_magicc: multiprocessing.pool.Pool | None,
     n_workers_per_magicc_notebook: int,
+    any_zenodo_deposition_id: str,
+    in_zenodo_json: Path,
+    output_bundle_root_dir: Path,
+    repo_root_dir: Path,
+    reference_db: Path,
 ) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -245,6 +265,25 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     n_workers_per_magicc_notebook
         Number of MAGICC workers to use in each MAGICC-related step/notebook
 
+    any_zenodo_deposition_id
+        A deposition ID from the sequence of Zenodo versions we want to upload to
+
+    in_zenodo_json
+        Input `zenodo.json` file
+
+    output_bundle_root_dir
+        Root directory of the output bundle
+
+        Used to ensure we can copy inputs into the output bundle
+
+    repo_root_dir
+        Root directory of the repository
+
+        Used to ensure we can copy inputs into the output bundle
+
+    reference_db
+        Database in which reference information is saved
+
     Returns
     -------
     :
@@ -263,7 +302,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         tar_file=downloaded_cmip7_historical_seasonality_lat_gradient_info,
         extract_root_dir=cmip7_historical_seasonality_lat_gradient_info_extracted_root_dir,
     )
-    doi = get_doi.submit()
+    doi = get_doi.submit(any_deposition_id=any_zenodo_deposition_id)
 
     ### WMO 2022
     all_wmo_2022_ghgs = {
@@ -398,13 +437,26 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         esgf_institution_id=esgf_institution_id,
         input4mips_cvs_source=input4mips_cvs_source,
         doi=doi,
+        reference_db=reference_db,
         pool_multiprocessing=pool_multiprocessing,
     )
 
+    wmo_2022_futures = {}
     if wmo_2022_ghgs:
+        references_short_names_wmo_2022_ghgs = save_references_info_to_db(
+            [
+                NICHOLLS_ET_AL_HISTORICAL,
+                NICHOLLS_ET_AL_SCENARIOS,
+                MEINSHAUSEN_ET_AL_SCENARIOS,
+                WMO_2022,
+            ],
+            db=reference_db,
+        )
         wmo_2022_futures = create_single_concentration_projection(
             ghgs=wmo_2022_ghgs,
             cleaned_data_path=wmo_2022_cleaned,
+            references_short_names=references_short_names_wmo_2022_ghgs,
+            references_extensions_short_names=references_short_names_wmo_2022_ghgs,
         )
 
     western_2024_futures = {}
@@ -428,11 +480,22 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 executed_notebooks_dir=executed_notebooks_dir,
             )
 
+            references_short_names_western_2024_ghgs = save_references_info_to_db(
+                [
+                    NICHOLLS_ET_AL_HISTORICAL,
+                    NICHOLLS_ET_AL_SCENARIOS,
+                    MEINSHAUSEN_ET_AL_SCENARIOS,
+                    WESTERN_ET_AL_2024,
+                ],
+                db=reference_db,
+            )
             western_2024_futures = {
                 **western_2024_futures,
                 **create_single_concentration_projection(
                     ghgs=[ghg],
                     cleaned_data_path=western_et_al_2024_extended_ghg,
+                    references_short_names=references_short_names_western_2024_ghgs,
+                    references_extensions_short_names=references_short_names_western_2024_ghgs,
                 ),
             }
 
@@ -525,6 +588,14 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         )
         magicc_based_futures_d = defaultdict(list)
         for ghg in magicc_based_ghgs:
+            references_short_names_modelling_based_ghg = [
+                NICHOLLS_ET_AL_HISTORICAL,
+                NICHOLLS_ET_AL_SCENARIOS,
+                MEINSHAUSEN_ET_AL_SCENARIOS,
+            ]
+            references_extensions_only_short_names_modelling_based_ghg = [
+                SANDSTAD_ET_AL_2026,
+            ]
             global_mean_yearly_common_kwargs = dict(
                 ghg=ghg,
                 scenario_info_markers=scenario_info_markers,
@@ -542,6 +613,13 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                         create_gradient_aware_harmonisation_annual_mean_file,
                         out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
                         **global_mean_yearly_common_kwargs,
+                    )
+                    references_short_names_modelling_based_ghg.extend(
+                        [
+                            MEINSHAUSEN_ET_AL_2009,
+                            MEINSHAUSEN_ET_AL_2011,
+                            FORSTER_ET_AL_AR6_WG1_CH7,
+                        ]
                     )
 
                 else:
@@ -563,9 +641,17 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                         out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
                         **global_mean_yearly_common_kwargs,
                     )
+                    references_short_names_modelling_based_ghg.extend(
+                        [
+                            MEINSHAUSEN_ET_AL_2009,
+                            MEINSHAUSEN_ET_AL_2011,
+                            FORSTER_ET_AL_AR6_WG1_CH7,
+                        ]
+                    )
 
                 elif magicc_based_ghgs_projection_method[ghg] == "one-box":
                     global_mean_yearly_file_future = one_box_annual_mean_file
+                    # Nothing to add to references_short_names_modelling_based_ghg
 
                 else:
                     raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
@@ -682,8 +768,26 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     executed_notebooks_dir=executed_notebooks_dir,
                 )
 
-            esgf_ready_files_future = {
-                (ghg, si.cmip_scenario_name): submit_output_aware(
+            esgf_ready_files_future = {}
+            for si in scenario_info_markers:
+                references_short_names = save_references_info_to_db(
+                    [
+                        SCENARIO_REFERENCES[(si.model, si.cmip_scenario_name)],
+                        *references_short_names_modelling_based_ghg,
+                    ],
+                    db=reference_db,
+                )
+                references_extensions_short_names = [
+                    *references_short_names,
+                    *save_references_info_to_db(
+                        [
+                            *references_extensions_only_short_names_modelling_based_ghg,
+                        ],
+                        db=reference_db,
+                    ),
+                ]
+
+                esgf_ready_files_future[(ghg, si.cmip_scenario_name)] = submit_output_aware(
                     create_esgf_files,
                     ghg=ghg,
                     cmip_scenario_name=si.cmip_scenario_name,
@@ -697,14 +801,15 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     seasonality_file=seasonality_all_time_file_future,
                     lat_gradient_file=lat_gradient_file_future,
                     esgf_ready_root_dir=esgf_ready_root_dir,
+                    references_short_names=references_short_names,
+                    references_extensions_short_names=references_extensions_short_names,
+                    reference_db=reference_db,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     raw_notebooks_root_dir=raw_notebooks_root_dir,
                     executed_notebooks_dir=executed_notebooks_dir,
                     checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
                     pool=pool_multiprocessing,
                 )
-                for si in scenario_info_markers
-            }
 
             for key, v in esgf_ready_files_future.items():
                 magicc_based_futures_d[key[0]].append(v)
@@ -777,15 +882,48 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         for pt in plotting_futures_l:
             pt.wait()
 
-    # Ensure all paths finish
-    done, not_done = wait(
+    copy_inputs_to_output_bundle_futures = [
+        copy_to.submit(
+            to_copy=repo_root_dir / to_copy,
+            out_path=output_bundle_root_dir / to_copy,
+        )
+        for to_copy in (
+            "Makefile",
+            "README.md",
+            "data/raw",
+            "magicc",
+            "notebooks",
+            "pixi.lock",
+            "pyproject.toml",
+            "scripts",
+            "src",
+            "zenodo.json",
+        )
+    ]
+    copy_inputs_to_output_bundle_futures.extend(
         (
+            write_zenodo_json.submit(
+                in_zenodo_json=in_zenodo_json,
+                out_path=output_bundle_root_dir / "zenodo.json",
+                version=esgf_version,
+            ),
+        )
+    )
+
+    # Ensure all paths finish
+    wait_futures = (
+        *(
             vv
             for v in esgf_ready_futures_all_variables.values()
             for vv in v.esgf_ready_files_futures
             # Urgh this bloody halon1202 business
             if vv is not None
         ),
+        *copy_inputs_to_output_bundle_futures,
+    )
+
+    done, not_done = wait(
+        wait_futures,
         # 4 hours
         timeout=4 * 60 * 60,
     )
@@ -851,6 +989,11 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     n_workers_multiprocessing_magicc: int,
     n_workers_per_magicc_notebook: int,
     plot_complete_dir: Path,
+    any_zenodo_deposition_id: str,
+    in_zenodo_json: Path,
+    output_bundle_root_dir: Path,
+    repo_root_dir: Path,
+    reference_db: Path,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -998,6 +1141,25 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     n_workers_per_magicc_notebook
         Number of MAGICC workers to use per MAGICC-running task
 
+    any_zenodo_deposition_id
+        A deposition ID from the sequence of Zenodo versions we want to upload to
+
+    in_zenodo_json
+        Input `zenodo.json` file
+
+    output_bundle_root_dir
+        Root directory of the output bundle
+
+        Used to ensure we can copy inputs into the output bundle
+
+    repo_root_dir
+        Root directory of the repository
+
+        Used to ensure we can copy inputs into the output bundle
+
+    reference_db
+        Database in which reference information is saved
+
     Returns
     -------
     :
@@ -1092,6 +1254,11 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             pool_multiprocessing=pool_multiprocessing,
             pool_multiprocessing_magicc=pool_multiprocessing_magicc,
             n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
+            any_zenodo_deposition_id=any_zenodo_deposition_id,
+            in_zenodo_json=in_zenodo_json,
+            output_bundle_root_dir=output_bundle_root_dir,
+            repo_root_dir=repo_root_dir,
+            reference_db=reference_db,
         )
 
     return res_flow

@@ -8,11 +8,12 @@ from typing import Annotated
 import click
 import typer
 from attrs import evolve
+from dotenv import load_dotenv
 from input4mips_validation.cvs.loading import load_cvs_known_loader
 from input4mips_validation.cvs.loading_raw import get_raw_cvs_loader
 from pandas_openscm.io import load_timeseries_csv
 
-from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id
+from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id, create_source_id_extension
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
@@ -169,12 +170,23 @@ will be the *product* of the two levels of parallelisation.
 Be careful and don't crash your computer."""
         ),
     ] = 1,
+    any_zenodo_deposition_id: Annotated[
+        str,
+        typer.Option(
+            help="A deposition ID from the sequence of Zenodo versions we want to upload to",
+        ),
+    ] = "18690745",
+    in_zenodo_json: Annotated[Path, typer.Option(help="Input `zenodo.json` file")] = (REPO_ROOT_DIR / "zenodo.json"),
+    reference_db_name: Annotated[Path, typer.Option(help="Name of the database in which to save references")] = (
+        "references.db"
+    ),
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
+
+    Secrets are passed via a `.env` file, see `.env.sample`.
     """
-    # # TODO: activate this
-    # load_dotenv()
+    load_dotenv()
 
     ghgs = tuple(ghg)
     magicc_versions_to_run = tuple(magicc_version_to_run)
@@ -190,14 +202,13 @@ Be careful and don't crash your computer."""
 
     markers = (
         # (model, scenario, cmip7 experiment name)
-        # Decision: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
-        # vl likely to be finalised first
+        # Decision re naming: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
         ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
-        # ("AIM 3.0", "SSP2 - Low Overshoot_e", "ln"),
-        # ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
-        # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
-        # ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
-        # ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
+        ("AIM 3.0", "SSP2 - Low Overshoot_a", "ln"),
+        ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
+        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
+        ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
+        ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
         ("GCAM 8s", "SSP3 - High Emissions", "h"),
     )
 
@@ -258,7 +269,20 @@ Be careful and don't crash your computer."""
                 f"{marker_source_id} is not registered in "
                 f"input4MIPs CVs {input4mips_cvs_source}. "
                 "Please push an update to input4MIPs CVs, "
-                "then use that update as your `input4mips_cvs_source"
+                "then use that update as your `input4mips_cvs_source`"
+            )
+            raise AssertionError(msg)
+
+        marker_source_id_ext = create_source_id_extension(
+            marker_source_id,
+            cmip_scenario_name=marker_info[-1],
+        )
+        if marker_source_id_ext not in cvs.source_id_entries.source_ids:
+            msg = (
+                f"{marker_source_id_ext} is not registered in "
+                f"input4MIPs CVs {input4mips_cvs_source}. "
+                "Please push an update to input4MIPs CVs, "
+                "then use that update as your `input4mips_cvs_source`"
             )
             raise AssertionError(msg)
 
@@ -271,6 +295,8 @@ Be careful and don't crash your computer."""
     data_processed_root = data_root / "processed"
 
     executed_notebooks_dir = output_bundle_root_dir / "notebooks-executed"
+
+    reference_db = data_interim_root / "references.db"
 
     ### Historical GHG
     cmip7_historical_ghg_concentration_source_id = "CR-CMIP-1-0-0"
@@ -416,6 +442,11 @@ Be careful and don't crash your computer."""
         n_workers_multiprocessing=n_workers_multiprocessing,
         n_workers_multiprocessing_magicc=n_workers_multiprocessing_magicc,
         n_workers_per_magicc_notebook=n_workers_per_magicc_notebook,
+        any_zenodo_deposition_id=any_zenodo_deposition_id,
+        in_zenodo_json=in_zenodo_json,
+        output_bundle_root_dir=output_bundle_root_dir,
+        repo_root_dir=REPO_ROOT_DIR,
+        reference_db=reference_db,
     )
 
 

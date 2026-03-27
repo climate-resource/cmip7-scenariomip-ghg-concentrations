@@ -42,13 +42,15 @@ from gcages.renaming import SupportedNamingConventions, convert_variable_name
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-model: str = "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12"
-scenario: str = "SSP2 - Low Emissions"
-scenario_file: str = "../output-bundles/dev-test/data/interim/input-emissions/0009-zn_0003_0003_0002/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.feather"  # noqa: E501
+model: str = "WITCH 6.0"
+scenario: str = "SSP5 - Medium-Low Emissions_a"
+scenario_file: str = "../output-bundles/dev-test/data/interim/input-emissions/202603081555_202512071232_202511040855_202511040855_complete-emissions.csv/SSP5_-_Medium-Low_Emissions_a_WITCH_6-0.feather"  # noqa: E501
 harmonisation_year: int = 2023
 inverse_emissions_file: str = "../output-bundles/dev-test/data/interim/inverse-emissions/single-concentration-projection_inverse-emissions.feather"  # noqa: E501
-history_file: str = "../output-bundles/dev-test/data/interim/input-emissions/0009-zn_0003_0003_0002/historical.feather"
-out_file: str = "../output-bundles/dev-test/data/interim/complete-emissions/SSP2_-_Low_Emissions_MESSAGEix-GLOBIOM-GAINS_2-1-M-R12.feather"  # noqa: E501
+history_file: str = "../output-bundles/dev-test/data/interim/input-emissions/202603081555_202512071232_202511040855_202511040855_complete-emissions.csv/historical.feather"  # noqa: E501
+out_file: str = (
+    "../output-bundles/dev-test/data/interim/complete-emissions/SSP5_-_Medium-Low_Emissions_a_WITCH_6-0.feather"
+)
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -358,14 +360,52 @@ compare_to
 # %%
 for (variable, unit), vdf in compare_to.groupby(["variable", "unit"]):
     comparison = pandas_openscm.comparison.compare_close(
-        complete_scenario_infilled_inverse_emissions.loc[pix.isin(variable=variable)].pix.convert_unit(unit),
-        vdf,
+        complete_scenario_infilled_inverse_emissions.loc[pix.isin(variable=variable)]
+        .pix.convert_unit(unit)
+        .loc[:, :2100],
+        vdf.loc[:, :2100],
         left_name="complete",
         right_name="double_check",
         isclose=partial(np.isclose, atol=0.01),
     )
     if not comparison.empty:
         raise AssertionError(comparison)
+
+# %% [markdown]
+# Plot comparison for the extensions.
+# They're not the same, which makes sense
+# because we didn't tell the extensions team
+# to use the inverse of WMO 2022 and Western to create their extensions.
+
+# %%
+pdf_l = []
+for (variable, unit), vdf in compare_to.groupby(["variable", "unit"]):
+    pdf_v = pix.concat(
+        [
+            complete_scenario_infilled_inverse_emissions.loc[pix.isin(variable=variable)]
+            .pix.convert_unit(unit)
+            .pix.assign(source="complete-scenario"),
+            vdf.pix.assign(source="inverse-emissions"),
+        ]
+    )
+
+    pdf_l.append(pdf_v)
+
+
+pdf = pd.concat(pdf_l)
+
+sns.relplot(
+    data=pdf.openscm.to_long_data(),
+    x="time",
+    y="value",
+    hue="source",
+    col="variable",
+    col_wrap=4,
+    kind="line",
+    facet_kws=dict(sharey=False),
+)
+
+plt.show()
 
 # %%
 out = gcages_scenario

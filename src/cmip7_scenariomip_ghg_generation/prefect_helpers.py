@@ -318,6 +318,7 @@ def submit_output_aware(
         else:
             msg = f"No instance of `PathHashesCP` in the tasks's cache policies. {task.cache_policy=}"
             raise AssertionError(msg)
+
     else:
         msg = (
             "task's cache policy is not and does not contain "

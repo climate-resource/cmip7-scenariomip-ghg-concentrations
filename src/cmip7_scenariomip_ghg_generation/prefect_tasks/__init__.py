@@ -8,6 +8,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.annual_mean_to_monthly impor
 from cmip7_scenariomip_ghg_generation.prefect_tasks.cmip7_historical_ghgs import (
     download_cmip7_historical_ghg_concentrations,
 )
+from cmip7_scenariomip_ghg_generation.prefect_tasks.copy_to import copy_to
 from cmip7_scenariomip_ghg_generation.prefect_tasks.create_esgf_files import (
     create_esgf_files,
     create_esgf_files_equivalence_species,
@@ -33,6 +34,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.one_box_projection import (
     create_one_box_annual_mean_file,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.plotting import plot_marker_overview
+from cmip7_scenariomip_ghg_generation.prefect_tasks.references import save_references_info_to_db
 from cmip7_scenariomip_ghg_generation.prefect_tasks.scale_latitudinal_gradient_with_emissions import (
     scale_lat_gradient_based_on_emissions,
     scale_lat_gradient_eofs,
@@ -54,13 +56,14 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.western_et_al_2024 import (
     get_western_et_al_2024_clean,
 )
 from cmip7_scenariomip_ghg_generation.prefect_tasks.wmo_2022 import clean_wmo_data
-from cmip7_scenariomip_ghg_generation.prefect_tasks.zenodo import get_doi
+from cmip7_scenariomip_ghg_generation.prefect_tasks.zenodo import get_doi, write_zenodo_json
 
 __all__ = [
     "calculate_inverse_emissions",
     "clean_western_et_al_2024_data",
     "clean_wmo_data",
     "compile_inverse_emissions",
+    "copy_to",
     "create_esgf_files",
     "create_esgf_files_equivalence_species",
     "create_gradient_aware_harmonisation_annual_mean_file",
@@ -80,9 +83,11 @@ __all__ = [
     "make_complete_scenario",
     "plot_marker_overview",
     "run_magicc",
+    "save_references_info_to_db",
     "scale_lat_gradient_based_on_emissions",
     "scale_lat_gradient_eofs",
     "scale_seasonality_based_on_annual_mean",
     "scale_seasonality_based_on_magicc_npp",
     "split_input_emissions_into_individual_files_and_check_harmonisation",
+    "write_zenodo_json",
 ]
