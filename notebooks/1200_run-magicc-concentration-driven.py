@@ -53,20 +53,20 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-# cmip_scenario_name: str = "vl"
-# model: str = "REMIND-MAgPIE 3.5-4.11"
-# scenario: str = "SSP1 - Very Low Emissions"
+cmip_scenario_name: str = "vl"
+model: str = "REMIND-MAgPIE 3.5-4.11"
+scenario: str = "SSP1 - Very Low Emissions"
 # cmip_scenario_name: str = "h"
 # model: str = "GCAM 8s"
 # scenario: str = "SSP3 - High Emissions"
-cmip_scenario_name: str = "ln"
-model: str = "AIM 3.0"
-scenario: str = "SSP2 - Low Overshoot_a"
-emissions_complete_dir: str = "../output-bundles/1.0.0_lower-priority/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/1.0.0_lower-priority/data/interim/magicc-output/db"
+# cmip_scenario_name: str = "ln"
+# model: str = "AIM 3.0"
+# scenario: str = "SSP2 - Low Overshoot_a"
+emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
-esgf_ready_root_dir: str = "../output-bundles/1.0.0_lower-priority/data/processed/esgf-ready"
-historical_data_root_dir: str = "../output-bundles/1.0.0_lower-priority/data/raw/historical-ghg-concs"
+esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
+historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 magicc_version: str = "MAGICCv7.6.0a3"
 magicc_exe: str = "../magicc/magicc-v7.6.0a3/bin/magicc-darwin-arm64"
 magicc_prob_distribution: str = "../magicc/magicc-v7.6.0a3/configs/magicc-ar7-fast-track-drawnset-v0-3-0.json"
@@ -127,24 +127,38 @@ historical_concentrations_xr
 # #### Future
 
 # %%
-concentrations_xr_l = []
-source_id = None
-for fp in tqdm.auto.tqdm(esgf_ready_root_dir_p.rglob(f"**/yr/**/*-{cmip_scenario_name}-*gm*.nc")):
+filepaths = tuple(esgf_ready_root_dir_p.rglob(f"**/yr/**/*-{cmip_scenario_name}-*gm*.nc"))
+# for non_ext_files in tqdm.auto.tqdm():
+gases = []
+for fp in filepaths:
     source_id_fp = fp.name.split("_")[4]
-    if source_id is None:
-        source_id = source_id_fp
-    elif source_id != source_id_fp:
-        raise AssertionError(source_id_fp)
+    if "ext" in source_id_fp:
+        continue
+
+    source_id = source_id_fp
 
     ghg = fp.name.split("_")[0]
     if ghg.endswith("eq"):
         # Don't need equivalent species for MAGICC
         continue
 
-    concentrations_xr_l.append(xr.open_dataset(fp)[ghg])
+    gases.append(ghg)
 
-concentrations_xr = xr.merge(concentrations_xr_l)
-# concentrations_xr
+# %%
+concentrations_xr_l = []
+for gas in tqdm.auto.tqdm(set(gases)):
+    gas_xr_l = []
+    for fp in tqdm.auto.tqdm(filepaths, leave=False):
+        if gas not in fp.parts:
+            continue
+
+        gas_xr_l.append(xr.open_dataset(fp, use_cftime=True)[gas])
+
+    gas_da = xr.concat(gas_xr_l, dim="time").sortby("time")
+    concentrations_xr_l.append(gas_da)
+
+concentrations_xr = xr.merge(concentrations_xr_l, combine_attrs="drop_conflicts")
+concentrations_xr
 
 # %% [markdown]
 # ## Write concentrations files for MAGICC and set config
@@ -642,8 +656,6 @@ ax = pdf.loc[pix.isin(variable="Surface Air Temperature Change"), 2000:].openscm
     hue_var="run_mode",
 )
 ax.grid()
-
-# %%
 
 # %%
 n_run_modes_to_show = 2

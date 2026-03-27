@@ -45,7 +45,7 @@ from input4mips_validation.dataset.metadata_data_producer_minimum import (
 from input4mips_validation.xarray_helpers import add_time_bounds
 
 from cmip7_scenariomip_ghg_generation.constants import VARIABLE_TO_STANDARD_NAME_RENAMING
-from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id
+from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id, create_source_id_extension
 from cmip7_scenariomip_ghg_generation.xarray_helpers import (
     calculate_cos_lat_weighted_mean_latitude_only,
     convert_time_to_year_month,
@@ -57,32 +57,39 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "cfc11"
-cmip_scenario_name: str = "hl"
-internal_processing_scenario_name: str = "all"
+ghg: str = "so2f2"
+cmip_scenario_name: str = "vl"
+internal_processing_scenario_name: str = "vl"
 esgf_version: str = "1.0.1"
 esgf_institution_id: str = "CR"
 input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/1.0.1/data/interim/monthly-means/single-concentration-projection_cfc11_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_so2f2_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/1.0.1/data/interim/seasonality/single-concentration-projection_cfc11_seasonality-all-time.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_so2f2_seasonality-all-time.nc"
 )
 lat_gradient_file: str = (
-    "../output-bundles/dev-test/data/interim/latitudinal-gradient/cfc11_latitudinal-gradient-info.nc"
+    "../output-bundles/dev-test/data/interim/latitudinal-gradient/so2f2_latitudinal-gradient-info.nc"
 )
 esgf_files_start_year: int = 2022
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 references_short_names = [
+    "GCAM integrated assessment modelling team, 2026 (in-prep)",
     "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
     "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
     "Meinshausen et al., 2020",
-    "WMO 2022",
 ]
-reference_db = "../output-bundles/1.0.1/data/interim/references.db"
+references_extensions_short_names = [
+    "High scenario for CMIP7 ScenarioMIP based on the GCAM model, 2026 (in-prep)",
+    "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
+    "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
+    "Meinshausen et al., 2020",
+    "Sandstad et al., 2026 (in-prep)",
+]
+reference_db = "../output-bundles/dev-test/data/interim/references.db"
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -149,7 +156,7 @@ lat_grad = (lat_grad_info["eofs"] * lat_grad_info["principal-components-monthly"
 # lat_grad
 
 # %% [markdown]
-# ### Combine
+# ### Prepare to combine
 
 # %%
 global_mean_monthly_ym = convert_time_to_year_month(global_mean_monthly_no_seasonality)
@@ -157,20 +164,123 @@ global_mean_monthly_ym = convert_time_to_year_month(global_mean_monthly_no_seaso
 
 # %%
 seasonality_ym = convert_time_to_year_month(seasonality)
+# Need some rounding here or in
+# `1010_scale-seasonality-based-on-annual-mean`
 # seasonality_ym
 
 # %%
 lat_grad_ym = convert_time_to_year_month(lat_grad)
+# Need some rounding here or in
+# `1030_scale-latitudinal-gradient-based-on-emissions`
 # lat_grad_ym
 
+# %% [markdown]
+# ### Get rid of spots that will lead to unphysical values
+
 # %%
-# Quick checks
+abs_checker_seasonality = (global_mean_monthly_ym + seasonality_ym).min(["lat", "month"])
+unphysical_years_seasonality = abs_checker_seasonality.where(abs_checker_seasonality < 0.0, drop=True)["year"]
+unphysical_years_seasonality
+
+# %%
+abs_checker_latitudinal_gradient = (global_mean_monthly_ym + lat_grad_ym).min(["lat", "month"])
+unphysical_years_latitudinal_gradient = abs_checker_latitudinal_gradient.where(
+    abs_checker_latitudinal_gradient < 0.0, drop=True
+)["year"]
+unphysical_years_latitudinal_gradient
+
+# %%
+global_mean_monthly_ym_in_unphysical_years_seasonality = global_mean_monthly_ym.sel(year=unphysical_years_seasonality)
+all_unphysical_seasonality_years_are_zero_gm = (
+    global_mean_monthly_ym_in_unphysical_years_seasonality.min("month") == 0.0
+).all()
+if unphysical_years_seasonality.size == 0:
+    # Nothing to do
+    pass
+
+elif unphysical_years_seasonality.size and all_unphysical_seasonality_years_are_zero_gm:
+    seasonality_ym = xr.where(
+        seasonality_ym["year"].isin(global_mean_monthly_ym_in_unphysical_years_seasonality["year"]), 0.0, seasonality_ym
+    )
+
+else:
+    raise NotImplementedError
+
+# %%
+if unphysical_years_latitudinal_gradient.size:
+    print(f"Adjusting unphysical latitudinal gradient in years: {unphysical_years_latitudinal_gradient.values}")
+    global_mean_monthly_ym.mean("month").plot()
+    global_mean_monthly_ym.sel(year=unphysical_years_latitudinal_gradient).mean("month").plot(
+        label="Unphysical latitudinal gradient years"
+    )
+    plt.legend()
+    plt.show()
+
+    # Scale the latitudinal gradient down
+    # in the years where unphysical values are found.
+    # Iterate to avoid stupid rounding errors
+    for i in range(10):
+        lat_grad_ym_neg_only = xr.where(lat_grad_ym < 0, lat_grad_ym, 0.0)
+        scale_factor_all_time = (global_mean_monthly_ym / np.absolute(lat_grad_ym_neg_only).max(["lat"])).min("month")
+        scale_factor_all_time = xr.where(
+            scale_factor_all_time.isnull() | np.isinf(scale_factor_all_time),
+            1.0,
+            scale_factor_all_time,
+        )
+        scale_factor = xr.where(
+            scale_factor_all_time["year"].isin(unphysical_years_latitudinal_gradient), scale_factor_all_time, 1.0
+        )
+        if ((scale_factor >= 1.0) | (global_mean_monthly_ym == 0.0)).all():
+            break
+
+        lat_grad_ym = lat_grad_ym * scale_factor
+
+    else:
+        msg = "Need more iterations to get rid of rounding errors"
+        raise AssertionError
+
+# %%
+checker = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
+# Cut to intended time axis and check
+checker = checker.sel(year=lat_grad_ym["year"] >= esgf_files_start_year)
+if checker.min() < 0:
+    if ghg not in ["hfc125", "hfc134a", "hfc152a", "hfc245fa", "hfc32", "hfc4310mee", "so2f2"]:
+        # I haven't thought this through for other gases
+        raise NotImplementedError
+
+    unphysical_years_combo = checker.where(checker < 0, drop=True)["year"]
+    # Adjust the latitudinal gradient further
+    # in the years where unphysical values are found.
+    # Iterate to avoid stupid rounding errors
+    for i in range(10):
+        lat_grad_ym_neg_only = xr.where(lat_grad_ym < 0, lat_grad_ym, 0.0)
+        scale_factor_all_time = ((global_mean_monthly_ym + seasonality_ym) / np.absolute(lat_grad_ym_neg_only)).min(
+            ["month", "lat"]
+        )
+        scale_factor_all_time = xr.where(
+            scale_factor_all_time.isnull() | np.isinf(scale_factor_all_time),
+            1.0,
+            scale_factor_all_time,
+        )
+        scale_factor = xr.where(scale_factor_all_time["year"].isin(unphysical_years_combo), scale_factor_all_time, 1.0)
+        if ((scale_factor >= 1.0) | ((global_mean_monthly_ym + seasonality_ym) == 0.0)).all():
+            break
+
+        lat_grad_ym = lat_grad_ym * scale_factor
+
+# checker
+
+# %% [markdown]
+# ### Quick checks
 
 # %%
 np.testing.assert_allclose(seasonality_ym.mean("month").data.m, 0.0, atol=1e-5)
 
 # %%
 np.testing.assert_allclose(calculate_cos_lat_weighted_mean_latitude_only(lat_grad_ym).data.m, 0.0, atol=1e-8)
+
+# %% [markdown]
+# ### Combine
 
 # %%
 native_grid_ym = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
@@ -179,6 +289,10 @@ native_grid_ym = native_grid_ym.sel(year=native_grid_ym["year"] >= esgf_files_st
 if native_grid_ym["year"].min() != esgf_files_start_year:
     raise AssertionError(native_grid_ym["year"])
 # native_grid_ym
+
+# %%
+if native_grid_ym.min() < 0:
+    raise AssertionError(native_grid_ym.min())
 
 # %%
 ym_to_time = partial(convert_year_month_to_time, day=15)
@@ -202,7 +316,8 @@ plt.show()
 
 # %%
 print("Concs at different latitudes")
-native_grid.sel(lat=[-87.5, 0, 87.5], method="nearest").plot.line(hue="lat", alpha=0.4)
+ax = native_grid.sel(lat=[-87.5, 0, 87.5], method="nearest").plot.line(hue="lat", alpha=0.4)
+plt.axhline(0.0, color="tab:gray", linestyle="--")
 plt.show()
 
 # %%
@@ -347,18 +462,6 @@ plt.show()
 # ### Set common metadata
 
 # %%
-# source_id = f"{esgf_institution_id}-{cmip_scenario_name}-{esgf_version.replace('.', '-')}"
-source_id = create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
-source_id
-
-# %%
-metadata_minimum_common = dict(
-    source_id=source_id,
-    target_mip="ScenarioMIP",
-)
-metadata_minimum_common
-
-# %%
 funding_info = (
     {
         "name": "GHG Forcing For CMIP",
@@ -382,21 +485,31 @@ references_all = pd.read_sql("SELECT * FROM data_references", con=db_connection)
 db_connection.close()
 
 gas_deps = references_all.loc[references_short_names].reset_index().to_dict(orient="records")
+gas_deps_extensions = references_all.loc[references_extensions_short_names].reset_index().to_dict(orient="records")
 gas_deps
 
 # %%
 non_input4mips_metadata_common = {
+    "funding": " ".join([v["long_text"] for v in funding_info]),
+    "funding_short_names": " --- ".join([v["name"] for v in funding_info]),
+    "funding_urls": " --- ".join([v["url"] for v in funding_info]),
+}
+references_input4mips_metadata = {
     "references": " --- ".join([v["reference"] for v in gas_deps]),
     "references_short_names": " --- ".join([v["short_name"] for v in gas_deps]),
     "references_dois": " --- ".join(
         [v["doi"] if ("doi" in v and v["doi"] is not None) else "No DOI" for v in gas_deps]
     ),
     "references_urls": " --- ".join([v["url"] for v in gas_deps]),
-    "funding": " ".join([v["long_text"] for v in funding_info]),
-    "funding_short_names": " --- ".join([v["name"] for v in funding_info]),
-    "funding_urls": " --- ".join([v["url"] for v in funding_info]),
 }
-non_input4mips_metadata_common
+references_input4mips_metadata_extensions = {
+    "references": " --- ".join([v["reference"] for v in gas_deps_extensions]),
+    "references_short_names": " --- ".join([v["short_name"] for v in gas_deps_extensions]),
+    "references_dois": " --- ".join(
+        [v["doi"] if ("doi" in v and v["doi"] is not None) else "No DOI" for v in gas_deps_extensions]
+    ),
+    "references_urls": " --- ".join([v["url"] for v in gas_deps_extensions]),
+}
 
 # %% [markdown]
 # ### Grab the CVs
@@ -408,11 +521,8 @@ raw_cvs_loader = get_raw_cvs_loader(
     # force_download=True,
 )
 # raw_cvs_loader
-
-# %%
 cvs = load_cvs_known_loader(raw_cvs_loader)
-if source_id not in cvs.source_id_entries.source_ids:
-    raise AssertionError(source_id)
+# cvs
 
 # %% [markdown]
 # ### Set up time ranges
@@ -424,14 +534,46 @@ if source_id not in cvs.source_id_entries.source_ids:
 time_dimension = "time"
 
 # %%
-# Extensions will be a different thing hence hard-code end for now
-time_ranges_to_write = [range(int(global_mean_annual_mean[time_dimension].dt.year[0]), 2100 + 1)]
-# time_ranges_to_write = [range(1750, int(global_mean_annual_mean.time.dt.year[-1].values) + 1)]
+time_ranges_to_write = [
+    range(int(global_mean_annual_mean[time_dimension].dt.year[0]), 2100 + 1),
+]
 
 for start, end in itertools.pairwise(time_ranges_to_write):
-    assert start[-1] == end[0] - 1
+    assert start[-1] == end[0] - 1, (start[-1], end[0] - 1)
 
-time_ranges_to_write
+time_ranges_to_write_ext = []
+dat_last_year = int(global_mean_annual_mean.time.dt.year[-1].values)
+chunk_size = 100
+for i, sy in enumerate(range(2101, dat_last_year, chunk_size)):
+    er = sy + chunk_size
+    if er > dat_last_year:
+        er = dat_last_year + 1
+
+    time_ranges_to_write_ext.append(range(sy, er))
+
+for start, end in itertools.pairwise(time_ranges_to_write_ext):
+    assert start[-1] == end[0] - 1, (start[-1], end[0] - 1)
+
+time_ranges_to_write_ext
+
+# %% [markdown]
+# ### Set up source IDs
+#
+# Also associate them with time ranges.
+
+# %%
+source_id = create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
+source_id
+
+# %%
+source_id_extension = create_source_id_extension(source_id, cmip_scenario_name)
+source_id_extension
+
+# %%
+source_id_time_ranges = (
+    (source_id, time_ranges_to_write),
+    (source_id_extension, time_ranges_to_write_ext),
+)
 
 # %% [markdown]
 # ### Get standard name
@@ -487,69 +629,89 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
     if "lat" in dimensions:
         ds_to_write["lat"].encoding = {"dtype": np.dtypes.Float16DType}
 
-    metadata_minimum = Input4MIPsDatasetMetadataDataProducerMinimum(
-        grid_label=grid_label,
-        nominal_resolution=nominal_resolution,
-        **metadata_minimum_common,
-    )
+    for source_id_l, time_ranges_l in source_id_time_ranges:
+        metadata_minimum_common = dict(
+            source_id=source_id_l,
+            target_mip="ScenarioMIP",
+        )
+        if source_id_l not in cvs.source_id_entries.source_ids:
+            raise AssertionError(source_id_l)
 
-    for time_range in time_ranges_to_write:
-        ds_to_write_time_section = ds_to_write.sel(time=ds_to_write.time.dt.year.isin(time_range))
+        metadata_minimum = Input4MIPsDatasetMetadataDataProducerMinimum(
+            grid_label=grid_label,
+            nominal_resolution=nominal_resolution,
+            **metadata_minimum_common,
+        )
 
-        input4mips_ds = Input4MIPsDataset.from_data_producer_minimum_information(
-            data=ds_to_write_time_section,
-            prepare_func=partial(
-                prepare_ds_and_get_frequency,
-                dimensions=dimensions,
-                time_dimension=time_dimension,
-                standard_and_or_long_names={
-                    variable_name_output: {
-                        "standard_name": standard_name,
-                        "long_name": variable_name_raw,
+        # Yuck implicit coupling
+        references_metadata = (
+            references_input4mips_metadata if "ext" not in source_id_l else references_input4mips_metadata_extensions
+        )
+        non_input4mips_metadata = {
+            **non_input4mips_metadata_common,
+            **references_metadata,
+        }
+
+        for time_range_l in time_ranges_l:
+            ds_to_write_time_section = ds_to_write.sel(time=ds_to_write.time.dt.year.isin(time_range_l))
+
+            input4mips_ds = Input4MIPsDataset.from_data_producer_minimum_information(
+                data=ds_to_write_time_section,
+                prepare_func=partial(
+                    prepare_ds_and_get_frequency,
+                    dimensions=dimensions,
+                    time_dimension=time_dimension,
+                    standard_and_or_long_names={
+                        variable_name_output: {
+                            "standard_name": standard_name,
+                            "long_name": variable_name_raw,
+                        },
                     },
-                },
-                add_time_bounds=partial(
-                    add_time_bounds,
-                    monthly_time_bounds=not yearly_time_bounds,
-                    yearly_time_bounds=yearly_time_bounds,
+                    add_time_bounds=partial(
+                        add_time_bounds,
+                        monthly_time_bounds=not yearly_time_bounds,
+                        yearly_time_bounds=yearly_time_bounds,
+                    ),
                 ),
-            ),
-            metadata_minimum=metadata_minimum,
-            cvs=cvs,
-            dataset_category="GHGConcentrations",
-            realm="atmos",
-        )
+                metadata_minimum=metadata_minimum,
+                cvs=cvs,
+                dataset_category="GHGConcentrations",
+                realm="atmos",
+            )
 
-        metadata_evolved = evolve(
-            input4mips_ds.metadata,
-            product="derived",
-            comment=comment,
-            doi=doi,
-        )
+            metadata_evolved = evolve(
+                input4mips_ds.metadata,
+                product="derived",
+                comment=comment,
+                doi=doi,
+            )
 
-        ds = input4mips_ds.data
-        ds[variable_name_output].attrs["cell_methods"] = "area: time: mean"
-        input4mips_ds = Input4MIPsDataset(
-            data=ds,
-            metadata=metadata_evolved,
-            cvs=cvs,
-            non_input4mips_metadata=non_input4mips_metadata_common,
-        )
+            ds = input4mips_ds.data
+            ds[variable_name_output].attrs["cell_methods"] = "area: time: mean"
+            input4mips_ds = Input4MIPsDataset(
+                data=ds,
+                metadata=metadata_evolved,
+                cvs=cvs,
+                non_input4mips_metadata=non_input4mips_metadata,
+            )
 
-        print("Writing")
-        written = input4mips_ds.write(esgf_ready_root_dir_p)
-        print(f"Wrote: {written.relative_to(esgf_ready_root_dir_p)}")
+            print("Writing")
+            written = input4mips_ds.write(esgf_ready_root_dir_p)
+            print(f"Wrote: {written.relative_to(esgf_ready_root_dir_p)}")
 
-    print("")
+        print("")
 
 # %% [markdown]
 # ## Validate the written files
 
 # %%
-# papermill_description=validate-written-files
+# # # papermill_description=validate-written-files
 # # Turn this off for now, very slow hence waste of time.
 # # Probably move into another step at some point
 # # (and just validate the entire written tree at once).
+# from input4mips_validation.inference.from_data import BoundsInfo, FrequencyMetadataKeys
+# from input4mips_validation.xarray_helpers.variables import XRVariableHelper
+# from input4mips_validation.cli import validate_tree
 # bounds_info = BoundsInfo(
 #     time_bounds="time_bnds",
 #     bounds_dim="bnds",
@@ -564,7 +726,7 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
 #     bounds_coord_indicators=("bounds", "bnds"),
 #     climatology_bounds_coord_indicators=("climatology",),
 # )
-#
+
 # validate_tree(
 #     tree_root=esgf_ready_root_dir_p,
 #     cv_source=input4mips_cvs_source,

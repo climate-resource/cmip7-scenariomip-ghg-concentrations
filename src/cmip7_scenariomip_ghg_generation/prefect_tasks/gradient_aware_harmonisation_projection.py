@@ -26,6 +26,9 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
         parameters_ignore=None,
         parameters_output=("out_file",),
     ),
+    # Hmm caching with scenario_info_markers doesn't seem to work?
+    # Maybe I just ran in the wrong order/hit a race condition.
+    # refresh_cache=True,
 )
 def create_gradient_aware_harmonisation_annual_mean_file(  # noqa: PLR0913
     ghg: str,

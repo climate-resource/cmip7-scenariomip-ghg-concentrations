@@ -133,6 +133,11 @@ def save_reference_info_to_db(
 
 @task(
     cache_policy=INPUTS + TASK_SOURCE,
+    # If you're running on a machine where you've already run,
+    # you may have to turn this on to avoid prefect skipping the task
+    # (and no database existing).
+    # TODO: when we clean up, caching is the biggest pain point.
+    # Somehow figure out how to test and make it behave.
     # refresh_cache=True,
 )
 def save_references_info_to_db(

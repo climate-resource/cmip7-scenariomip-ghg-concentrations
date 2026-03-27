@@ -61,6 +61,8 @@ def extract_specific_variable_from_collection(
     db = pix.concat([file_reader(f) for f in extract_from])
 
     raw = db.loc[db.index.get_level_values(variable_level).str.lower() == variable_lower]
+    if raw.empty:
+        raise AssertionError
 
     scenario_map = {(si.model, si.scenario): si.cmip_scenario_name for si in scenario_infos}
     cmip_scenario_names = raw.pix.project([model_level, scenario_level]).index.map(scenario_map)

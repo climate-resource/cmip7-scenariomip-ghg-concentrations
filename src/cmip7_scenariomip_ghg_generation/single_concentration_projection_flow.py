@@ -58,6 +58,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     input4mips_cvs_source: str,
     doi: str,
     references_short_names: list[str],
+    references_extensions_short_names: list[str],
     reference_db: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
@@ -123,6 +124,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
 
     references_short_names
         Short-names of the references that apply to these projections
+
+    references_extensions_short_names
+        Short-names of the references that apply to these projections (the extensions part)
 
     reference_db
         Database in which reference information is saved
@@ -255,6 +259,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             esgf_files_start_year=esgf_files_start_year,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             references_short_names=references_short_names,
+            references_extensions_short_names=references_extensions_short_names,
             reference_db=reference_db,
             raw_notebooks_root_dir=raw_notebooks_root_dir,
             executed_notebooks_dir=executed_notebooks_dir,

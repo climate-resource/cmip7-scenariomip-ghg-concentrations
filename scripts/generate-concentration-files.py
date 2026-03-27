@@ -13,7 +13,7 @@ from input4mips_validation.cvs.loading import load_cvs_known_loader
 from input4mips_validation.cvs.loading_raw import get_raw_cvs_loader
 from pandas_openscm.io import load_timeseries_csv
 
-from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id
+from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id, create_source_id_extension
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
@@ -206,7 +206,7 @@ Be careful and don't crash your computer."""
         ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
         ("AIM 3.0", "SSP2 - Low Overshoot_a", "ln"),
         ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
-        # ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
+        ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
         ("IMAGE 3.4", "SSP2 - Medium Emissions", "m"),
         ("WITCH 6.0", "SSP5 - Medium-Low Emissions_a", "hl"),
         ("GCAM 8s", "SSP3 - High Emissions", "h"),
@@ -269,7 +269,20 @@ Be careful and don't crash your computer."""
                 f"{marker_source_id} is not registered in "
                 f"input4MIPs CVs {input4mips_cvs_source}. "
                 "Please push an update to input4MIPs CVs, "
-                "then use that update as your `input4mips_cvs_source"
+                "then use that update as your `input4mips_cvs_source`"
+            )
+            raise AssertionError(msg)
+
+        marker_source_id_ext = create_source_id_extension(
+            marker_source_id,
+            cmip_scenario_name=marker_info[-1],
+        )
+        if marker_source_id_ext not in cvs.source_id_entries.source_ids:
+            msg = (
+                f"{marker_source_id_ext} is not registered in "
+                f"input4MIPs CVs {input4mips_cvs_source}. "
+                "Please push an update to input4MIPs CVs, "
+                "then use that update as your `input4mips_cvs_source`"
             )
             raise AssertionError(msg)
 

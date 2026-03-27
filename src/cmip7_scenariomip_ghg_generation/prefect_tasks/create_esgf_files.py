@@ -41,6 +41,7 @@ def create_esgf_files(  # noqa: PLR0913
     esgf_ready_root_dir: Path,
     historical_data_root_dir: Path,
     references_short_names: list[str],
+    references_extensions_short_names: list[str],
     reference_db: Path,
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
@@ -96,6 +97,12 @@ def create_esgf_files(  # noqa: PLR0913
     historical_data_root_dir
         Root path in which the historical data was downloaded
 
+    references_short_names
+        Short-names of the references that apply to these projections
+
+    references_extensions_short_names
+        Short-names of the references that apply to these projections (the extensions part)
+
     reference_db
         Database in which reference information is saved
 
@@ -145,6 +152,7 @@ def create_esgf_files(  # noqa: PLR0913
             "esgf_ready_root_dir": str(esgf_ready_root_dir),
             "historical_data_root_dir": str(historical_data_root_dir),
             "references_short_names": references_short_names,
+            "references_extensions_short_names": references_extensions_short_names,
             "reference_db": str(reference_db),
         },
         run_notebooks_dir=executed_notebooks_dir,
