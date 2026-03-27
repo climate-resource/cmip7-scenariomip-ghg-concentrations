@@ -15,7 +15,7 @@ pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
 pixi run python scripts/generate-concentration-files.py \
     --run-id "${RUN_ID}" \
     --esgf-version 1.1.0 \
-    --input4mips-cvs-source "gh:ghg-concs-lower-priority" \
+    --input4mips-cvs-source "gh:ghg-concs-v1-1-0" \
     --n-workers 2 \
     --n-workers-multiprocessing 8 \
     --n-workers-multiprocessing-magicc 2 \

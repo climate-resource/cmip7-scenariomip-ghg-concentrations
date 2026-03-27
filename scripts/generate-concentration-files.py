@@ -269,7 +269,7 @@ Be careful and don't crash your computer."""
                 f"{marker_source_id} is not registered in "
                 f"input4MIPs CVs {input4mips_cvs_source}. "
                 "Please push an update to input4MIPs CVs, "
-                "then use that update as your `input4mips_cvs_source"
+                "then use that update as your `input4mips_cvs_source`"
             )
             raise AssertionError(msg)
 
@@ -282,7 +282,7 @@ Be careful and don't crash your computer."""
                 f"{marker_source_id_ext} is not registered in "
                 f"input4MIPs CVs {input4mips_cvs_source}. "
                 "Please push an update to input4MIPs CVs, "
-                "then use that update as your `input4mips_cvs_source"
+                "then use that update as your `input4mips_cvs_source`"
             )
             raise AssertionError(msg)
 
