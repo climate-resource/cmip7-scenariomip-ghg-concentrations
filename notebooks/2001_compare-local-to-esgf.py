@@ -97,6 +97,8 @@ except FileNotFoundError:
     esgf_url_checksums = {}
 
 # %%
+# Checks for high.
+#
 # The extensions means the data is slightly different,
 # particularly because of the mean-preserving interpolation,
 # hence check closeness with different thresholds for different periods.
@@ -104,8 +106,7 @@ compare_closer_before = 2095
 
 to_check = []
 for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
-    if not any(sid in str(fp) for sid in ("-vl-", "-h-")):
-        # print(f"Not checking {fp.name} yet as these scenarios haven't been upload to ESGF")
+    if not any(sid in str(fp) for sid in ("-h-",)):
         continue
 
     if "ext" in str(fp):
@@ -113,9 +114,6 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
         continue
 
     # if not any (ghg in str(fp) for ghg in ("hfc32",)):
-    #     continue
-
-    # if not any(sid in str(fp) for sid in ("-h-",)):
     #     continue
 
     # if not any(sid in str(fp) for sid in ("gm", "gr1z")):
@@ -206,6 +204,96 @@ for fp in tqdm.auto.tqdm(to_check):
     # print(f"Checked {fp=}")
 
 print(f"{len(checked)=}")
+
+# %%
+# Checks for vl.
+# This is different because there was a very small difference
+# in input emissions for v1.0.0
+# and spruious negative values (my fault).
+# Hence the tolerances and checks are different.
+#
+# The extensions means the data is slightly different,
+# particularly because of the mean-preserving interpolation,
+# hence check closeness with different thresholds for different periods.
+compare_closer_before = 2095
+
+to_check = []
+for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
+    if not any(sid in str(fp) for sid in ("-vl-",)):
+        continue
+
+    if "ext" in str(fp):
+        # print(f"Not checking {fp.name} yet as the extensions haven't been upload to ESGF")
+        continue
+
+    # if not any (ghg in str(fp) for ghg in ("hfc32",)):
+    #     continue
+
+    # if not any(sid in str(fp) for sid in ("gm", "gr1z")):
+    #     continue
+
+    # if not any(sid in str(fp) for sid in ("yr",)):
+    #     continue
+
+    to_check.append(fp)
+
+to_check = sorted(to_check)
+
+checked = []
+for fp in tqdm.auto.tqdm(to_check):
+    if fp.name in esgf_url_checksums:
+        url, checksum = esgf_url_checksums[fp.name]
+    else:
+        url, checksum = get_esgf_url(fp)
+        esgf_url_checksums[fp.name] = (url, checksum)
+
+    esgf_file = pooch.retrieve(url, known_hash=checksum)
+    local = xr.load_dataset(fp)
+    esgf = xr.load_dataset(esgf_file)
+
+    ghg = fp.name.split("_")[0]
+
+    if ghg == "hfc152a":
+        # Relatively big differences due to fixing lat. gradient
+        tol_paras = dict(
+            rtol=1e-2,
+            atol=25e-1,
+        )
+
+    elif ghg == "hfc245fa":
+        # Relatively big differences due to fixing lat. gradient
+        tol_paras = dict(
+            rtol=1e-2,
+            atol=7e-2,
+        )
+
+    elif ghg == "ch2cl2":
+        # Super short lifetime
+        tol_paras = dict(
+            rtol=1e-3,
+            atol=2e-3,
+        )
+
+    else:
+        tol_paras = dict(
+            rtol=1e-3,
+            atol=1e-8,
+        )
+
+    local_ghg = local[ghg]
+    esgf_ghg = esgf[ghg]
+    diffs_loc = np.where(~np.isclose(local_ghg.values, esgf_ghg.values, **tol_paras))
+    if diffs_loc[0].size == 0:
+        checked.append(fp)
+        continue
+
+    print(f"Issue for {fp=} with {tol_paras=}")
+    print(f"{local_ghg.time[diffs_loc[0]].values=}")
+    print(f"{local_ghg.values[diffs_loc]=}")
+    print(f"{esgf_ghg.values[diffs_loc]=}")
+
+print(f"{len(checked)=}")
+# checked
 
 # %%
 with open("esgf-url-checksums.json", "w") as fh:

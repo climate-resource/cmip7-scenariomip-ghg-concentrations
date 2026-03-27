@@ -4,7 +4,7 @@
 # May not work on windows as this is a shell script,
 # but the commands should be easy to copy-paste
 # (if they're not, we've made the script too complex).
-RUN_ID="1.0.1"
+RUN_ID="1.1.0"
 
 echo "============================"
 echo "Generating ESGF-ready files"
@@ -14,7 +14,7 @@ echo "============================"
 pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
 pixi run python scripts/generate-concentration-files.py \
     --run-id "${RUN_ID}" \
-    --esgf-version 1.0.1 \
+    --esgf-version 1.1.0 \
     --input4mips-cvs-source "gh:ghg-concs-lower-priority" \
     --n-workers 2 \
     --n-workers-multiprocessing 8 \
@@ -26,7 +26,7 @@ pixi run python scripts/generate-concentration-files.py \
 generate_exit_code=$?
 
 if [ $"$generate_exit_code" -eq 0 ]; then
-    n_files_produced=$(find output-bundles/1.0.1/data/processed/esgf-ready/input4MIPs -type f | wc -l)
+    n_files_produced=$(find "output-bundles/${RUN_ID}/data/processed/esgf-ready/input4MIPs" -type f | wc -l)
     echo "Number of files produced: ${n_files_produced}"
     if [ "${n_files_produced}" -eq 8050 ]; then
         echo "Looks good"
