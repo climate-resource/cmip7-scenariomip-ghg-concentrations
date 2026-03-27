@@ -4,7 +4,7 @@
 # May not work on windows as this is a shell script,
 # but the commands should be easy to copy-paste
 # (if they're not, we've made the script too complex).
-RUN_ID="1.0.1"
+RUN_ID="1.1.0"
 
 echo "============================"
 echo "Creating zenodo-ready bundle"

@@ -10,8 +10,8 @@
 - [x] add extension citation information
 - [x] generate files
 - [x] quantify difference from vl v1.0.0
-- [ ] put in publication queue
-- [ ] input4MIPs-CV PR:
-    - [ ] 1.0.1 has slight differences (<1e-3) in vl and h because of the introduction of extensions (which define concentrations out to the end of 2100, whereas previously assumed constant emissions to get from June 2100 to December 2100) and a fix to an input file and a fix to remove small, but nonetheless unphysical, negative values (no need to re-run if you've already run with 1.0.0)
-- [ ] bundle and put on zenodo
-- [ ] publish on zenodo
+- [x] put in publication queue
+- [x] input4MIPs-CV PR:
+    - [x] 1.0.1 has slight differences (<1e-3) in vl and h because of the introduction of extensions (which define concentrations out to the end of 2100, whereas previously assumed constant emissions to get from June 2100 to December 2100) and a fix to an input file and a fix to remove small, but nonetheless unphysical, negative values (no need to re-run if you've already run with 1.0.0)
+- [x] bundle and put on zenodo
+- [x] publish on zenodo

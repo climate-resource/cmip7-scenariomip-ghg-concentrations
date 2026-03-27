@@ -4,15 +4,19 @@ Create a bundle ready to upload to Zenodo
 
 from __future__ import annotations
 
+import copy
+import json
 import shutil
+import sqlite3
 import sys
 import tarfile
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import netCDF4
+import pandas as pd
 import tqdm.auto
 import typer
 from attrs import define
@@ -360,7 +364,49 @@ You can confirm this with `notebooks/2001_compare-local-to-esgf.py`.
     return out_path
 
 
-def main(
+def add_references_to_zenodo_metadata(metadata: dict[str, Any], references_table: pd.DataFrame) -> dict[str, Any]:
+    """
+    Add references to the zenodo metadata
+
+    Parameters
+    ----------
+    metadata
+        Metadata to add to
+
+    references_table
+        References table to add from
+
+
+    Returns
+    -------
+    :
+        Zenodo metadata with reference links added
+    """
+    metadata_out = copy.deepcopy(metadata)
+    metadata_out["metadata"]["related_identifiers"] = []
+    for (url, doi, resource_type), _ in references_table.groupby(["url", "doi", "resource_type"], dropna=False):
+        if pd.isnull(doi):
+            related_id = {
+                "identifier": url,
+                "scheme": "url",
+            }
+
+        else:
+            related_id = {
+                "identifier": doi,
+                "scheme": "doi",
+            }
+
+        related_id["relation"] = "isDerivedFrom"
+        related_id["resource_type"] = resource_type
+
+        if related_id not in metadata_out["metadata"]["related_identifiers"]:
+            metadata_out["metadata"]["related_identifiers"].append(related_id)
+
+    return metadata_out
+
+
+def main(  # noqa: PLR0913
     bundle_path: Annotated[Path, typer.Argument(help="Path to the bundle to prepare for zenodo")],
     zenodo_bundle_root_path: Annotated[Path, typer.Option(help="Root path in which to save the Zenodo bundle")] = Path(
         "zenodo-bundles"
@@ -369,12 +415,12 @@ def main(
     zenodo_metadata_file: Annotated[
         str, typer.Option(help="Name of the file in which the zenodo metadata was written")
     ] = "zenodo.json",
+    references_table_file: Annotated[
+        str, typer.Option(help="Path to the file in which the refernces table was written")
+    ] = "data/interim/references.db",
     reserved_zenodo_doi_file: Annotated[
         str, typer.Option(help="Name of the file in which to write the reserved Zenodo DOI")
     ] = "reserved-zenodo-doi.txt",
-    # dependencies_table_file: Annotated[
-    #     Path, typer.Option(help="Path from which to read the dependencies table")
-    # ] = Path("data/processed/dependencies.db"),
 ) -> None:
     load_dotenv()
 
@@ -385,6 +431,23 @@ def main(
     zenodo_bundle_path = zenodo_bundle_root_path / bundle_id
 
     zenodo_bundle_path.mkdir(exist_ok=True, parents=True)
+
+    # # Helpful if you need to work out how identifiers look in Zenodo JSON
+    # tmp = zenodo_interactor.get_metadata("14892947")
+    # tmp["metadata"]["related_identifiers"]
+    db_connection = sqlite3.connect(bundle_path / Path(references_table_file))
+    references_table = pd.read_sql("SELECT * FROM data_references", con=db_connection)
+    db_connection.close()
+
+    with open(bundle_path / zenodo_metadata_file) as fh:
+        zenodo_metadata = json.load(fh)
+
+    zenodo_metadata_incl_refs = add_references_to_zenodo_metadata(
+        references_table=references_table,
+        metadata=zenodo_metadata,
+    )
+    with open(zenodo_bundle_path / zenodo_metadata_file, "w") as fh:
+        json.dump(zenodo_metadata_incl_refs, fh, indent=4, sort_keys=True)
 
     zenodo_bundle_files = create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
 
