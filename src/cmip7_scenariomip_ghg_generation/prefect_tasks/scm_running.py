@@ -27,6 +27,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
         parameters_ignore=None,
         parameters_output=("out_file",),
     ),
+    refresh_cache=True,
 )
 def run_magicc(  # noqa: PLR0913
     scenario_info: ScenarioInfo,
