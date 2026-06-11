@@ -139,6 +139,7 @@ output_variables = (
     # # Heat uptake
     "Heat Uptake",
     "Heat Uptake|Ocean",
+    "Heat Content|Ocean",
     # # Atmospheric concentrations
     "Atmospheric Concentrations|CO2",
     "Atmospheric Concentrations|CH4",
