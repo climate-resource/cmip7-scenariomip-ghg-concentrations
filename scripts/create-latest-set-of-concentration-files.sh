@@ -4,6 +4,7 @@
 # May not work on windows as this is a shell script,
 # but the commands should be easy to copy-paste
 # (if they're not, we've made the script too complex).
+# TODO: bump this
 RUN_ID="1.1.0"
 
 echo "============================"
