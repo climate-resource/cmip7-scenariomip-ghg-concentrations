@@ -16,9 +16,6 @@ def main() -> None:
     """
     Extract the results
     """
-    # out_file = "20261206_magicc-for-sleip.csv"
-    out_file = "20261206_magicc-for-sleip.parquet.gzip"
-
     db_backend_str: str = "feather"
     db_dir = Path("output-bundles/1.1.0/data/interim/magicc-output/db")
     db = pandas_openscm.db.OpenSCMDB(
@@ -49,7 +46,9 @@ def main() -> None:
 
     out = pix.concat([tmp.loc[pix.isin(variable="Heat Content|Ocean")], post_processed_results.timeseries_run_id])
 
-    # out.to_csv(out_file)
+    out_file = "20261206_magicc-for-sleip.csv"
+    out.to_csv(out_file)
+    out_file = "20261206_magicc-for-sleip.parquet.gzip"
     out.to_parquet(out_file, compression="gzip")
 
 
