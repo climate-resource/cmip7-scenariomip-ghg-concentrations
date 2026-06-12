@@ -4,6 +4,7 @@ Extract MAGICC results for SLEIP
 
 from pathlib import Path
 
+import pandas as pd
 import pandas_indexing as pix
 import pandas_openscm
 import pandas_openscm.db
@@ -26,12 +27,22 @@ def main() -> None:
         db_dir=db_dir,
     )
 
+    out_variables = ["Surface Air Temperature Change", "Heat Content|Ocean", "Heat Uptake", "Heat Uptake|Ocean"]
     tmp = db.load(
         pix.isin(
-            variable=["Surface Air Temperature Change", "Heat Content|Ocean"],
+            variable=out_variables,
             run_mode="magicc-concentration-to-emissions-switch",
         )
     ).reset_index(["run_mode"], drop=True)
+    missing_variables = []
+    for (model, scenario, climate_model), sdf in tmp.groupby(["model", "scenario", "climate_model"]):
+        sdf_variables = sdf.index.unique("variable")
+        missing = set(out_variables) - set(sdf_variables)
+        if missing:
+            missing_variables.append([model, scenario, climate_model, missing])
+
+    if missing_variables:
+        raise AssertionError(pd.DataFrame(missing_variables))
 
     post_processor = AR6PostProcessor.from_ar6_config(n_processes=None)
     post_processed_results = post_processor(tmp)
