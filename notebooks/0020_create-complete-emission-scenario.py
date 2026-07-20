@@ -206,6 +206,9 @@ assert_harmonised(
 )
 
 # %%
+# Hard-coded because we are comparing to something
+# that was already done with 2023
+harmonisation_year_scaling = 2023
 infilled_scaling_l = []
 for follower, leader in scaling_leaders.items():
     history_leader = gcages_history.loc[pix.isin(variable=leader)]
@@ -221,8 +224,8 @@ for follower, leader in scaling_leaders.items():
         raise AssertionError
     hl_unit = hl_unit_l[0].replace("-", "")
 
-    l_harmonisation_year = Q(float(history_leader[harmonisation_year].values.squeeze()), hl_unit)
-    f_harmonisation_year = Q(float(history_follower[harmonisation_year].values.squeeze()), f_unit)
+    l_harmonisation_year = Q(float(history_leader[harmonisation_year_scaling].values.squeeze()), hl_unit)
+    f_harmonisation_year = Q(float(history_follower[harmonisation_year_scaling].values.squeeze()), f_unit)
 
     f_0 = Q(float(history_follower[PI_YEAR].values.squeeze()), f_unit)
     l_0 = Q(float(history_leader[PI_YEAR].values.squeeze()), hl_unit)
@@ -235,7 +238,7 @@ for follower, leader in scaling_leaders.items():
     lead_df = annual_scenario.loc[
         pix.isin(variable=leader),
         # Don't infill in the historical period
-        harmonisation_year:,
+        harmonisation_year_scaling:,
     ]
     if lead_df.empty:
         raise AssertionError(f"{leader=}")

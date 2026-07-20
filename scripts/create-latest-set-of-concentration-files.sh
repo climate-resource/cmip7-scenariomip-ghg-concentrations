@@ -14,15 +14,17 @@ echo "============================"
 # PREFECT_TASKS_REFRESH_CACHE=true
 pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
 pixi run python scripts/generate-concentration-files.py \
-    --run-id "${RUN_ID}" \
+    --run-id "dev-test" \
     --esgf-version 1.1.0 \
-    --input4mips-cvs-source "gh:ghg-concs-v1-1-0" \
+    --input4mips-cvs-source "gh:ghg-vl-cf" \
     --n-workers 2 \
     --n-workers-multiprocessing 8 \
     --n-workers-multiprocessing-magicc 2 \
     --n-workers-per-magicc-notebook 6 \
-    --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv
-# --run-id "dev-test"
+    --harmonisation-year 2015 \
+    --emissions-file data/raw/input-scenarios/202607141103_markers_lixo_202512071232_202607160001_202607160001_complete-emissions.csv
+# --run-id "${RUN_ID}" \
+# --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv
 
 generate_exit_code=$?
 

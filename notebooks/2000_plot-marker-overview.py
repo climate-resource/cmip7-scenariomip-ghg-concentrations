@@ -40,6 +40,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 scenario_info_markers: str = (
     "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
     "REMIND-MAgPIE 3.5-4.11;SSP1 - Very Low Emissions;vl;;"
+    "REMIND-MAgPIE 3.5-4.11;VL-cf;vl-cf;;"
     "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
     "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
     "GCAM 8s;SSP3 - High Emissions;h;;"
@@ -111,7 +112,13 @@ for si in tqdm.auto.tqdm(scenario_info_markers_p):
                 climate_model="MAGICCv7.6.0a3",
                 run_mode="magicc-concentration-to-emissions-switch",
             )
-            & pix.ismatch(variable=["Surface Air Temperature Change", "Effective Radiative Forcing**"]),
+            & pix.ismatch(
+                variable=[
+                    "Surface Air Temperature Change",
+                    "Effective Radiative Forcing**",
+                    "Atmospheric Concentrations|*",
+                ]
+            ),
             # progress=True,
         )
     except ValueError:
@@ -156,6 +163,7 @@ magiccc_output_pdf = add_cmip_scenario_name(magiccc_output)
 # %%
 palette = {
     "vl": "#24a4ff",
+    "vl-cf": "#24a400",
     "ln": "#4a0daf",
     "l": "#00cc69",
     "ml": "#f5ac00",
@@ -164,7 +172,7 @@ palette = {
     "hl": "#8f003b",
 }
 
-scenario_order = ["vl", "ln", "l", "ml", "m", "hl", "h"]
+scenario_order = ["vl-cf", "vl", "ln", "l", "ml", "m", "hl", "h"]
 
 # %% [markdown]
 # ### Just temperatures
@@ -242,8 +250,9 @@ fig, axes = plt.subplot_mosaic(
         ["full"],
         ["century"],
         ["mid-century"],
+        ["extension"],
     ],
-    figsize=(10, 12),
+    figsize=(10, 16),
 )
 
 
@@ -274,6 +283,7 @@ for ax, xlim, yticks, ylim, show_legend, qps in (
     (axes["full"], (1950, 2100), np.arange(0.5, 5.01, 0.5), None, True, [(0.5, 0.95), ((0.05, 0.95), 0.2)]),
     (axes["century"], (2015, 2100), np.arange(1.0, 2.51, 0.1), (1.0, 2.5), True, [(0.5, 0.95), ((0.33, 0.67), 0.5)]),
     (axes["mid-century"], (2023, 2050), np.arange(1.3, 2.01, 0.1), (1.3, 2.0), True, [(0.5, 0.95)]),
+    (axes["extension"], (1950, 2500), np.arange(1.0, 3.01, 0.5), (0.0, 1.7), True, [(0.5, 0.95), ((0.05, 0.95), 0.2)]),
 ):
     pdf.loc[:, xlim[0] : xlim[1]].openscm.plot_plume(
         quantiles_plumes=qps,
@@ -304,12 +314,17 @@ for level in [1.5, 2.0]:
 for level in [1.5, 1.7, 1.8, 2.0]:
     axes["century"].axhline(level, linestyle="--", color="gray", zorder=1.1)
 
+for level in [1.5, 2.0]:
+    axes["extension"].axhline(level, linestyle="--", color="gray", zorder=1.1)
+
 axes["mid-century"].grid()
 # TODO: fix legend position
 # plt.tight_layout()
 
 # %%
-gsat.max(axis=1).groupby(gsat.index.names.difference(["run_id"])).median()
+gsat.max(axis=1).groupby(gsat.index.names.difference(["run_id"])).median().reset_index(
+    ["region", "run_mode"], drop=True
+)
 
 # %%
 scenario_order_in_dataset = [v for v in scenario_order if v in pdf.index.get_level_values("cmip_scenario_name")]
@@ -354,6 +369,7 @@ emissions_pdf_incl_extras = pix.concat(
 
 # %%
 xlim = (2015, 2500)
+# xlim = (2010, 2100)
 quantiles_plumes = [
     (0.5, 0.95),
     # ((0.05, 0.95), 0.2),
@@ -363,6 +379,7 @@ mosaic = [
     ["GSAT assessed", "Effective Radiative Forcing"],
     ["Effective Radiative Forcing|Greenhouse Gases", "Effective Radiative Forcing|Aerosols"],
     ["Emissions|GHG AR6GWP100", "."],
+    ["Atmospheric Concentrations|CO2", "Atmospheric Concentrations|CH4"],
     ["Effective Radiative Forcing|CO2", "Emissions|CO2"],
     ["Emissions|CO2|Fossil", "Emissions|CO2|Biosphere"],
     ["Effective Radiative Forcing|CH4", "Emissions|CH4"],

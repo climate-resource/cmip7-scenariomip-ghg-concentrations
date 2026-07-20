@@ -144,7 +144,7 @@ WESTERN_ET_AL_2024 = ReferenceInfo(
 SANDSTAD_ET_AL_2026 = ReferenceInfo(
     short_name="Sandstad et al., 2026 (in-prep)",
     licence="Paper, NA",
-    reference=("Sandstad, Sanderson et al: " "Emissions extensions for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+    reference=("Sandstad, Sanderson et al: Emissions extensions for CMIP7 ScenarioMIP, in-prep, 2026."),
     url="https://github.com/maritsandstad/emissions_harmonization_historical",
     resource_type="publication-article",
 )
@@ -154,6 +154,18 @@ SCENARIO_REFERENCES = {
         short_name="Very low scenario for CMIP7 ScenarioMIP based on the REMIND-MAgPIE model, 2026 (in-prep)",
         licence="Paper, NA",
         reference=(
+            "Kriegler, Luderer, Popp, Abrahão, ... and Strefler: "
+            "Very low scenario for CMIP7 ScenarioMIP based on the REMIND-MAgPIE model, "
+            "in-prep, 2026."
+        ),
+        url="https://zenodo.org/records/18497404",
+        resource_type="publication-article",
+    ),
+    ("REMIND-MAgPIE 3.5-4.11", "vl-cf"): ReferenceInfo(
+        short_name="TBD",
+        licence="Paper, NA",
+        reference=(
+            "TBD "
             "Kriegler, Luderer, Popp, Abrahão, ... and Strefler: "
             "Very low scenario for CMIP7 ScenarioMIP based on the REMIND-MAgPIE model, "
             "in-prep, 2026."
