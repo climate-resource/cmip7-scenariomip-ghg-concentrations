@@ -22,7 +22,8 @@ pixi run python scripts/generate-concentration-files.py \
     --n-workers-multiprocessing-magicc 2 \
     --n-workers-per-magicc-notebook 6 \
     --harmonisation-year 2015 \
-    --emissions-file data/raw/input-scenarios/202607141103_markers_lixo_202512071232_202607160001_202607160001_complete-emissions.csv
+    --esgf-files-start-year 2015 \
+    --emissions-file data/raw/input-scenarios/202607141103_markers_lixo_202512071232_202607200001_202607200001_complete-emissions.csv
 # --run-id "${RUN_ID}" \
 # --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv
 

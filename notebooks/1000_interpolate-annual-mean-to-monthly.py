@@ -181,8 +181,16 @@ if ghg != "halon1202":
 # %% editable=true slideshow={"slide_type": ""}
 if ghg != "halon1202":
     annual_mean_tmp = annual_mean.loc[:, overlap_year + 1 :]
+    # TODO: check these changes by checking if vl-cf
+    # and vl files are the same data for relevant gases
+    # (same comment applies to all changes really).
     stitched = pix.concat(
-        [cmip7_historical_gm_annual_df.align(annual_mean_tmp)[0].dropna(axis="columns"), annual_mean_tmp],
+        [
+            cmip7_historical_gm_annual_df.align(annual_mean_tmp)[0]
+            .dropna(axis="columns")
+            .loc[:, : annual_mean.columns.min()],
+            annual_mean_tmp,
+        ],
         axis="columns",
     )
 

@@ -152,7 +152,8 @@ else:
 
 # %%
 last_hist_year = cmip7_historical_gm_monthly["time"].dt.year.values[-1]
-# last_hist_year
+last_hist_year = 2015
+last_hist_year
 
 # %%
 if ghg != "c8f18":

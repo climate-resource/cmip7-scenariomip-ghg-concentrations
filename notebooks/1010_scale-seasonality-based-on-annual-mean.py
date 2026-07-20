@@ -128,6 +128,9 @@ except AssertionError:
 
 # %%
 annual_mean_first_year = annual_mean.columns.min()
+annual_mean_first_year
+
+# %%
 annual_mean_first_year_value_all_scenarios = annual_mean[annual_mean_first_year]
 np.testing.assert_allclose(
     annual_mean_first_year_value_all_scenarios.values,

@@ -116,6 +116,7 @@ if last_history_year != last_history_year_exp:
     msg = "Please check last historical GHG conc year"
     raise AssertionError(msg)
 
+last_history_year = 2015
 last_history_year
 
 # %%

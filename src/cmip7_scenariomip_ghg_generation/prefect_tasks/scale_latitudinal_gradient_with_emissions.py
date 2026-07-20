@@ -13,6 +13,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_
 @task_standard_path_cache(
     task_run_name="scale-lat-gradient-based-on-emissions_{ghg}_{annual_mean_emissions_file.stem}",
     parameters_output=("out_file",),
+    # refresh_cache=True,
 )
 def scale_lat_gradient_based_on_emissions(  # noqa: PLR0913
     ghg: str,
@@ -75,6 +76,7 @@ def scale_lat_gradient_based_on_emissions(  # noqa: PLR0913
 @task_standard_path_cache(
     task_run_name="scale-lat-gradient-eofs_{ghg}_{annual_mean_emissions_file.stem}",
     parameters_output=("out_file",),
+    # refresh_cache=True,
 )
 def scale_lat_gradient_eofs(  # noqa: PLR0913
     ghg: str,

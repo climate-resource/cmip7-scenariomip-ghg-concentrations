@@ -98,6 +98,7 @@ UR.setup_matplotlib(enable=True)
 # %%
 palette = {
     "vl": "#24a4ff",
+    "vl-cf": "#24a400",
     "ln": "#4a0daf",
     "l": "#00cc69",
     "ml": "#f5ac00",

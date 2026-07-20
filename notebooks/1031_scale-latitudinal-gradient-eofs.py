@@ -190,6 +190,7 @@ ax.legend()
 
 # %%
 last_hist_year = cmip7_historical_gm_monthly["time"].dt.year.values[-1]
+last_hist_year = 2015
 # last_hist_year
 
 # %%
