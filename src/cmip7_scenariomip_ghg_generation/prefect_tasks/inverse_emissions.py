@@ -29,6 +29,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import (
     + PathHashesCP(
         parameters_output=("out_file",),
     ),
+    # refresh_cache=True,
 )
 def calculate_inverse_emissions(  # noqa: PLR0913
     ghg: str,

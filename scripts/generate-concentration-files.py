@@ -199,6 +199,7 @@ Be careful and don't crash your computer."""
     if not fossil_bio_split_file.exists():
         raise FileNotFoundError(fossil_bio_split_file)
 
+    # TODO: add target MIP here
     markers = (
         # (model, scenario, cmip7 experiment name)
         # Decision re naming: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785

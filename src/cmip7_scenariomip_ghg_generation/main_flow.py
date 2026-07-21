@@ -36,6 +36,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     get_western_et_al_2024_clean,
     interpolate_annual_mean_to_monthly,
     make_complete_scenario,
+    make_vl_cf_inputs_that_match_historical_and_vl,
     plot_marker_overview,
     run_magicc,
     save_references_info_to_db,
@@ -403,11 +404,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             missing_gases = set(equivalence_ghg_components) - set(ghgs)
             if missing_gases:
                 cli_args = " ".join(f"--ghg {ghg}" for ghg in missing_gases)
-                msg = (
-                    f"To generate {eg}, you need multiple components. "
-                    f"Missing: {missing_gases}. "
-                    f"CLI args: {cli_args}"
-                )
+                msg = f"To generate {eg}, you need multiple components. Missing: {missing_gases}. CLI args: {cli_args}"
                 raise AssertionError(msg)
 
     ### Get the markers
@@ -596,177 +593,206 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             references_extensions_only_short_names_modelling_based_ghg = [
                 SANDSTAD_ET_AL_2026,
             ]
-            global_mean_yearly_common_kwargs = dict(
-                ghg=ghg,
-                scenario_info_markers=scenario_info_markers,
-                historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-                magicc_output_db_dir=magicc_output_db_dir,
-                magicc_db_backend_str=magicc_db_backend_str,
-                raw_notebooks_root_dir=raw_notebooks_root_dir,
-                executed_notebooks_dir=executed_notebooks_dir,
-                pool=pool_multiprocessing,
-                wait_for=[downloaded_cmip7_historical_ghgs_futures[ghg], *magicc_v760a3_complete_files_markers],
-            )
-            if ghg in ["co2", "ch4", "n2o"]:
-                if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
-                    global_mean_yearly_file_future = submit_output_aware(
-                        create_gradient_aware_harmonisation_annual_mean_file,
-                        out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
-                        **global_mean_yearly_common_kwargs,
-                    )
-                    references_short_names_modelling_based_ghg.extend(
-                        [
-                            MEINSHAUSEN_ET_AL_2009,
-                            MEINSHAUSEN_ET_AL_2011,
-                            FORSTER_ET_AL_AR6_WG1_CH7,
-                        ]
-                    )
 
-                else:
-                    raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
+            # # TODO: get rid of vl-cf hard-coding
+            # # This will be super flaky. It only works if you have already done a run with vl in advance.
+            # breakpoint()
+            vl_cf_name = "vl-cf"
+            if (
+                any(si.cmip_scenario_name == vl_cf_name for si in scenario_infos)
+                and magicc_based_ghgs_projection_method[ghg] != "gradient-aware-harmonisation"
+            ):
+                if len(scenario_infos) != 1:
+                    msg = "Haven't figured out how to produce vl-cf at the same time as other scenarios yet"
+                    raise NotImplementedError(msg)
+
+                # breakpoint()
+                global_mean_monthly_file_future, seasonality_all_time_file_future, lat_gradient_file_future = (
+                    submit_output_aware(
+                        make_vl_cf_inputs_that_match_historical_and_vl,
+                        ghg=ghg,
+                        internal_processing_scenario_name=vl_cf_name,
+                        esgf_files_start_year=esgf_files_start_year,
+                        out_file_global_mean_monthly=monthly_mean_dir
+                        / f"modelling-based-projection_{ghg}_monthly-mean_vl-cf-hack.nc",
+                        out_file_seasonality=seasonality_dir
+                        / f"modelling-based-projection_{ghg}_seasonality-all-time_vl-cf-hack.nc",
+                        out_file_lat_gradient=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info_vl-cf-hack.nc",
+                    )
+                )
 
             else:
-                # Submit in all cases, even if not used,
-                # so we have a record of how much the choice between MAGICC
-                # and one-box matters.
-                one_box_annual_mean_file = submit_output_aware(
-                    create_one_box_annual_mean_file,
-                    emissions_complete_dir=emissions_complete_dir,
-                    out_file=annual_mean_dir / f"one-box_{ghg}_annual-mean.feather",
-                    **global_mean_yearly_common_kwargs,
-                )
-                if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
-                    global_mean_yearly_file_future = submit_output_aware(
-                        create_gradient_aware_harmonisation_annual_mean_file,
-                        out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
-                        **global_mean_yearly_common_kwargs,
-                    )
-                    references_short_names_modelling_based_ghg.extend(
-                        [
-                            MEINSHAUSEN_ET_AL_2009,
-                            MEINSHAUSEN_ET_AL_2011,
-                            FORSTER_ET_AL_AR6_WG1_CH7,
-                        ]
-                    )
-
-                elif magicc_based_ghgs_projection_method[ghg] == "one-box":
-                    global_mean_yearly_file_future = one_box_annual_mean_file
-                    # Nothing to add to references_short_names_modelling_based_ghg
-
-                else:
-                    raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
-
-            global_mean_monthly_file_future = submit_output_aware(
-                interpolate_annual_mean_to_monthly,
-                ghg=ghg,
-                annual_mean_file=global_mean_yearly_file_future,
-                historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-                historical_data_seasonality_lat_gradient_info_root=(
-                    cmip7_historical_seasonality_lat_gradient_info_extracted
-                ),
-                wmo_2022_clean_file=None,
-                out_file=monthly_mean_dir / f"modelling-based-projection_{ghg}_monthly-mean.nc",
-                raw_notebooks_root_dir=raw_notebooks_root_dir,
-                executed_notebooks_dir=executed_notebooks_dir,
-            )
-
-            if ghg in ["co2"]:
-                seasonality_all_time_file_future = submit_output_aware(
-                    scale_seasonality_based_on_magicc_npp,
+                global_mean_yearly_common_kwargs = dict(
                     ghg=ghg,
                     scenario_info_markers=scenario_info_markers,
-                    harmonisation_year=harmonisation_year,
+                    historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     magicc_output_db_dir=magicc_output_db_dir,
                     magicc_db_backend_str=magicc_db_backend_str,
-                    historical_data_seasonality_lat_gradient_info_root=(
-                        cmip7_historical_seasonality_lat_gradient_info_extracted
-                    ),
-                    out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
                     raw_notebooks_root_dir=raw_notebooks_root_dir,
                     executed_notebooks_dir=executed_notebooks_dir,
-                    wait_for=magicc_v760a3_complete_files_markers,
+                    pool=pool_multiprocessing,
+                    wait_for=[downloaded_cmip7_historical_ghgs_futures[ghg], *magicc_v760a3_complete_files_markers],
                 )
+                if ghg in ["co2", "ch4", "n2o"]:
+                    if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
+                        global_mean_yearly_file_future = submit_output_aware(
+                            create_gradient_aware_harmonisation_annual_mean_file,
+                            out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
+                            **global_mean_yearly_common_kwargs,
+                        )
+                        references_short_names_modelling_based_ghg.extend(
+                            [
+                                MEINSHAUSEN_ET_AL_2009,
+                                MEINSHAUSEN_ET_AL_2011,
+                                FORSTER_ET_AL_AR6_WG1_CH7,
+                            ]
+                        )
 
-            else:
-                seasonality_all_time_file_future = submit_output_aware(
-                    scale_seasonality_based_on_annual_mean,
+                    else:
+                        raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
+
+                else:
+                    # Submit in all cases, even if not used,
+                    # so we have a record of how much the choice between MAGICC
+                    # and one-box matters.
+                    one_box_annual_mean_file = submit_output_aware(
+                        create_one_box_annual_mean_file,
+                        emissions_complete_dir=emissions_complete_dir,
+                        out_file=annual_mean_dir / f"one-box_{ghg}_annual-mean.feather",
+                        **global_mean_yearly_common_kwargs,
+                    )
+                    if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
+                        global_mean_yearly_file_future = submit_output_aware(
+                            create_gradient_aware_harmonisation_annual_mean_file,
+                            out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
+                            **global_mean_yearly_common_kwargs,
+                        )
+                        references_short_names_modelling_based_ghg.extend(
+                            [
+                                MEINSHAUSEN_ET_AL_2009,
+                                MEINSHAUSEN_ET_AL_2011,
+                                FORSTER_ET_AL_AR6_WG1_CH7,
+                            ]
+                        )
+
+                    elif magicc_based_ghgs_projection_method[ghg] == "one-box":
+                        global_mean_yearly_file_future = one_box_annual_mean_file
+                        # Nothing to add to references_short_names_modelling_based_ghg
+
+                    else:
+                        raise NotImplementedError(magicc_based_ghgs_projection_method[ghg])
+
+                global_mean_monthly_file_future = submit_output_aware(
+                    interpolate_annual_mean_to_monthly,
                     ghg=ghg,
                     annual_mean_file=global_mean_yearly_file_future,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                     historical_data_seasonality_lat_gradient_info_root=(
                         cmip7_historical_seasonality_lat_gradient_info_extracted
                     ),
-                    out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
+                    wmo_2022_clean_file=None,
+                    out_file=monthly_mean_dir / f"modelling-based-projection_{ghg}_monthly-mean.nc",
                     raw_notebooks_root_dir=raw_notebooks_root_dir,
                     executed_notebooks_dir=executed_notebooks_dir,
                 )
 
-            if ghg in ["co2", "ch4", "n2o"]:
-                # Scale latitudinal gradient.
-                if ghg == "n2o":
-                    # Total emissions for n2o
-                    eof_one_scaling_variable = f"emissions|{ghg}"
-                    extract_from = complete_scenario_files_markers
-
-                elif ghg in ["co2", "ch4"]:
-                    # Fossil emissions for co2 and ch4
-                    extract_from = (
-                        submit_output_aware(
-                            extract_fossil_biosphere_timeseries,
-                            (fossil_bio_split_file,),
-                            scenario_infos=scenario_info_markers,
-                            out_file=fossil_bio_split_interim_dir / "fossil-bio-split-markers.feather",
+                if ghg in ["co2"]:
+                    seasonality_all_time_file_future = submit_output_aware(
+                        scale_seasonality_based_on_magicc_npp,
+                        ghg=ghg,
+                        scenario_info_markers=scenario_info_markers,
+                        harmonisation_year=harmonisation_year,
+                        magicc_output_db_dir=magicc_output_db_dir,
+                        magicc_db_backend_str=magicc_db_backend_str,
+                        historical_data_seasonality_lat_gradient_info_root=(
+                            cmip7_historical_seasonality_lat_gradient_info_extracted
                         ),
+                        out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
+                        raw_notebooks_root_dir=raw_notebooks_root_dir,
+                        executed_notebooks_dir=executed_notebooks_dir,
+                        wait_for=magicc_v760a3_complete_files_markers,
                     )
-                    eof_one_scaling_variable = f"emissions|{ghg}|fossil"
 
                 else:
-                    raise NotImplementedError(ghg)
+                    seasonality_all_time_file_future = submit_output_aware(
+                        scale_seasonality_based_on_annual_mean,
+                        ghg=ghg,
+                        annual_mean_file=global_mean_yearly_file_future,
+                        historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                        historical_data_seasonality_lat_gradient_info_root=(
+                            cmip7_historical_seasonality_lat_gradient_info_extracted
+                        ),
+                        out_file=seasonality_dir / f"modelling-based-projection_{ghg}_seasonality-all-time.nc",
+                        raw_notebooks_root_dir=raw_notebooks_root_dir,
+                        executed_notebooks_dir=executed_notebooks_dir,
+                    )
 
-                eof_zero_scaling_emissions_file = submit_output_aware(
-                    extract_specific_variable_from_collection,
-                    extract_from=extract_from,
-                    scenario_infos=scenario_info_markers,
-                    variable_lower=eof_one_scaling_variable,
-                    out_file=single_variable_dir / f"{ghg}_eof-one-scaling.feather",
-                )
+                if ghg in ["co2", "ch4", "n2o"]:
+                    # Scale latitudinal gradient.
+                    if ghg == "n2o":
+                        # Total emissions for n2o
+                        eof_one_scaling_variable = f"emissions|{ghg}"
+                        extract_from = complete_scenario_files_markers
 
-                lat_gradient_file_future = submit_output_aware(
-                    scale_lat_gradient_eofs,
-                    ghg=ghg,
-                    annual_mean_emissions_file=eof_zero_scaling_emissions_file,
-                    harmonisation_year=harmonisation_year,
-                    historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-                    historical_data_seasonality_lat_gradient_info_root=(
-                        cmip7_historical_seasonality_lat_gradient_info_extracted
-                    ),
-                    out_file=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info.nc",
-                    raw_notebooks_root_dir=raw_notebooks_root_dir,
-                    executed_notebooks_dir=executed_notebooks_dir,
-                )
+                    elif ghg in ["co2", "ch4"]:
+                        # Fossil emissions for co2 and ch4
+                        extract_from = (
+                            submit_output_aware(
+                                extract_fossil_biosphere_timeseries,
+                                (fossil_bio_split_file,),
+                                scenario_infos=scenario_info_markers,
+                                out_file=fossil_bio_split_interim_dir / "fossil-bio-split-markers.feather",
+                            ),
+                        )
+                        eof_one_scaling_variable = f"emissions|{ghg}|fossil"
 
-            else:
-                ghg_annual_mean_emissions_file = submit_output_aware(
-                    extract_specific_variable_from_collection,
-                    extract_from=complete_scenario_files_markers,
-                    scenario_infos=scenario_info_markers,
-                    # Scale latitudinal gradient using total emissions
-                    variable_lower=f"emissions|{ghg}",
-                    out_file=single_variable_dir / f"{ghg}_total.feather",
-                )
+                    else:
+                        raise NotImplementedError(ghg)
 
-                lat_gradient_file_future = submit_output_aware(
-                    scale_lat_gradient_based_on_emissions,
-                    ghg=ghg,
-                    annual_mean_emissions_file=ghg_annual_mean_emissions_file,
-                    historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
-                    historical_data_seasonality_lat_gradient_info_root=(
-                        cmip7_historical_seasonality_lat_gradient_info_extracted
-                    ),
-                    out_file=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info.nc",
-                    raw_notebooks_root_dir=raw_notebooks_root_dir,
-                    executed_notebooks_dir=executed_notebooks_dir,
-                )
+                    eof_zero_scaling_emissions_file = submit_output_aware(
+                        extract_specific_variable_from_collection,
+                        extract_from=extract_from,
+                        scenario_infos=scenario_info_markers,
+                        variable_lower=eof_one_scaling_variable,
+                        out_file=single_variable_dir / f"{ghg}_eof-one-scaling.feather",
+                    )
+
+                    lat_gradient_file_future = submit_output_aware(
+                        scale_lat_gradient_eofs,
+                        ghg=ghg,
+                        annual_mean_emissions_file=eof_zero_scaling_emissions_file,
+                        harmonisation_year=harmonisation_year,
+                        historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                        historical_data_seasonality_lat_gradient_info_root=(
+                            cmip7_historical_seasonality_lat_gradient_info_extracted
+                        ),
+                        out_file=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info.nc",
+                        raw_notebooks_root_dir=raw_notebooks_root_dir,
+                        executed_notebooks_dir=executed_notebooks_dir,
+                    )
+
+                else:
+                    ghg_annual_mean_emissions_file = submit_output_aware(
+                        extract_specific_variable_from_collection,
+                        extract_from=complete_scenario_files_markers,
+                        scenario_infos=scenario_info_markers,
+                        # Scale latitudinal gradient using total emissions
+                        variable_lower=f"emissions|{ghg}",
+                        out_file=single_variable_dir / f"{ghg}_total.feather",
+                    )
+
+                    lat_gradient_file_future = submit_output_aware(
+                        scale_lat_gradient_based_on_emissions,
+                        ghg=ghg,
+                        annual_mean_emissions_file=ghg_annual_mean_emissions_file,
+                        historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                        historical_data_seasonality_lat_gradient_info_root=(
+                            cmip7_historical_seasonality_lat_gradient_info_extracted
+                        ),
+                        out_file=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info.nc",
+                        raw_notebooks_root_dir=raw_notebooks_root_dir,
+                        executed_notebooks_dir=executed_notebooks_dir,
+                    )
 
             esgf_ready_files_future = {}
             for si in scenario_info_markers:

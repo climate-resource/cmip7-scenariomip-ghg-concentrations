@@ -632,6 +632,7 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
     for source_id_l, time_ranges_l in source_id_time_ranges:
         metadata_minimum_common = dict(
             source_id=source_id_l,
+            # TODO: make this injectable
             target_mip="ScenarioMIP",
         )
         if source_id_l not in cvs.source_id_entries.source_ids:

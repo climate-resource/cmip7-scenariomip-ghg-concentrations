@@ -50,6 +50,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks.single_concentration_project
 from cmip7_scenariomip_ghg_generation.prefect_tasks.split_input_emissions import (
     split_input_emissions_into_individual_files_and_check_harmonisation,
 )
+from cmip7_scenariomip_ghg_generation.prefect_tasks.vl_cf_hacks import make_vl_cf_inputs_that_match_historical_and_vl
 from cmip7_scenariomip_ghg_generation.prefect_tasks.western_et_al_2024 import (
     clean_western_et_al_2024_data,
     extend_western_et_al_2024,
@@ -81,6 +82,7 @@ __all__ = [
     "get_western_et_al_2024_clean",
     "interpolate_annual_mean_to_monthly",
     "make_complete_scenario",
+    "make_vl_cf_inputs_that_match_historical_and_vl",
     "plot_marker_overview",
     "run_magicc",
     "save_references_info_to_db",
