@@ -36,6 +36,7 @@ from gradient_aware_harmonisation.add_cubic import (
     harmonise_splines_add_cubic,
 )
 from gradient_aware_harmonisation.spline import SplineScipy
+from IPython.display import display
 
 from cmip7_scenariomip_ghg_generation.constants import GHG_LIFETIMES
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
@@ -138,6 +139,7 @@ for si in tqdm.auto.tqdm(scenario_info_markers_p):
                 model=si.model,
                 scenario=si.scenario,
                 climate_model="MAGICCv7.6.0a3",
+                run_mode="magicc-concentration-to-emissions-switch",
             )
             & pix.isin(variable=variable_magicc),
             # progress=True,
@@ -207,7 +209,8 @@ def to_timeseries(
     Convert DataFrame to Timeseries
     """
     if indf.shape[0] != 1:
-        raise AssertionError
+        display(indf)
+        raise AssertionError(indf.shape)
 
     time_axis = Q(indf.columns.values, time_units)
 
