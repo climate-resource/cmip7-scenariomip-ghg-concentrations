@@ -5,7 +5,6 @@ Generate the concentration files
 from pathlib import Path
 from typing import Annotated
 
-import click
 import typer
 from attrs import evolve
 from dotenv import load_dotenv
@@ -80,19 +79,16 @@ def main(  # noqa: PLR0912, PLR0913, PLR0915
         / "input-scenarios"
         / "202511281156_202511040855_202511040855_202511040855_complete-emissions.csv"
     ),
-    scenarios_to_run: Annotated[
-        str,
+    scenario: Annotated[
+        list[str] | None,
         typer.Option(
-            click_type=click.Choice(["all", "markers", "custom"]),
-            help="""Scenarios to run
+            help="""Scenario to run
 
-Options:
+Uses the CMIP7 ScenarioMIP names (e.g. vl, l).
 
-- all: run all scenarios
-- markers: run only the markers
-- custom: run whatever custom selection is in the script""",
+If not supplied, runs all scenarios in the input file.""",
         ),
-    ] = "markers",
+    ] = None,
     harmonisation_year: Annotated[
         int, typer.Option(help="Year in which the scenarios are harmonised to history")
     ] = 2023,
@@ -189,6 +185,9 @@ Be careful and don't crash your computer."""
     load_dotenv()
 
     ghgs = tuple(ghg)
+    if scenario is not None:
+        scenarios_to_run = tuple(scenario)
+
     magicc_versions_to_run = tuple(magicc_version_to_run)
 
     # Lots of things here that can't be passed from the CLI.
@@ -204,6 +203,7 @@ Be careful and don't crash your computer."""
         # (model, scenario, cmip7 experiment name)
         # Decision re naming: https://github.com/WCRP-CMIP/CMIP7-CVs/discussions/1#discussioncomment-14585785
         ("REMIND-MAgPIE 3.5-4.11", "SSP1 - Very Low Emissions", "vl"),
+        ("REMIND-MAgPIE 3.5-4.11", "VL-cf", "vl-cf"),
         ("AIM 3.0", "SSP2 - Low Overshoot_a", "ln"),
         ("MESSAGEix-GLOBIOM-GAINS 2.1-M-R12", "SSP2 - Low Emissions", "l"),
         ("COFFEE 1.6", "SSP2 - Medium-Low Emissions", "ml"),
@@ -358,44 +358,42 @@ Be careful and don't crash your computer."""
         )
         for model, scenario in all_model_scenarios.reorder_levels(["model", "scenario"])
     ]
-    for model, scenario, cmip_scenario_name in markers:
+    included_markers = []
+    for model, scen, cmip_scenario_name in markers:
         for i, si in enumerate(scenario_infos_l):
-            if si.model == model and si.scenario == scenario:
+            if si.model == model and si.scenario == scen:
                 break
 
         else:
-            msg = f"{model=} {scenario=} not found in input model-scenario options"
-            raise AssertionError(msg)
+            if scenario is None:
+                msg = f"{model=} {scen=} not found in input model-scenario options"
+                raise AssertionError(msg)
 
         scenario_infos_l[i] = evolve(si, cmip_scenario_name=cmip_scenario_name)
 
     # Double check
-    for model, scenario, cmip_scenario_name in markers:
+    for model, scen, cmip_scenario_name in markers:
+        if scenario is not None and cmip_scenario_name not in included_markers:
+            # User specified scenarios to run, don't check others
+            continue
+
         for i, si in enumerate(scenario_infos_l):
-            if si.model == model and si.scenario == scenario:
+            if si.model == model and si.scenario == scen:
                 if si.cmip_scenario_name != cmip_scenario_name:
-                    msg = f"{model=} {scenario=} should have {cmip_scenario_name=} but it has {si.cmip_scenario_name=}"
+                    msg = f"{model=} {scen=} should have {cmip_scenario_name=} but it has {si.cmip_scenario_name=}"
                     raise AssertionError(msg)
 
                 break
 
         else:
-            msg = f"{model=} {scenario=} marker not set correctly"
+            msg = f"{model=} {scen=} marker not set correctly"
             raise AssertionError(msg)
 
-    if scenarios_to_run == "all":
+    if scenarios_to_run is None:
         scenario_infos = tuple(scenario_infos_l)
 
-    elif scenarios_to_run == "markers":
-        scenario_infos = tuple(v for v in scenario_infos_l if v.cmip_scenario_name is not None)
-
-    elif scenarios_to_run == "custom":
-        scenario_infos = tuple(
-            v
-            for v in scenario_infos_l
-            if (v.cmip_scenario_name in ["vl", "l"])
-            or (v.model == "WITCH 6.0" and v.scenario == "SSP1 - Very Low Emissions")
-        )
+    else:
+        scenario_infos = tuple(v for v in scenario_infos_l if (v.cmip_scenario_name in scenarios_to_run))
 
     create_scenariomip_ghgs(
         ghgs=ghgs,
