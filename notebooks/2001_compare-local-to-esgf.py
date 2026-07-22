@@ -32,7 +32,7 @@ import xarray as xr
 # Double check these values before running
 output_bundle = "1.1.0"
 local_out_root = Path(f"../output-bundles/{output_bundle}/data/processed/esgf-ready/")
-compare_to_esgf_version = "1.0.0"
+compare_to_esgf_version = "1.1.0"
 
 
 # %%
@@ -71,8 +71,13 @@ def get_esgf_url(local_fp: Path) -> str:
         msg = f"No ESGF results for {local_fp}. {params=} {r_json=}"
         raise AssertionError(msg)
 
-    if r_json["response"]["numFound"] != 1:
-        print(f"Be careful, didn't find only one response for {local_fp}")
+    if r_json["response"]["numFound"] > 1:
+        id_match = ".".join(local_fp.parts[-11:])
+        matching = [v for v in r_json["response"]["docs"] if v["id"].split("|")[0] == id_match]
+        if len(matching) != 1:
+            raise AssertionError
+
+        r_json["response"]["docs"] = matching
 
     record = r_json["response"]["docs"][0]
     urls = record["url"]
@@ -109,10 +114,6 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     if not any(sid in str(fp) for sid in ("-h-",)):
         continue
 
-    if "ext" in str(fp):
-        # print(f"Not checking {fp.name} yet as the extensions haven't been upload to ESGF")
-        continue
-
     # if not any (ghg in str(fp) for ghg in ("hfc32",)):
     #     continue
 
@@ -135,8 +136,8 @@ for fp in tqdm.auto.tqdm(to_check):
         esgf_url_checksums[fp.name] = (url, checksum)
 
     esgf_file = pooch.retrieve(url, known_hash=checksum)
-    local = xr.load_dataset(fp)
-    esgf = xr.load_dataset(esgf_file)
+    local = xr.load_dataset(fp, use_cftime=True)
+    esgf = xr.load_dataset(esgf_file, use_cftime=True)
 
     ghg = fp.name.split("_")[0]
 
@@ -197,7 +198,7 @@ for fp in tqdm.auto.tqdm(to_check):
         print(f"{esgf[ghg].values[loc]=}")
         print(f"{local[ghg].time[loc[0]].values=}")
         print()
-        # raise
+        raise
 
     if passed_compare_closer_before and passed_all_time:
         checked.append(fp)
@@ -222,10 +223,6 @@ for fp in tqdm.auto.tqdm(local_out_root.glob("input4MIPs/**/*.nc")):
     if not any(sid in str(fp) for sid in ("-vl-",)):
         continue
 
-    if "ext" in str(fp):
-        # print(f"Not checking {fp.name} yet as the extensions haven't been upload to ESGF")
-        continue
-
     # if not any (ghg in str(fp) for ghg in ("hfc32",)):
     #     continue
 
@@ -248,8 +245,8 @@ for fp in tqdm.auto.tqdm(to_check):
         esgf_url_checksums[fp.name] = (url, checksum)
 
     esgf_file = pooch.retrieve(url, known_hash=checksum)
-    local = xr.load_dataset(fp)
-    esgf = xr.load_dataset(esgf_file)
+    local = xr.load_dataset(fp, use_cftime=True)
+    esgf = xr.load_dataset(esgf_file, use_cftime=True)
 
     ghg = fp.name.split("_")[0]
 
@@ -298,3 +295,5 @@ print(f"{len(checked)=}")
 # %%
 with open("esgf-url-checksums.json", "w") as fh:
     json.dump(esgf_url_checksums, fh)
+
+# %%

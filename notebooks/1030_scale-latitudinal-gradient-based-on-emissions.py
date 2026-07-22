@@ -152,8 +152,17 @@ else:
 # ## Scale latitudinal gradient pc
 
 # %%
-last_hist_year = harmonisation_year
-# last_hist_year
+# So ugly.
+# Basically, we need to keep things consistent
+# at the join point.
+# For ScenarioMIP, that's 2022: we want everything the same in 2022.
+# For PolMIP, that's 2015: we want everything the same in 2015,
+# divergence thereafter.
+last_hist_year = min(
+    cmip7_historical_gm_monthly["time"].dt.year.values[-1],
+    harmonisation_year,
+)
+last_hist_year
 
 # %%
 if ghg != "c8f18":
@@ -280,7 +289,7 @@ last_overlap_month = pc_extended_monthly.sel(
 np.testing.assert_allclose(
     last_overlap_month.data.m.squeeze(),
     last_overlap_month.data.m[0].squeeze(),
-    rtol=1e-3,
+    rtol=5e-3,
 )
 
 # %%

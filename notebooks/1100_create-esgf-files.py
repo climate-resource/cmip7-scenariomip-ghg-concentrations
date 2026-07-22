@@ -248,7 +248,7 @@ if unphysical_years_latitudinal_gradient.size:
 # %%
 checker = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
 # Cut to intended time axis and check
-checker = checker.sel(year=lat_grad_ym["year"] >= esgf_files_start_year)
+checker = checker.sel(year=checker["year"] >= esgf_files_start_year)
 if checker.min() < 0:
     if ghg not in ["hfc125", "hfc134a", "hfc152a", "hfc245fa", "hfc32", "hfc4310mee", "hfc365mfc", "so2f2"]:
         # I haven't thought this through for other gases

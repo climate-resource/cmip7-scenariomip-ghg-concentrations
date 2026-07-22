@@ -189,8 +189,17 @@ ax.legend()
 # ### PC0
 
 # %%
-last_hist_year = annual_mean_emissions_emms_units_historical.columns.max()
-# last_hist_year
+# So ugly.
+# Basically, we need to keep things consistent
+# at the join point.
+# For ScenarioMIP, that's 2022: we want everything the same in 2022.
+# For PolMIP, that's 2015: we want everything the same in 2015,
+# divergence thereafter.
+last_hist_year = min(
+    cmip7_historical_gm_monthly["time"].dt.year.values[-1],
+    harmonisation_year,
+)
+last_hist_year
 
 # %%
 delta_E = (

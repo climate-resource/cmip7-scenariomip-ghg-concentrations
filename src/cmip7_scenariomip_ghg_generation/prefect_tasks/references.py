@@ -121,7 +121,7 @@ def save_reference_info_to_db(
                 raise NotImplementedError
 
             else:
-                msg = "Entry is already in the database, but with a different value. " f"{dict(existing[0])=}. {ri=}"
+                msg = f"Entry is already in the database, but with a different value. {dict(existing[0])=}. {ri=}"
                 raise ValueError(msg)
 
     db_connection.close()
