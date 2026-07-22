@@ -16,6 +16,7 @@ from cmip7_scenariomip_ghg_generation.prefect_tasks import (
     create_single_concentration_projection_annual_mean_file,
     download_cmip7_historical_ghg_concentrations,
     interpolate_annual_mean_to_monthly,
+    make_vl_cf_inputs_that_match_historical_and_vl,
     scale_lat_gradient_based_on_emissions,
     scale_seasonality_based_on_annual_mean,
 )
@@ -40,6 +41,7 @@ class SingleConcentrationProjectionResult:
 
 def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     ghgs: tuple[str, ...],
+    harmonisation_year: int,
     scenario_infos: tuple[ScenarioInfo, ...],
     cleaned_data_path: Path,
     cmip7_historical_ghg_concentration_source_id: str,
@@ -63,6 +65,8 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     raw_notebooks_root_dir: Path,
     executed_notebooks_dir: Path,
     pool_multiprocessing: multiprocessing.pool.Pool | None,
+    # Urgh
+    vl_cf_name: str,
 ) -> dict[str, SingleConcentrationProjectionResult]:
     """
     Create the ScenarioMIP GHG concentrations for GHGs based on WMO 2022
@@ -71,6 +75,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
     ----------
     ghgs
         Greenhouse gases for which to create output files
+
+    harmonisation_year
+        Year in which data should be harmonised to history
 
     cleaned_data_path
         Path in which the cleaned data is saved
@@ -141,6 +148,9 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         Parallel pool to use for multiprocessing
 
         If `None`, no parallel processing will be used
+
+    vl_cf_name
+        Hack way to identify if we're doing a `vl-cf` run
 
     Returns
     -------
@@ -229,6 +239,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         ghg: submit_output_aware(
             scale_lat_gradient_based_on_emissions,
             ghg=ghg,
+            harmonisation_year=harmonisation_year,
             annual_mean_emissions_file=inverse_emmissions_file,
             historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
             historical_data_seasonality_lat_gradient_info_root=(
@@ -241,6 +252,40 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
         for ghg, inverse_emmissions_file in inverse_emissions_file_futures.items()
         if ghg != "halon1202"
     }
+
+    if any(si.cmip_scenario_name == vl_cf_name for si in scenario_infos):
+        if len(scenario_infos) != 1:
+            msg = "Haven't figured out how to produce vl-cf at the same time as other scenarios yet"
+            raise NotImplementedError(msg)
+
+        for ghg in inverse_emissions_file_futures:
+            if ghg == "halon1202":
+                continue
+
+            global_mean_monthly_file_futures[ghg], seasonality_file_futures[ghg], lat_gradient_file_futures[ghg] = (
+                submit_output_aware(
+                    make_vl_cf_inputs_that_match_historical_and_vl,
+                    ghg=ghg,
+                    internal_processing_scenario_name="all",
+                    esgf_files_start_year=esgf_files_start_year,
+                    monthly_mean_dir=monthly_mean_dir,
+                    seasonality_dir=seasonality_dir,
+                    lat_gradient_dir=lat_gradient_dir,
+                    historical_data_seasonality_lat_gradient_info_root=(
+                        cmip7_historical_seasonality_lat_gradient_info_extracted
+                    ),
+                    wmo_2022_clean_file=wmo_2022_clean_file,
+                    out_file_global_mean_monthly=monthly_mean_dir
+                    / f"modelling-based-projection_{ghg}_monthly-mean_vl-cf-hack.nc",
+                    out_file_seasonality=seasonality_dir
+                    / f"modelling-based-projection_{ghg}_seasonality-all-time_vl-cf-hack.nc",
+                    out_file_lat_gradient=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info_vl-cf-hack.nc",
+                    raw_notebooks_root_dir=raw_notebooks_root_dir,
+                    executed_notebooks_dir=executed_notebooks_dir,
+                    # Don't know how to make this work within prefect's framework,
+                    # hence calling.result here
+                ).result()
+            )
 
     esgf_ready_futures = {
         ghg: submit_output_aware(
@@ -267,6 +312,7 @@ def create_scenariomip_ghgs_single_concentration_projection(  # noqa: PLR0913
             pool=pool_multiprocessing,
         )
         for ghg, si in itertools.product(global_mean_monthly_file_futures, scenario_infos)
+        # TODO: sort out whether we should include halon1202 in a future dataset
         if ghg != "halon1202"
     }
 

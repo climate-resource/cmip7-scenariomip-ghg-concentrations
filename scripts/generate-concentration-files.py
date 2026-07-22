@@ -363,14 +363,13 @@ Be careful and don't crash your computer."""
     for model, scen, cmip_scenario_name in markers:
         for i, si in enumerate(scenario_infos_l):
             if si.model == model and si.scenario == scen:
+                scenario_infos_l[i] = evolve(si, cmip_scenario_name=cmip_scenario_name)
                 break
 
         else:
             if scenario is None:
                 msg = f"{model=} {scen=} not found in input model-scenario options"
                 raise AssertionError(msg)
-
-        scenario_infos_l[i] = evolve(si, cmip_scenario_name=cmip_scenario_name)
 
     # Double check
     for model, scen, cmip_scenario_name in markers:
@@ -395,6 +394,9 @@ Be careful and don't crash your computer."""
 
     else:
         scenario_infos = tuple(v for v in scenario_infos_l if (v.cmip_scenario_name in scenarios_to_run))
+
+    if not scenario_infos:
+        raise AssertionError
 
     create_scenariomip_ghgs(
         ghgs=ghgs,

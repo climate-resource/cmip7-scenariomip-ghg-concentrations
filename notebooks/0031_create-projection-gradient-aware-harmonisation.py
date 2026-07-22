@@ -46,14 +46,16 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "ch4"
+harmonisation_year: int = 2015
 scenario_info_markers: str = (
-    "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
-    "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vl;;"
-    "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
-    "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
-    "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
-    "AIM 3.0;SSP2 - Low Overshoot;ln;;"
-    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
+    # "WITCH 6.0;SSP5 - Medium-Low Emissions_a;hl;;"
+    # "REMIND-MAgPIE 3.5-4.10;SSP1 - Very Low Emissions;vl;;"
+    # "MESSAGEix-GLOBIOM-GAINS 2.1-M-R12;SSP2 - Low Emissions;l;;"
+    # "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
+    # "GCAM 7.1 scenarioMIP;SSP3 - High Emissions;h;;"
+    # "AIM 3.0;SSP2 - Low Overshoot;ln;;"
+    # "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
+    "REMIND-MAgPIE 3.5-4.11;VL-cf;vl-cf"
 )
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
@@ -276,7 +278,7 @@ convergence_time_delta["n2o"] = 75
 convergence_time_delta
 
 # %%
-harmonisation_time = historical_concs_ts.time_axis.bounds.max().m
+harmonisation_time = harmonisation_year
 convergence_time = harmonisation_time + convergence_time_delta[ghg]
 
 out_years = np.arange(harmonisation_time, magiccc_output_pdf_median.columns.max() + 1)
@@ -311,7 +313,7 @@ harmonised = pix.concat(harmonised_l)
 # ## Plot
 
 # %%
-fig, axes = plt.subplot_mosaic([["vl", "ln", "l"], ["ml", "m", "."], ["hl", "h", "."]], figsize=(20, 20))
+fig, axes = plt.subplot_mosaic([["vl", "ln", "l"], ["vl-cf", "ml", "m"], ["hl", "h", "."]], figsize=(20, 20))
 for scenario, ax in axes.items():
     pdf = pix.concat(
         [

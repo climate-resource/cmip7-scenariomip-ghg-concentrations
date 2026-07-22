@@ -22,6 +22,9 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 @task_standard_path_cache(
     task_run_name="extract-fossil-biosphere-timeseries",
     parameters_output=("out_file",),
+    # Urgh, caching is killing me.
+    # For some reason this hits the cache, even though the input file changes.
+    # refresh_cache=True,
 )
 def extract_fossil_biosphere_timeseries(
     extract_from: tuple[Path, ...],

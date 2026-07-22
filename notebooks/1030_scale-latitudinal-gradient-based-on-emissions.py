@@ -47,6 +47,7 @@ from cmip7_scenariomip_ghg_generation.mean_preserving_interpolation.lai_kaplan i
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
 ghg: str = "c8f18"
 annual_mean_emissions_file: str = "../output-bundles/dev-test/data/interim/single-variable-files/c8f18_total.feather"
+harmonisation_year: int = 2015
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
@@ -151,7 +152,7 @@ else:
 # ## Scale latitudinal gradient pc
 
 # %%
-last_hist_year = cmip7_historical_gm_monthly["time"].dt.year.values[-1]
+last_hist_year = harmonisation_year
 # last_hist_year
 
 # %%

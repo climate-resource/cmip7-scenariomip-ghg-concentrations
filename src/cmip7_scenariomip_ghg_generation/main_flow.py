@@ -407,6 +407,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 msg = f"To generate {eg}, you need multiple components. Missing: {missing_gases}. CLI args: {cli_args}"
                 raise AssertionError(msg)
 
+    # Hack
+    vl_cf_name = "vl-cf"
+
     ### Get the markers
     scenario_info_markers = tuple(v for v in scenario_infos if v.cmip_scenario_name is not None)
 
@@ -416,6 +419,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
     create_single_concentration_projection = partial(
         create_scenariomip_ghgs_single_concentration_projection,
+        harmonisation_year=harmonisation_year,
         scenario_infos=scenario_info_markers,
         cmip7_historical_ghg_concentration_source_id=cmip7_historical_ghg_concentration_source_id,
         cmip7_historical_ghg_concentration_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
@@ -436,6 +440,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
         doi=doi,
         reference_db=reference_db,
         pool_multiprocessing=pool_multiprocessing,
+        vl_cf_name=vl_cf_name,
     )
 
     wmo_2022_futures = {}
@@ -584,6 +589,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
             if si.cmip_scenario_name is not None and magicc_version == "MAGICCv7.6.0a3"
         )
         magicc_based_futures_d = defaultdict(list)
+        # breakpoint()
         for ghg in magicc_based_ghgs:
             references_short_names_modelling_based_ghg = [
                 NICHOLLS_ET_AL_HISTORICAL,
@@ -596,8 +602,6 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
             # # TODO: get rid of vl-cf hard-coding
             # # This will be super flaky. It only works if you have already done a run with vl in advance.
-            # breakpoint()
-            vl_cf_name = "vl-cf"
             if (
                 any(si.cmip_scenario_name == vl_cf_name for si in scenario_infos)
                 and magicc_based_ghgs_projection_method[ghg] != "gradient-aware-harmonisation"
@@ -613,12 +617,23 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                         ghg=ghg,
                         internal_processing_scenario_name=vl_cf_name,
                         esgf_files_start_year=esgf_files_start_year,
+                        monthly_mean_dir=monthly_mean_dir,
+                        seasonality_dir=seasonality_dir,
+                        lat_gradient_dir=lat_gradient_dir,
+                        historical_data_seasonality_lat_gradient_info_root=(
+                            cmip7_historical_seasonality_lat_gradient_info_extracted
+                        ),
+                        wmo_2022_clean_file=None,
                         out_file_global_mean_monthly=monthly_mean_dir
                         / f"modelling-based-projection_{ghg}_monthly-mean_vl-cf-hack.nc",
                         out_file_seasonality=seasonality_dir
                         / f"modelling-based-projection_{ghg}_seasonality-all-time_vl-cf-hack.nc",
                         out_file_lat_gradient=lat_gradient_dir / f"{ghg}_latitudinal-gradient-info_vl-cf-hack.nc",
-                    )
+                        raw_notebooks_root_dir=raw_notebooks_root_dir,
+                        executed_notebooks_dir=executed_notebooks_dir,
+                        # Don't know how to make this work within prefect's framework,
+                        # hence calling.result here
+                    ).result()
                 )
 
             else:
@@ -637,6 +652,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
                         global_mean_yearly_file_future = submit_output_aware(
                             create_gradient_aware_harmonisation_annual_mean_file,
+                            harmonisation_year=harmonisation_year,
                             out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
                             **global_mean_yearly_common_kwargs,
                         )
@@ -664,6 +680,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     if magicc_based_ghgs_projection_method[ghg] == "gradient-aware-harmonisation":
                         global_mean_yearly_file_future = submit_output_aware(
                             create_gradient_aware_harmonisation_annual_mean_file,
+                            harmonisation_year=harmonisation_year,
                             out_file=annual_mean_dir / f"gradient-aware-harmonisation_{ghg}_annual-mean.feather",
                             **global_mean_yearly_common_kwargs,
                         )
@@ -784,6 +801,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     lat_gradient_file_future = submit_output_aware(
                         scale_lat_gradient_based_on_emissions,
                         ghg=ghg,
+                        harmonisation_year=harmonisation_year,
                         annual_mean_emissions_file=ghg_annual_mean_emissions_file,
                         historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
                         historical_data_seasonality_lat_gradient_info_root=(

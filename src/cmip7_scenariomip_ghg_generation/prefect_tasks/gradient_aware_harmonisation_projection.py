@@ -26,12 +26,13 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
         parameters_ignore=None,
         parameters_output=("out_file",),
     ),
-    # Hmm caching with scenario_info_markers doesn't seem to work?
-    # Maybe I just ran in the wrong order/hit a race condition.
+    # # Urgh, caching is killing me.
+    # # For some reason this hits the cache, even though the input file changes.
     # refresh_cache=True,
 )
 def create_gradient_aware_harmonisation_annual_mean_file(  # noqa: PLR0913
     ghg: str,
+    harmonisation_year: int,
     scenario_info_markers: tuple[ScenarioInfo, ...],
     historical_data_root_dir: Path,
     magicc_output_db_dir: Path,
@@ -49,6 +50,9 @@ def create_gradient_aware_harmonisation_annual_mean_file(  # noqa: PLR0913
     ----------
     ghg
         Greenhouse gas to create the annual-mean file for
+
+    harmonisation_year
+        Year in which scenarios are harmonised to history
 
     scenario_info_markers
         Scenario info about the marker scenarios
@@ -95,6 +99,7 @@ def create_gradient_aware_harmonisation_annual_mean_file(  # noqa: PLR0913
         # progress=True,
         parameters={
             "ghg": ghg,
+            "harmonisation_year": harmonisation_year,
             "scenario_info_markers": scenario_info_markers_str,
             "historical_data_root_dir": str(historical_data_root_dir),
             "magicc_output_db_dir": str(magicc_output_db_dir),

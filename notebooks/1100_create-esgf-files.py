@@ -57,36 +57,42 @@ from cmip7_scenariomip_ghg_generation.xarray_helpers import (
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-ghg: str = "so2f2"
-cmip_scenario_name: str = "vl"
-internal_processing_scenario_name: str = "vl"
-esgf_version: str = "1.0.1"
+ghg: str = "hfc365mfc"
+cmip_scenario_name: str = "vl-cf"
+internal_processing_scenario_name: str = "vl-cf"
+esgf_version: str = "1.1.0"
 esgf_institution_id: str = "CR"
-input4mips_cvs_source: str = "gh:ghg-concs-lower-priority"
+input4mips_cvs_source: str = "gh:ghg-vl-cf"
 doi: str = "dev-test-doi"
 global_mean_monthly_file: str = (
-    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_so2f2_monthly-mean.nc"
+    "../output-bundles/dev-test/data/interim/monthly-means/modelling-based-projection_hfc365mfc_monthly-mean.nc"
 )
 seasonality_file: str = (
-    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_so2f2_seasonality-all-time.nc"
+    "../output-bundles/dev-test/data/interim/seasonality/modelling-based-projection_hfc365mfc_seasonality-all-time.nc"
 )
 lat_gradient_file: str = (
-    "../output-bundles/dev-test/data/interim/latitudinal-gradient/so2f2_latitudinal-gradient-info.nc"
+    "../output-bundles/dev-test/data/interim/latitudinal-gradient/hfc365mfc_latitudinal-gradient-info.nc"
 )
-esgf_files_start_year: int = 2022
+esgf_files_start_year: int = 2015
 esgf_ready_root_dir: str = "../output-bundles/dev-test/data/processed/esgf-ready"
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 references_short_names = [
-    "GCAM integrated assessment modelling team, 2026 (in-prep)",
+    "TBD",
     "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
     "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
     "Meinshausen et al., 2020",
+    "Meinshausen et al., 2009",
+    "Meinshausen et al., 2011",
+    "Forster et al, 2021",
 ]
 references_extensions_short_names = [
-    "High scenario for CMIP7 ScenarioMIP based on the GCAM model, 2026 (in-prep)",
+    "TBD",
     "Nicholls et al., historical GHG concentrations, 2026 (in-prep)",
     "Nicholls et al., future GHG concentrations, 2026 (in-prep)",
     "Meinshausen et al., 2020",
+    "Meinshausen et al., 2009",
+    "Meinshausen et al., 2011",
+    "Forster et al, 2021",
     "Sandstad et al., 2026 (in-prep)",
 ]
 reference_db = "../output-bundles/dev-test/data/interim/references.db"
@@ -141,7 +147,7 @@ seasonality = convert_year_month_to_time(seasonality_month_year)
 # %% [markdown]
 # ### Latitudinal gradient info
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 lat_grad_info = ssoi(lds(lat_gradient_file_p).pint.quantify(unit_registry=ur))
 # lat_grad_info
 
@@ -244,7 +250,7 @@ checker = global_mean_monthly_ym + seasonality_ym + lat_grad_ym
 # Cut to intended time axis and check
 checker = checker.sel(year=lat_grad_ym["year"] >= esgf_files_start_year)
 if checker.min() < 0:
-    if ghg not in ["hfc125", "hfc134a", "hfc152a", "hfc245fa", "hfc32", "hfc4310mee", "so2f2"]:
+    if ghg not in ["hfc125", "hfc134a", "hfc152a", "hfc245fa", "hfc32", "hfc4310mee", "hfc365mfc", "so2f2"]:
         # I haven't thought this through for other gases
         raise NotImplementedError
 
@@ -633,7 +639,7 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
         metadata_minimum_common = dict(
             source_id=source_id_l,
             # TODO: make this injectable
-            target_mip="ScenarioMIP",
+            target_mip="ScenarioMIP" if cmip_scenario_name != "vl-cf" else "PolMIP",
         )
         if source_id_l not in cvs.source_id_entries.source_ids:
             raise AssertionError(source_id_l)

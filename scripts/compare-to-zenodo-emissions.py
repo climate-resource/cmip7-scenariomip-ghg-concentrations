@@ -57,7 +57,6 @@ def main():
             raise AssertionError
 
         msdf_new = new.openscm.mi_loc(pd.MultiIndex.from_tuples([(model,)], names=["model"]))
-        # breakpoint()
         # msdf_new.loc[pix.ismatch(variable="**43**")]
         # msdf_zenodo.loc[pix.ismatch(variable="**43**")]
 

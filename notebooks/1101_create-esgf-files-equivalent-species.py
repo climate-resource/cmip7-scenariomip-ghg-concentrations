@@ -441,7 +441,7 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
     for source_id_l, time_ranges_l in source_id_time_ranges:
         metadata_minimum_common = dict(
             source_id=source_id_l,
-            target_mip="ScenarioMIP",
+            target_mip="ScenarioMIP" if cmip_scenario_name != "vl-cf" else "PolMIP",
         )
         if source_id not in cvs.source_id_entries.source_ids:
             raise AssertionError(source_id)

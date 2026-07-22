@@ -100,6 +100,7 @@ def make_vl_cf_inputs_that_match_historical_and_vl(  # noqa: PLR0913
             "out_file_lat_gradient": str(out_file_lat_gradient),
         },
         run_notebooks_dir=executed_notebooks_dir,
-        identity=f"1050_hack-vl-cf-inputs_{ghg}",
+        identity=ghg,
+        # verbose=True,
     )
     return (out_file_global_mean_monthly, out_file_seasonality, out_file_lat_gradient)

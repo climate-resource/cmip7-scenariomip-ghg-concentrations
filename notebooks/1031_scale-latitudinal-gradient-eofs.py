@@ -49,7 +49,7 @@ ghg: str = "ch4"
 annual_mean_emissions_file: str = (
     "../output-bundles/dev-test/data/interim/single-variable-files/ch4_eof-one-scaling.feather"
 )
-harmonisation_year: int = 2023
+harmonisation_year: int = 2015
 historical_data_root_dir: str = "../output-bundles/dev-test/data/raw/historical-ghg-concs"
 historical_data_seasonality_lat_gradient_info_root: str = (
     "../output-bundles/dev-test/data/raw/historical-ghg-data-interim"
@@ -189,7 +189,7 @@ ax.legend()
 # ### PC0
 
 # %%
-last_hist_year = cmip7_historical_gm_monthly["time"].dt.year.values[-1]
+last_hist_year = annual_mean_emissions_emms_units_historical.columns.max()
 # last_hist_year
 
 # %%

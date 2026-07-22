@@ -182,7 +182,10 @@ if ghg != "halon1202":
 if ghg != "halon1202":
     annual_mean_tmp = annual_mean.loc[:, overlap_year + 1 :]
     stitched = pix.concat(
-        [cmip7_historical_gm_annual_df.align(annual_mean_tmp)[0].dropna(axis="columns"), annual_mean_tmp],
+        [
+            cmip7_historical_gm_annual_df.align(annual_mean_tmp)[0].dropna(axis="columns").loc[:, :overlap_year],
+            annual_mean_tmp,
+        ],
         axis="columns",
     )
 
