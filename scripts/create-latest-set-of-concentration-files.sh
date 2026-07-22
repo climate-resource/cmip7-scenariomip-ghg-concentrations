@@ -12,26 +12,26 @@ INPUT4MIPS_CVS_SOURCE="gh:ghg-vl-cf"
 # Use this to refresh the cache for all tasks
 # PREFECT_TASKS_REFRESH_CACHE=true
 
-# echo "============================"
-# echo "Generating ESGF-ready files"
-# echo "============================"
-# pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
-# pixi run python scripts/generate-concentration-files.py \
-#     --run-id "${RUN_ID}" \
-#     --esgf-version 1.1.0 \
-#     --input4mips-cvs-source "${INPUT4MIPS_CVS_SOURCE}" \
-#     --n-workers 2 \
-#     --n-workers-multiprocessing 8 \
-#     --n-workers-multiprocessing-magicc 2 \
-#     --n-workers-per-magicc-notebook 6 \
-#     --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv \
-#     --scenario vl \
-#     --scenario h
-# # --scenario ln \
-# # --scenario l \
-# # --scenario ml \
-# # --scenario m \
-# # --scenario hl \
+echo "============================"
+echo "Generating ESGF-ready files"
+echo "============================"
+pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
+pixi run python scripts/generate-concentration-files.py \
+    --run-id "${RUN_ID}" \
+    --esgf-version 1.1.0 \
+    --input4mips-cvs-source "${INPUT4MIPS_CVS_SOURCE}" \
+    --n-workers 2 \
+    --n-workers-multiprocessing 8 \
+    --n-workers-multiprocessing-magicc 2 \
+    --n-workers-per-magicc-notebook 6 \
+    --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv \
+    --scenario vl \
+    --scenario h
+# --scenario ln \
+# --scenario l \
+# --scenario ml \
+# --scenario m \
+# --scenario hl \
 
 # Developer note: this is a hack.
 # We have to have the vl files
