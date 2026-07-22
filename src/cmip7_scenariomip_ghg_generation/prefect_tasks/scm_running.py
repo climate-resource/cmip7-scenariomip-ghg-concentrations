@@ -27,7 +27,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
         parameters_ignore=None,
         parameters_output=("out_file",),
     ),
-    refresh_cache=True,
+    # refresh_cache=True,
 )
 def run_magicc(  # noqa: PLR0913
     scenario_info: ScenarioInfo,
@@ -98,9 +98,9 @@ def run_magicc(  # noqa: PLR0913
     :
         Written file
     """
-    # TODO: remove this and fix caching so we don't get so many accidental misses
-    if out_file.exists():
-        return out_file
+    # # TODO: remove this and fix caching so we don't get so many accidental misses
+    # if out_file.exists():
+    #     return out_file
     call_maybe_in_subprocess(
         run_notebook,
         maybe_pool=pool,

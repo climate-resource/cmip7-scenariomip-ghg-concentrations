@@ -278,7 +278,19 @@ convergence_time_delta["n2o"] = 75
 convergence_time_delta
 
 # %%
-harmonisation_time = harmonisation_year
+# So ugly.
+# Basically, we need to keep things consistent
+# at the join point.
+# For ScenarioMIP, that's 2022: we want everything the same in 2022.
+# For PolMIP, that's 2015: we want everything the same in 2015,
+# divergence thereafter.
+harmonisation_time = min(
+    historical_concs_ts.time_axis.bounds.max().m,
+    harmonisation_year,
+)
+harmonisation_time
+
+# %%
 convergence_time = harmonisation_time + convergence_time_delta[ghg]
 
 out_years = np.arange(harmonisation_time, magiccc_output_pdf_median.columns.max() + 1)
