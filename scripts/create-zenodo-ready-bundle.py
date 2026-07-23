@@ -23,7 +23,7 @@ from attrs import define
 from dotenv import load_dotenv
 from loguru import logger
 
-# ruff: noqa: D101, D102, D103
+# ruff: noqa: D101, D103
 
 
 def tar_filter(
@@ -449,13 +449,14 @@ def main(  # noqa: PLR0913
     with open(zenodo_bundle_path / zenodo_metadata_file, "w") as fh:
         json.dump(zenodo_metadata_incl_refs, fh, indent=4, sort_keys=True)
 
-    zenodo_bundle_files = create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
-
     draft_deposition_id, version = get_draft_deposition_id_and_version(
-        bundle_path / "data/processed/esgf-ready/input4MIPs"
+        # Urgh hard-coded PolMIP
+        bundle_path / "data/processed/esgf-ready/input4MIPs/CMIP7/PolMIP"
     )
     with open(zenodo_bundle_path / reserved_zenodo_doi_file, "w") as fh:
         fh.write(draft_deposition_id)
+
+    zenodo_bundle_files = create_zenodo_bundle(zenodo_bundle_path=zenodo_bundle_path, original_bundle_path=bundle_path)
 
     write_zenodo_readme(
         out_path=zenodo_bundle_path / "README.md",
