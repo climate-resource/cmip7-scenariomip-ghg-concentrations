@@ -4,6 +4,7 @@ Extract specific scenarios from a collection of timeseries
 
 from __future__ import annotations
 
+import os
 from functools import partial
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
     parameters_output=("out_file",),
     # Urgh, caching is killing me.
     # For some reason this hits the cache, even though the input file changes.
-    # refresh_cache=True,
+    refresh_cache=os.getenv("VL_CACHE_HACK", "false").lower() in ("true", "1"),
 )
 def extract_fossil_biosphere_timeseries(
     extract_from: tuple[Path, ...],

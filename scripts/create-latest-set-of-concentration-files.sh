@@ -61,9 +61,9 @@ fi
 # in order to make the vl-cf files.
 # You could do this by fixing the workflow
 # (and that's what we should do long-term).
-#
-# Annoying that we need this, but I can't get caching to work
-export PREFECT_TASKS_REFRESH_CACHE=true
+
+# Urgh
+export VL_CACHE_HACK=True
 echo "====================================="
 echo "Generating ESGF-ready files for vl-cf"
 echo "====================================="

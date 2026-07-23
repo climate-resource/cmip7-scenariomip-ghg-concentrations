@@ -4,6 +4,7 @@ Scale future latitudinal gradient with emissions
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
@@ -15,7 +16,7 @@ from cmip7_scenariomip_ghg_generation.prefect_helpers import task_standard_path_
     parameters_output=("out_file",),
     # # Urgh, caching is killing me.
     # # For some reason this hits the cache, even though the input file changes.
-    # refresh_cache=True,
+    refresh_cache=os.getenv("VL_CACHE_HACK", "false").lower() in ("true", "1"),
 )
 def scale_lat_gradient_based_on_emissions(  # noqa: PLR0913
     ghg: str,
@@ -85,7 +86,7 @@ def scale_lat_gradient_based_on_emissions(  # noqa: PLR0913
     parameters_output=("out_file",),
     # # Urgh, caching is killing me.
     # # For some reason this hits the cache, even though the input file changes.
-    # refresh_cache=True,
+    refresh_cache=os.getenv("VL_CACHE_HACK", "false").lower() in ("true", "1"),
 )
 def scale_lat_gradient_eofs(  # noqa: PLR0913
     ghg: str,

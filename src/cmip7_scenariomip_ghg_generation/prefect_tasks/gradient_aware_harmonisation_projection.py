@@ -5,6 +5,7 @@ Create gradient-aware harmonisation based annual-mean file
 from __future__ import annotations
 
 import multiprocessing
+import os
 from pathlib import Path
 
 from prefect import task
@@ -28,7 +29,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
     ),
     # # Urgh, caching is killing me.
     # # For some reason this hits the cache, even though the input file changes.
-    # refresh_cache=True,
+    refresh_cache=os.getenv("VL_CACHE_HACK", "false").lower() in ("true", "1"),
 )
 def create_gradient_aware_harmonisation_annual_mean_file(  # noqa: PLR0913
     ghg: str,

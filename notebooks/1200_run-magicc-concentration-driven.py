@@ -535,15 +535,17 @@ res = res.pix.assign(run_mode="concentration-driven")
 # ## Check concentrations were prescribed correctly
 
 # %%
+concentrations_xr_start_year = int(concentrations_xr["time"].dt.year.min())
 for ghg in tqdm.auto.tqdm(concentrations_xr.data_vars):
     ghg_magicc = ghg.replace("hfc4310mee", "hfc4310")
     openscm_runner_variable = convert_magicc7_to_openscm_variables(f"{ghg_magicc}_conc".upper())
 
     np.testing.assert_allclose(
         np.broadcast_to(
-            concentrations_xr[ghg].values, res.loc[pix.isin(variable=openscm_runner_variable), 2022:].shape
+            concentrations_xr[ghg].values,
+            res.loc[pix.isin(variable=openscm_runner_variable), concentrations_xr_start_year:].shape,
         ),
-        res.loc[pix.isin(variable=openscm_runner_variable), 2022:].values,
+        res.loc[pix.isin(variable=openscm_runner_variable), concentrations_xr_start_year:].values,
         rtol=1e-4,
     )
 

@@ -23,6 +23,7 @@ import json
 import re
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pooch
 import requests
@@ -111,12 +112,11 @@ except FileNotFoundError:
 
 # %%
 local_vl_cf_fps = list(local_out_root.glob("input4MIPs/**/*CR-vl-cf*.nc"))
-local_vl_cf_fps = list(local_out_root.glob("input4MIPs/**/*CR-vl*.nc"))
 # local_vl_cf_fps
 
 # %%
 gases = set(v.parts[-4] for v in local_vl_cf_fps)
-assert len(gases) == 46
+assert len(gases) == 46, len(gases)
 
 # %%
 grids = set(v.parts[-3] for v in local_vl_cf_fps)
@@ -129,15 +129,160 @@ assert len(frequencies) == 2, frequencies
 frequencies
 
 # %%
-for gas in gases:
-    for grid, frequency, plot in (
-        ("gm", "yr", True),
-        # ("gm", "mon", True),
-        # ("gnz", "mon", True),
-        # ("gr1z", "yr", True),
-        # ("gr1z", "mon", True),
+for gas in tqdm.auto.tqdm(sorted(gases), desc="Gases"):
+    for grid, frequency, plot in tqdm.auto.tqdm(
+        (
+            ("gm", "yr", True),
+            # ("gm", "mon", True),
+            # ("gnz", "mon", False),
+            # ("gr1z", "yr", False),
+            # ("gr1z", "mon", False),
+        ),
+        desc="grids and frequencies",
+        leave=False,
     ):
-        break
+        local_vl_cf_fps_gas = [
+            v for v in local_vl_cf_fps if v.parts[-4] == gas and v.parts[-3] == grid and v.parts[-5] == frequency
+        ]
+
+        local_vl_cf_ds = (
+            xr.open_mfdataset([v for v in local_vl_cf_fps_gas if "ext" not in v.name], use_cftime=True)
+            .assign_coords({"scenario": "vl-cf"})
+            .expand_dims("scenario")
+        )
+        local_vl_cf_ext_ds = (
+            xr.open_mfdataset([v for v in local_vl_cf_fps_gas if "ext" in v.name], use_cftime=True)
+            .assign_coords({"scenario": "vl-cf-ext"})
+            .expand_dims("scenario")
+        )
+        # break
+        esgf_files_gas = []
+        for fp in tqdm.auto.tqdm(local_vl_cf_fps_gas):
+            fp_to_get = Path(
+                "/".join(
+                    v.replace("vl-cf", "vl")
+                    .replace("PolMIP", "ScenarioMIP")
+                    .replace("2016-2100", "1750-2022")
+                    .replace("201601-210012", "175001-202212")
+                    for v in fp.parts
+                )
+            )
+            if fp_to_get.name in esgf_url_checksums:
+                url, checksum = esgf_url_checksums[fp_to_get.name]
+            else:
+                url, checksum = get_esgf_url(fp_to_get)
+                esgf_url_checksums[fp_to_get.name] = (url, checksum)
+
+            esgf_file_vl = pooch.retrieve(url, known_hash=checksum)
+            esgf_files_gas.append(esgf_file_vl)
+            if "ext" not in fp.name:
+                history_fp = Path(
+                    "/".join(
+                        v.replace("PolMIP", "CMIP")
+                        .replace("2016-2100", "1750-2022")
+                        .replace("201601-210012", "175001-202212")
+                        .replace(fp.parts[-7], compare_to_esgf_version_history_source_id)
+                        for v in fp.parts
+                    )
+                )
+                if history_fp.name in esgf_url_checksums:
+                    url, checksum = esgf_url_checksums[history_fp.name]
+                else:
+                    url, checksum = get_esgf_url(history_fp)
+                    esgf_url_checksums[history_fp.name] = (url, checksum)
+
+                esgf_file_history = pooch.retrieve(url, known_hash=checksum)
+                esgf_files_gas.append(esgf_file_history)
+
+        esgf_files_gas = [Path(v) for v in esgf_files_gas]
+
+        local_history_ds = (
+            xr.open_mfdataset(
+                [v for v in esgf_files_gas if "ext" not in v.name and "vl" not in v.name], use_cftime=True
+            )
+            .assign_coords({"scenario": "hist-vl"})
+            .expand_dims("scenario")
+        )
+        local_vl_ds = (
+            xr.open_mfdataset([v for v in esgf_files_gas if "ext" not in v.name and "vl" in v.name], use_cftime=True)
+            .assign_coords({"scenario": "hist-vl"})
+            .expand_dims("scenario")
+        )
+        local_historical_vl_ds = xr.concat(
+            [local_history_ds, local_vl_ds.sel(time=local_vl_ds["time"].dt.year > 2022)], dim="time"
+        )
+        local_vl_ext_ds = (
+            xr.open_mfdataset([v for v in esgf_files_gas if "ext" in v.name], use_cftime=True)
+            .assign_coords({"scenario": "vl-ext"})
+            .expand_dims("scenario")
+        )
+        # local_vl_ext_ds
+        if plot:
+            plot_dss = [
+                local_vl_cf_ds,
+                local_vl_cf_ext_ds,
+                local_historical_vl_ds,
+                local_vl_ext_ds,
+            ]
+
+            fig, axes = plt.subplots(ncols=3, figsize=(12, 4))
+            markers = ["+", "x", "o", "^"]
+
+            for ax, xlim in zip(axes, ((2000, 2500), (2010, 2030), (2090, 2110))):
+                for i, plot_ds in enumerate(plot_dss):
+                    if frequency == "yr":
+                        time_axis = plot_ds["time"].dt.year.values.squeeze()
+
+                    elif frequency == "mon":
+                        time_axis = (plot_ds["time"].dt.year + (plot_ds["time"].dt.month + 1) / 24).values.squeeze()
+
+                    else:
+                        raise NotImplementedError(frequency)
+
+                    ax.plot(
+                        time_axis,
+                        plot_ds[gas].values.squeeze(),
+                        label=str(plot_ds["scenario"].values[0]),
+                        alpha=0.7,
+                        linewidth=3,
+                        marker=markers[i],
+                        markersize=8,
+                    )
+                    # plot_ds[gas].plot.line(x="time", hue="scenario")
+                    # break
+
+                ax.legend()
+                ax.grid()
+
+                if frequency in ("yr", "mon"):
+                    ax.set_xlim(xlim)
+
+                else:
+                    raise NotImplementedError(frequency)
+
+            plt.suptitle(f"{gas} {frequency} {grid}")
+            plt.tight_layout()
+            plt.show()
+
+        if gas not in {"co2"}:
+            vl_cf_min_year = local_vl_cf_ds["time"].dt.year.min()
+            np.testing.assert_allclose(
+                local_vl_cf_ds[gas].values,
+                local_historical_vl_ds[gas].sel(time=local_historical_vl_ds["time"].dt.year >= vl_cf_min_year).values,
+                rtol=1e-4,
+            )
+            np.testing.assert_allclose(
+                local_vl_cf_ext_ds[gas].values,
+                local_vl_ext_ds[gas].values,
+                rtol=1e-4,
+            )
+
+# %%
+with open("esgf-url-checksums.json", "w") as fh:
+    json.dump(esgf_url_checksums, fh)
+
+# %%
+assert False, "Sandbox below"
 
 # %%
 local_vl_cf_fps_gas = [
@@ -153,14 +298,22 @@ local_vl_cf_ds = (
 )
 local_vl_cf_ext_ds = (
     xr.open_mfdataset([v for v in local_vl_cf_fps_gas if "ext" in v.name], use_cftime=True)
-    .assign_coords({"scenario": "vl-cf"})
+    .assign_coords({"scenario": "vl-cf-ext"})
     .expand_dims("scenario")
 )
 
 # %%
 esgf_files_gas = []
 for fp in tqdm.auto.tqdm(local_vl_cf_fps_gas):
-    fp_to_get = Path("/".join(v.replace("vl-cf", "vl") for v in fp.parts))
+    fp_to_get = Path(
+        "/".join(
+            v.replace("vl-cf", "vl")
+            .replace("PolMIP", "ScenarioMIP")
+            .replace("2016-2100", "1750-2022")
+            .replace("201601-210012", "175001-202212")
+            for v in fp.parts
+        )
+    )
     if fp_to_get.name in esgf_url_checksums:
         url, checksum = esgf_url_checksums[fp_to_get.name]
     else:
@@ -172,9 +325,9 @@ for fp in tqdm.auto.tqdm(local_vl_cf_fps_gas):
     if "ext" not in fp.name:
         history_fp = Path(
             "/".join(
-                v.replace("ScenarioMIP", "CMIP")
-                .replace("2022-2100", "1750-2022")
-                .replace("202201-210012", "175001-202212")
+                v.replace("PolMIP", "CMIP")
+                .replace("2016-2100", "1750-2022")
+                .replace("201601-210012", "175001-202212")
                 .replace(fp.parts[-7], compare_to_esgf_version_history_source_id)
                 for v in fp.parts
             )
@@ -190,8 +343,94 @@ for fp in tqdm.auto.tqdm(local_vl_cf_fps_gas):
         esgf_file_history = pooch.retrieve(url, known_hash=checksum)
         esgf_files_gas.append(esgf_file_history)
 
+esgf_files_gas = [Path(v) for v in esgf_files_gas]
+
+local_history_ds = (
+    xr.open_mfdataset([v for v in esgf_files_gas if "ext" not in v.name and "vl" not in v.name], use_cftime=True)
+    .assign_coords({"scenario": "hist-vl"})
+    .expand_dims("scenario")
+)
+local_vl_ds = (
+    xr.open_mfdataset([v for v in esgf_files_gas if "ext" not in v.name and "vl" in v.name], use_cftime=True)
+    .assign_coords({"scenario": "hist-vl"})
+    .expand_dims("scenario")
+)
+local_historical_vl_ds = xr.concat(
+    [local_history_ds, local_vl_ds.sel(time=local_vl_ds["time"].dt.year > 2022)], dim="time"
+)
+local_vl_ext_ds = (
+    xr.open_mfdataset([v for v in esgf_files_gas if "ext" in v.name], use_cftime=True)
+    .assign_coords({"scenario": "vl-ext"})
+    .expand_dims("scenario")
+)
+# local_vl_ext_ds
+
 # %%
-esgf_files_gas
+if plot:
+    plot_dss = [
+        local_vl_cf_ds,
+        local_vl_cf_ext_ds,
+        local_historical_vl_ds,
+        local_vl_ext_ds,
+    ]
+
+    fig, axes = plt.subplots(ncols=3, figsize=(12, 4))
+    markers = ["+", "x", "o", "^"]
+
+    for ax, xlim in zip(axes, ((2000, 2500), (2010, 2030), (2090, 2110))):
+        for i, plot_ds in enumerate(plot_dss):
+            if frequency == "yr":
+                time_axis = plot_ds["time"].dt.year.values.squeeze()
+
+            else:
+                raise NotImplementedError(frequency)
+
+            ax.plot(
+                time_axis,
+                plot_ds[gas].values.squeeze(),
+                label=str(plot_ds["scenario"].values[0]),
+                alpha=0.7,
+                linewidth=3,
+                marker=markers[i],
+                markersize=8,
+            )
+            # plot_ds[gas].plot.line(x="time", hue="scenario")
+            # break
+
+        ax.legend()
+
+        if frequency == "yr":
+            ax.set_xlim(xlim)
+
+        else:
+            raise NotImplementedError(frequency)
+
+    plt.tight_layout()
+    plt.show()
+
+
+vl_cf_min_year = local_vl_cf_ds["time"].dt.year.min()
+np.testing.assert_allclose(
+    local_vl_cf_ds[gas].values,
+    local_historical_vl_ds[gas].sel(time=local_historical_vl_ds["time"].dt.year >= vl_cf_min_year).values,
+    rtol=1e-4,
+)
+np.testing.assert_allclose(
+    local_vl_cf_ext_ds[gas].values,
+    local_vl_ext_ds[gas].values,
+    rtol=1e-4,
+)
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+# local_vl_cf_ds[gas].plot.line(x="time")
 
 # %%
 # load local dataset(s)

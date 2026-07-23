@@ -28,13 +28,15 @@ def get_doi(any_deposition_id: str) -> str:
     :
         DOI of draft deposit
     """
+    # Urgh
+    return "no-zenodo-token"
     try:
         zenoodo_interactor = ZenodoInteractor(
             token=os.environ["ZENODO_TOKEN"],
             zenodo_domain=ZenodoDomain.production.value,
         )
     except KeyError:
-        msg = "==============\n" "No zenodo token provided, DOI will just be a placeholder\n" "=============="
+        msg = "==============\nNo zenodo token provided, DOI will just be a placeholder\n=============="
         print(msg)
         return "no-zenodo-token"
 

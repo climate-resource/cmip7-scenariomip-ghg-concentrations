@@ -4,6 +4,7 @@ Scale future seasonality with anual-mean
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from cmip7_scenariomip_ghg_generation.notebook_running import run_notebook
@@ -16,7 +17,7 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
     parameters_output=("out_file",),
     # # Urgh, caching is killing me.
     # # For some reason this hits the cache, even though the input file changes.
-    # refresh_cache=True,
+    refresh_cache=os.getenv("VL_CACHE_HACK", "false").lower() in ("true", "1"),
 )
 def scale_seasonality_based_on_annual_mean(  # noqa: PLR0913
     ghg: str,
@@ -81,7 +82,7 @@ def scale_seasonality_based_on_annual_mean(  # noqa: PLR0913
     parameters_output=("out_file",),
     # # Urgh, caching is killing me.
     # # For some reason this hits the cache, even though the input file changes.
-    # refresh_cache=True,
+    refresh_cache=os.getenv("VL_CACHE_HACK", "false").lower() in ("true", "1"),
 )
 def scale_seasonality_based_on_magicc_npp(  # noqa: PLR0913
     ghg: str,
