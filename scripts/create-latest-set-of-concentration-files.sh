@@ -5,7 +5,7 @@
 # but the commands should be easy to copy-paste
 # (if they're not, we've made the script too complex).
 RUN_ID="1.1.0"
-RUN_ID="dev-test"
+# RUN_ID="dev-test"
 
 INPUT4MIPS_CVS_SOURCE="gh:ghg-vl-cf"
 

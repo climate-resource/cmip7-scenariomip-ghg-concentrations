@@ -28,8 +28,7 @@ def get_doi(any_deposition_id: str) -> str:
     :
         DOI of draft deposit
     """
-    # Urgh
-    return "no-zenodo-token"
+    return "10.5281/zenodo.21501391"
     try:
         zenoodo_interactor = ZenodoInteractor(
             token=os.environ["ZENODO_TOKEN"],
