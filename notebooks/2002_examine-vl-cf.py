@@ -33,7 +33,7 @@ import xarray as xr
 # %%
 # Double check these values before running
 output_bundle = "1.1.0"
-output_bundle = "dev-test"
+# output_bundle = "dev-test"
 local_out_root = Path(f"../output-bundles/{output_bundle}/data/processed/esgf-ready/")
 compare_to_esgf_version = "1.1.0"
 compare_to_esgf_version_history_source_id = "CR-CMIP-1-0-0"
