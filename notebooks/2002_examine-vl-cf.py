@@ -13,12 +13,12 @@
 # ---
 
 # %% [markdown]
-# # Compare local output to ESGF
+# # Examine vl-cf output
 #
-# This is just a way to check that we can reproduce what is on the ESGF.
+# Should match history plus vl for many gases,
+# but differ from 2016-01 onwards for others.
 
 # %%
-import functools
 import json
 import re
 from pathlib import Path
@@ -32,12 +32,13 @@ import xarray as xr
 # %%
 # Double check these values before running
 output_bundle = "1.1.0"
+output_bundle = "dev-test"
 local_out_root = Path(f"../output-bundles/{output_bundle}/data/processed/esgf-ready/")
 compare_to_esgf_version = "1.1.0"
+compare_to_esgf_version_history_source_id = "CR-CMIP-1-0-0"
 
 
 # %%
-@functools.cache
 def get_esgf_url(local_fp: Path) -> str:
     """
     Get ESGF HTTP download URL from a filepath
@@ -107,6 +108,95 @@ try:
         esgf_url_checksums = json.load(fh)
 except FileNotFoundError:
     esgf_url_checksums = {}
+
+# %%
+local_vl_cf_fps = list(local_out_root.glob("input4MIPs/**/*CR-vl-cf*.nc"))
+local_vl_cf_fps = list(local_out_root.glob("input4MIPs/**/*CR-vl*.nc"))
+# local_vl_cf_fps
+
+# %%
+gases = set(v.parts[-4] for v in local_vl_cf_fps)
+assert len(gases) == 46
+
+# %%
+grids = set(v.parts[-3] for v in local_vl_cf_fps)
+assert len(grids) == 3, grids
+grids
+
+# %%
+frequencies = set(v.parts[-5] for v in local_vl_cf_fps)
+assert len(frequencies) == 2, frequencies
+frequencies
+
+# %%
+for gas in gases:
+    for grid, frequency, plot in (
+        ("gm", "yr", True),
+        # ("gm", "mon", True),
+        # ("gnz", "mon", True),
+        # ("gr1z", "yr", True),
+        # ("gr1z", "mon", True),
+    ):
+        break
+
+# %%
+local_vl_cf_fps_gas = [
+    v for v in local_vl_cf_fps if v.parts[-4] == gas and v.parts[-3] == grid and v.parts[-5] == frequency
+]
+local_vl_cf_fps_gas
+
+# %%
+local_vl_cf_ds = (
+    xr.open_mfdataset([v for v in local_vl_cf_fps_gas if "ext" not in v.name], use_cftime=True)
+    .assign_coords({"scenario": "vl-cf"})
+    .expand_dims("scenario")
+)
+local_vl_cf_ext_ds = (
+    xr.open_mfdataset([v for v in local_vl_cf_fps_gas if "ext" in v.name], use_cftime=True)
+    .assign_coords({"scenario": "vl-cf"})
+    .expand_dims("scenario")
+)
+
+# %%
+esgf_files_gas = []
+for fp in tqdm.auto.tqdm(local_vl_cf_fps_gas):
+    fp_to_get = Path("/".join(v.replace("vl-cf", "vl") for v in fp.parts))
+    if fp_to_get.name in esgf_url_checksums:
+        url, checksum = esgf_url_checksums[fp_to_get.name]
+    else:
+        url, checksum = get_esgf_url(fp_to_get)
+        esgf_url_checksums[fp_to_get.name] = (url, checksum)
+
+    esgf_file_vl = pooch.retrieve(url, known_hash=checksum)
+    esgf_files_gas.append(esgf_file_vl)
+    if "ext" not in fp.name:
+        history_fp = Path(
+            "/".join(
+                v.replace("ScenarioMIP", "CMIP")
+                .replace("2022-2100", "1750-2022")
+                .replace("202201-210012", "175001-202212")
+                .replace(fp.parts[-7], compare_to_esgf_version_history_source_id)
+                for v in fp.parts
+            )
+        )
+        if history_fp.name in esgf_url_checksums:
+            url, checksum = esgf_url_checksums[history_fp.name]
+        else:
+            url, checksum = get_esgf_url(history_fp)
+            print(history_fp)
+            print(url)
+            esgf_url_checksums[history_fp.name] = (url, checksum)
+
+        esgf_file_history = pooch.retrieve(url, known_hash=checksum)
+        esgf_files_gas.append(esgf_file_history)
+
+# %%
+esgf_files_gas
+
+# %%
+# load local dataset(s)
+# load vl and history combo
+# if extension: load vl
 
 # %%
 # Checks for high.

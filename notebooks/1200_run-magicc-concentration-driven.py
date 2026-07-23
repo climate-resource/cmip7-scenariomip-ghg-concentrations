@@ -53,9 +53,12 @@ from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 # ## Parameters
 
 # %% editable=true slideshow={"slide_type": ""} tags=["parameters"]
-cmip_scenario_name: str = "vl"
+cmip_scenario_name: str = "vl-cf"
 model: str = "REMIND-MAgPIE 3.5-4.11"
-scenario: str = "SSP1 - Very Low Emissions"
+scenario: str = "VL-cf"
+# cmip_scenario_name: str = "vl"
+# model: str = "REMIND-MAgPIE 3.5-4.11"
+# scenario: str = "SSP1 - Very Low Emissions"
 # cmip_scenario_name: str = "h"
 # model: str = "GCAM 8s"
 # scenario: str = "SSP3 - High Emissions"
@@ -143,6 +146,9 @@ for fp in filepaths:
         continue
 
     gases.append(ghg)
+
+# %%
+# sorted(filepaths)
 
 # %%
 concentrations_xr_l = []

@@ -14,28 +14,29 @@ ESGF_VERSION="1.1.0"
 # Use this to refresh the cache for all tasks
 # PREFECT_TASKS_REFRESH_CACHE=true
 
-echo "============================"
-echo "Generating ESGF-ready files"
-echo "============================"
-pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
-pixi run python scripts/generate-concentration-files.py \
-    --run-id "${RUN_ID}" \
-    --esgf-version "${ESGF_VERSION}" \
-    --input4mips-cvs-source "${INPUT4MIPS_CVS_SOURCE}" \
-    --n-workers 2 \
-    --n-workers-multiprocessing 8 \
-    --n-workers-multiprocessing-magicc 2 \
-    --n-workers-per-magicc-notebook 6 \
-    --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv \
-    --scenario vl \
-    --scenario ln \
-    --scenario l \
-    --scenario ml \
-    --scenario m \
-    --scenario hl \
-    --scenario h
-
-generate_exit_code=$?
+# echo "============================"
+# echo "Generating ESGF-ready files"
+# echo "============================"
+# pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
+# pixi run python scripts/generate-concentration-files.py \
+#     --run-id "${RUN_ID}" \
+#     --esgf-version "${ESGF_VERSION}" \
+#     --input4mips-cvs-source "${INPUT4MIPS_CVS_SOURCE}" \
+#     --n-workers 2 \
+#     --n-workers-multiprocessing 8 \
+#     --n-workers-multiprocessing-magicc 2 \
+#     --n-workers-per-magicc-notebook 6 \
+#     --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv \
+#     --scenario vl \
+#     --scenario ln \
+#     --scenario l \
+#     --scenario ml \
+#     --scenario m \
+#     --scenario hl \
+#     --scenario h
+#
+# generate_exit_code=$?
+generate_exit_code=0
 
 if [ $"$generate_exit_code" -eq 0 ]; then
     echo "Produced files for ScenarioMIP"
@@ -54,11 +55,15 @@ else
     exit $generate_exit_code
 
 fi
+
 # Developer note: this is a hack.
 # We have to have the vl files
 # in order to make the vl-cf files.
 # You could do this by fixing the workflow
 # (and that's what we should do long-term).
+#
+# Annoying that we need this, but I can't get caching to work
+export PREFECT_TASKS_REFRESH_CACHE=true
 echo "====================================="
 echo "Generating ESGF-ready files for vl-cf"
 echo "====================================="
