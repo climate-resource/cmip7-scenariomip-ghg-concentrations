@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.2
+#       jupytext_version: 1.19.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -298,3 +298,5 @@ print(f"{len(checked)=}")
 # %%
 with open("esgf-url-checksums.json", "w") as fh:
     json.dump(esgf_url_checksums, fh)
+
+# %%

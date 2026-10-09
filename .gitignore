@@ -10,7 +10,7 @@ scripts-ignore
 .prefect
 
 # MAGICC bits and pieces
-magicc
+magicc*
 magicc-pieces.tar.gz
 
 # Ignore data by default
