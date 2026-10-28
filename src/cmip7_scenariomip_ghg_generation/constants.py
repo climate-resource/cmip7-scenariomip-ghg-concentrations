@@ -173,7 +173,7 @@ Radiative efficiencies for GHGs
 
 Linear hence approximate, but fine.
 
-From Table 7.SM.6 of
+From Table 7.SM.7 (in Section 7.SM.6) of
 https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter07_SM.pdf
 """
 
