@@ -44,10 +44,11 @@ scenario_info_markers: str = (
     "IMAGE 3.4;SSP2 - Medium Emissions;m;;"
     "GCAM 8s;SSP3 - High Emissions;h;;"
     "AIM 3.0;SSP2 - Low Overshoot_a;ln;;"
-    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml"
+    "COFFEE 1.6;SSP2 - Medium-Low Emissions;ml;;"
+    "CGEM;SSP2-COM-CMIP7;SSP2-com-CMIP7"
 )
-emissions_complete_dir: str = "../output-bundles/dev-test/data/interim/complete-emissions"
-magicc_output_db_dir: str = "../output-bundles/dev-test/data/interim/magicc-output/db"
+emissions_complete_dir: str = "../output-bundles/1.1.0/data/interim/complete-emissions"
+magicc_output_db_dir: str = "../output-bundles/1.1.0/data/interim/magicc-output/db"
 magicc_db_backend_str: str = "feather"
 
 
@@ -165,7 +166,7 @@ palette = {
     "SSP2-com-CMIP7": "pink",
 }
 
-scenario_order = ["vl", "ln", "l", "ml", "m", "hl", "h"]
+scenario_order = ["vl", "ln", "l", "SSP2-com-CMIP7", "ml", "m", "hl", "h"]
 
 # %% [markdown]
 # ### Just temperatures
