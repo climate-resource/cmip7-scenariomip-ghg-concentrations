@@ -144,7 +144,7 @@ WESTERN_ET_AL_2024 = ReferenceInfo(
 SANDSTAD_ET_AL_2026 = ReferenceInfo(
     short_name="Sandstad et al., 2026 (in-prep)",
     licence="Paper, NA",
-    reference=("Sandstad, Sanderson et al: " "Emissions extensions for CMIP7 ScenarioMIP, " "in-prep, 2026."),
+    reference=("Sandstad, Sanderson et al: Emissions extensions for CMIP7 ScenarioMIP, in-prep, 2026."),
     url="https://github.com/maritsandstad/emissions_harmonization_historical",
     resource_type="publication-article",
 )
@@ -225,6 +225,18 @@ SCENARIO_REFERENCES = {
             "in-prep, 2026."
         ),
         url="https://zenodo.org/records/18497404",
+        resource_type="publication-article",
+    ),
+    ("CGEM", "SSP2-com-CMIP7"): ReferenceInfo(
+        short_name=("SSP2-com-CMIP7 (LP: Low-emissions pathway based on Pledges), 2026 (in-prep)"),
+        licence="Paper, NA",
+        reference=(
+            "Lu, Y., Zhong, J., et al.: "
+            "The Policy-Aligned Model Intercomparison Project for CMIP7 (PolMIP): "
+            "rationale, scenario design, and experimental protocol, "
+            "in-prep, 2026."
+        ),
+        url="www.in-prep.invalid",
         resource_type="publication-article",
     ),
 }

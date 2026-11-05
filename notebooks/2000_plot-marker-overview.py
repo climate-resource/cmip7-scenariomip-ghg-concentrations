@@ -162,6 +162,7 @@ palette = {
     "m": "#ffa9dc",
     "h": "#700000",
     "hl": "#8f003b",
+    "SSP2-com-CMIP7": "pink",
 }
 
 scenario_order = ["vl", "ln", "l", "ml", "m", "hl", "h"]

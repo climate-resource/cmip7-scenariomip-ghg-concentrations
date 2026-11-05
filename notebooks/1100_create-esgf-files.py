@@ -630,9 +630,10 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
         ds_to_write["lat"].encoding = {"dtype": np.dtypes.Float16DType}
 
     for source_id_l, time_ranges_l in source_id_time_ranges:
+        target_mip = "ScenarioMIP" if "SSP2-com-CMIP7" not in source_id_l else "PolMIP"
         metadata_minimum_common = dict(
             source_id=source_id_l,
-            target_mip="ScenarioMIP",
+            target_mip=target_mip,
         )
         if source_id_l not in cvs.source_id_entries.source_ids:
             raise AssertionError(source_id_l)

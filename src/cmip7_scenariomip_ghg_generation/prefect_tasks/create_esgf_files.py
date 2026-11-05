@@ -181,6 +181,7 @@ def create_esgf_files(  # noqa: PLR0913
     + PathHashesCP(
         parameters_output=("checklist_file",),
     ),
+    refresh_cache=True,
 )
 def create_esgf_files_equivalence_species(  # noqa: PLR0913
     equivalent_species: str,
