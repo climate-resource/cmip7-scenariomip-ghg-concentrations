@@ -112,7 +112,16 @@ for si in tqdm.auto.tqdm(scenario_info_markers_p):
                 climate_model="MAGICCv7.6.0a3",
                 run_mode="magicc-concentration-to-emissions-switch",
             )
-            & pix.ismatch(variable=["Surface Air Temperature Change", "Effective Radiative Forcing**"]),
+            & pix.ismatch(
+                variable=[
+                    "Surface Air Temperature Change",
+                    "Effective Radiative Forcing**",
+                    "Atmospheric Concentrations|CO2",
+                    "Atmospheric Concentrations|CH4",
+                    "Atmospheric Concentrations|N2O",
+                    "Atmospheric Concentrations|CFC12",
+                ]
+            ),
             # progress=True,
         )
     except ValueError:
@@ -163,7 +172,7 @@ palette = {
     "m": "#ffa9dc",
     "h": "#700000",
     "hl": "#8f003b",
-    "SSP2-com-CMIP7": "pink",
+    "SSP2-com-CMIP7": "gray",
 }
 
 scenario_order = ["vl", "ln", "l", "SSP2-com-CMIP7", "ml", "m", "hl", "h"]
@@ -377,6 +386,8 @@ mosaic = [
     ["Effective Radiative Forcing|Aerosols|Direct Effect|OC", "Emissions|OC"],
     ["Effective Radiative Forcing|Aerosols|Direct Effect|SOx", "Emissions|SOx"],
     ["Effective Radiative Forcing|Montreal Protocol Halogen Gases", "."],
+    ["Atmospheric Concentrations|CO2", "Atmospheric Concentrations|CH4"],
+    ["Atmospheric Concentrations|N2O", "Atmospheric Concentrations|CFC12"],
 ]
 fig, axes = plt.subplot_mosaic(
     mosaic,
