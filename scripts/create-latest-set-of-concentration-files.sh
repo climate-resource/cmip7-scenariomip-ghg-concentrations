@@ -10,9 +10,8 @@ echo "============================"
 echo "Generating ESGF-ready files"
 echo "============================"
 # # Use this to refresh the cache for all tasks
-# PREFECT_TASKS_REFRESH_CACHE=true
 pixi run prefect profile use cmip7-scenariomip-ghg-concentrations
-pixi run python scripts/generate-concentration-files.py \
+PREFECT_TASKS_REFRESH_CACHE=true pixi run python scripts/generate-concentration-files.py \
     --run-id "${RUN_ID}" \
     --esgf-version 1.1.0 \
     --input4mips-cvs-source "gh:ghg-ssp2-com-cmip7" \
@@ -20,7 +19,7 @@ pixi run python scripts/generate-concentration-files.py \
     --n-workers-multiprocessing 8 \
     --n-workers-multiprocessing-magicc 2 \
     --n-workers-per-magicc-notebook 6 \
-    --emissions-file data/raw/input-scenarios/202611051220_ssp2-com-cmip7_202512071232_202511040855_202511040855_complete-emissions.csv
+    --emissions-file data/raw/input-scenarios/202611091400_ssp2-com-cmip7_202611051000_202512071232_202511040855_202511040855_complete-emissions.csv
 # --input4mips-cvs-source "gh:ghg-concs-v1-1-0" \
 # --emissions-file data/raw/input-scenarios/202603251220_202512071232_202511040855_202511040855_complete-emissions.csv
 # --run-id "dev-test"
