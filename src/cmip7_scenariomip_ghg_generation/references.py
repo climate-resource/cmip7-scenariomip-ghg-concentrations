@@ -40,6 +40,19 @@ NICHOLLS_ET_AL_HISTORICAL = ReferenceInfo(
     resource_type="publication-article",
 )
 
+NICHOLLS_ET_AL_HISTORICAL_EO_UPDATE = ReferenceInfo(
+    short_name="Nicholls et al., 2026 (in-prep)",
+    licence="Paper, NA",
+    reference=(
+        "Nicholls, Z., Meinshausen, M., Lewis, J., Pflueger, M., Menking, A., ...: "
+        "Greenhouse gas concentrations for climate modelling (CMIP7), "
+        "in-prep, 2026."
+    ),
+    url="https://github.com/climate-resource/CMIP-GHG-Concentration-Generation",
+    resource_type="publication-article",
+)
+"""Same reference as written in the EO-update historical files, only used for the EO-update files"""
+
 NICHOLLS_ET_AL_SCENARIOS = ReferenceInfo(
     short_name="Nicholls et al., future GHG concentrations, 2026 (in-prep)",
     licence="Paper, NA",
@@ -147,6 +160,19 @@ SANDSTAD_ET_AL_2026 = ReferenceInfo(
     reference=("Sandstad, Sanderson et al: " "Emissions extensions for CMIP7 ScenarioMIP, " "in-prep, 2026."),
     url="https://github.com/maritsandstad/emissions_harmonization_historical",
     resource_type="publication-article",
+)
+
+EO_UPDATE_HISTORICAL_LOCAL_FIT = ReferenceInfo(
+    short_name="EO-updated historical GHG concentrations (local fit, 2026)",
+    licence="Internal, NA",
+    reference=(
+        "Climate Resource: EO-updated historical CO2 and CH4 concentrations, "
+        "derived from CMIP-GHG-Concentration-Generation using satellite "
+        "inverse-variance-weighted fits (LINEAR_SEASONAL_LAT_STD_WEIGHT_FIT for CO2, "
+        "NONLINEAR_LAT_STD_WEIGHT_FIT for CH4), 2026."
+    ),
+    url="https://github.com/climate-resource/CMIP-GHG-Concentration-Generation",
+    resource_type="dataset",
 )
 
 SCENARIO_REFERENCES = {

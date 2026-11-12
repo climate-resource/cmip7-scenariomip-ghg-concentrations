@@ -57,6 +57,7 @@ from cmip7_scenariomip_ghg_generation.references import (
     SCENARIO_REFERENCES,
     WESTERN_ET_AL_2024,
     WMO_2022,
+    ReferenceInfo,
 )
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 from cmip7_scenariomip_ghg_generation.single_concentration_projection_flow import (
@@ -125,6 +126,9 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     output_bundle_root_dir: Path,
     repo_root_dir: Path,
     reference_db: Path,
+    eo_update_filename_suffix_by_ghg: dict[str, str] | None = None,
+    eo_update_comment_extra_by_ghg: dict[str, str] | None = None,
+    eo_update_references_by_ghg: dict[str, list[ReferenceInfo]] | None = None,
 ) -> tuple[Path, ...] | tuple[Path | PrefectFuture, ...]:
     """
     Create the ScenarioMIP GHG concentrations
@@ -284,6 +288,21 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
     reference_db
         Database in which reference information is saved
 
+    eo_update_filename_suffix_by_ghg
+        Optional, per-GHG suffix to append to ESGF-ready filenames
+
+        Only applied to the GHGs present as keys.
+        Leaves the default (CV-compliant) filenames untouched for every
+        other GHG, so the baseline workflow is unaffected unless a GHG is
+        explicitly opted in here.
+
+    eo_update_comment_extra_by_ghg
+        Optional, per-GHG extra text appended to the `comment` attribute
+
+    eo_update_references_by_ghg
+        Optional, per-GHG extra references to attach (in addition to the
+        usual ones)
+
     Returns
     -------
     :
@@ -291,6 +310,10 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
 
         If any task failed, the future with the failure is returned instead
     """
+    eo_update_filename_suffix_by_ghg = eo_update_filename_suffix_by_ghg or {}
+    eo_update_comment_extra_by_ghg = eo_update_comment_extra_by_ghg or {}
+    eo_update_references_by_ghg = eo_update_references_by_ghg or {}
+
     ### Used in all flows hence here
     downloaded_cmip7_historical_seasonality_lat_gradient_info = submit_output_aware(
         download_file,
@@ -592,6 +615,7 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                 NICHOLLS_ET_AL_HISTORICAL,
                 NICHOLLS_ET_AL_SCENARIOS,
                 MEINSHAUSEN_ET_AL_SCENARIOS,
+                *eo_update_references_by_ghg.get(ghg, []),
             ]
             references_extensions_only_short_names_modelling_based_ghg = [
                 SANDSTAD_ET_AL_2026,
@@ -805,6 +829,8 @@ def create_scenariomip_ghgs_flow(  # noqa: PLR0912, PLR0913, PLR0915
                     references_extensions_short_names=references_extensions_short_names,
                     reference_db=reference_db,
                     historical_data_root_dir=cmip7_historical_ghg_concentration_data_root_dir,
+                    output_filename_suffix=eo_update_filename_suffix_by_ghg.get(ghg),
+                    extra_comment=eo_update_comment_extra_by_ghg.get(ghg),
                     raw_notebooks_root_dir=raw_notebooks_root_dir,
                     executed_notebooks_dir=executed_notebooks_dir,
                     checklist_file=esgf_ready_root_dir / f"{ghg}_{si.cmip_scenario_name}.chk",
@@ -994,6 +1020,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     output_bundle_root_dir: Path,
     repo_root_dir: Path,
     reference_db: Path,
+    eo_update_filename_suffix_by_ghg: dict[str, str] | None = None,
+    eo_update_comment_extra_by_ghg: dict[str, str] | None = None,
+    eo_update_references_by_ghg: dict[str, list[ReferenceInfo]] | None = None,
 ) -> tuple[Path, ...]:
     """
     Create ScenarioMIP GHGs via a convenience wrapper
@@ -1160,6 +1189,15 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
     reference_db
         Database in which reference information is saved
 
+    eo_update_filename_suffix_by_ghg
+        Optional, per-GHG suffix to append to ESGF-ready filenames
+
+    eo_update_comment_extra_by_ghg
+        Optional, per-GHG extra text appended to the `comment` attribute
+
+    eo_update_references_by_ghg
+        Optional, per-GHG extra references to attach
+
     Returns
     -------
     :
@@ -1259,6 +1297,9 @@ def create_scenariomip_ghgs(  # noqa: PLR0913
             output_bundle_root_dir=output_bundle_root_dir,
             repo_root_dir=repo_root_dir,
             reference_db=reference_db,
+            eo_update_filename_suffix_by_ghg=eo_update_filename_suffix_by_ghg,
+            eo_update_comment_extra_by_ghg=eo_update_comment_extra_by_ghg,
+            eo_update_references_by_ghg=eo_update_references_by_ghg,
         )
 
     return res_flow

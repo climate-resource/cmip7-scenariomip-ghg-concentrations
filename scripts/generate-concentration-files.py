@@ -15,6 +15,7 @@ from pandas_openscm.io import load_timeseries_csv
 
 from cmip7_scenariomip_ghg_generation.input4mips_cvs_helpers import create_source_id, create_source_id_extension
 from cmip7_scenariomip_ghg_generation.main_flow import create_scenariomip_ghgs
+from cmip7_scenariomip_ghg_generation.references import EO_UPDATE_HISTORICAL_LOCAL_FIT
 from cmip7_scenariomip_ghg_generation.scenario_info import ScenarioInfo
 
 REPO_ROOT_DIR = Path(__file__).parents[1]
@@ -180,6 +181,22 @@ Be careful and don't crash your computer."""
     reference_db_name: Annotated[Path, typer.Option(help="Name of the database in which to save references")] = (
         "references.db"
     ),
+    eo_update_filename_suffix: Annotated[
+        list[str],
+        typer.Option(
+            help="GHG=tag pairs; that GHG's ESGF-ready filenames get `input4MIPs` replaced with "
+            "`{tag}-input4MIPs` (e.g. co2=EO-update gives `EO-update-input4MIPs`). "
+            "GHGs not listed keep their normal filenames."
+        ),
+    ] = [],  # noqa: B006
+    eo_update_comment_extra: Annotated[
+        list[str],
+        typer.Option(help="GHG=text pairs appended to that GHG's written `comment` attribute"),
+    ] = [],  # noqa: B006
+    eo_update_reference_ghgs: Annotated[
+        list[str],
+        typer.Option(help="GHGs to attach the EO-updated-local-fit reference to"),
+    ] = [],  # noqa: B006
 ) -> tuple[Path, ...]:
     """
     Generate the CMIP7 ScenarioMIP greenhouse gas concentration files
@@ -187,6 +204,10 @@ Be careful and don't crash your computer."""
     Secrets are passed via a `.env` file, see `.env.sample`.
     """
     load_dotenv()
+
+    eo_update_filename_suffix_by_ghg = dict(item.split("=", 1) for item in eo_update_filename_suffix)
+    eo_update_comment_extra_by_ghg = dict(item.split("=", 1) for item in eo_update_comment_extra)
+    eo_update_references_by_ghg = {g: [EO_UPDATE_HISTORICAL_LOCAL_FIT] for g in eo_update_reference_ghgs}
 
     ghgs = tuple(ghg)
     magicc_versions_to_run = tuple(magicc_version_to_run)
@@ -447,6 +468,9 @@ Be careful and don't crash your computer."""
         output_bundle_root_dir=output_bundle_root_dir,
         repo_root_dir=REPO_ROOT_DIR,
         reference_db=reference_db,
+        eo_update_filename_suffix_by_ghg=eo_update_filename_suffix_by_ghg,
+        eo_update_comment_extra_by_ghg=eo_update_comment_extra_by_ghg,
+        eo_update_references_by_ghg=eo_update_references_by_ghg,
     )
 
 

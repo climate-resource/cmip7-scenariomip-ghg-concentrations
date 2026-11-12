@@ -90,6 +90,11 @@ references_extensions_short_names = [
     "Sandstad et al., 2026 (in-prep)",
 ]
 reference_db = "../output-bundles/dev-test/data/interim/references.db"
+output_filename_suffix: str | None = None
+extra_comment: str | None = None
+source_id_override: str | None = None
+source_id_extension_override: str | None = None
+extra_global_attributes: dict[str, str] | None = None
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -478,6 +483,8 @@ comment = (
     "(see 'references*' attributes). "
     "For funding information, see the 'funding*' attributes."
 )
+if extra_comment is not None:
+    comment = f"{comment} {extra_comment}"
 
 # %%
 db_connection = sqlite3.connect(reference_db_p)
@@ -493,6 +500,7 @@ non_input4mips_metadata_common = {
     "funding": " ".join([v["long_text"] for v in funding_info]),
     "funding_short_names": " --- ".join([v["name"] for v in funding_info]),
     "funding_urls": " --- ".join([v["url"] for v in funding_info]),
+    **(extra_global_attributes or {}),
 }
 references_input4mips_metadata = {
     "references": " --- ".join([v["reference"] for v in gas_deps]),
@@ -562,11 +570,11 @@ time_ranges_to_write_ext
 # Also associate them with time ranges.
 
 # %%
-source_id = create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
+source_id = source_id_override or create_source_id(esgf_institution_id, cmip_scenario_name, esgf_version)
 source_id
 
 # %%
-source_id_extension = create_source_id_extension(source_id, cmip_scenario_name)
+source_id_extension = source_id_extension_override or create_source_id_extension(source_id, cmip_scenario_name)
 source_id_extension
 
 # %%
@@ -697,6 +705,13 @@ for dat_resolution, grid_label, nominal_resolution, yearly_time_bounds in tqdm.a
 
             print("Writing")
             written = input4mips_ds.write(esgf_ready_root_dir_p)
+
+            if output_filename_suffix is not None:
+                renamed_stem = written.stem.replace("_input4MIPs_", f"_{output_filename_suffix}-input4MIPs_")
+                written_with_suffix = written.with_name(f"{renamed_stem}{written.suffix}")
+                written.rename(written_with_suffix)
+                written = written_with_suffix
+
             print(f"Wrote: {written.relative_to(esgf_ready_root_dir_p)}")
 
         print("")

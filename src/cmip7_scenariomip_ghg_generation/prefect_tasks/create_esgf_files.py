@@ -48,6 +48,8 @@ def create_esgf_files(  # noqa: PLR0913
     checklist_file: Path,
     pool: multiprocessing.pool.Pool | None,
     res_timeout: int = 10 * 60,
+    output_filename_suffix: str | None = None,
+    extra_comment: str | None = None,
 ) -> tuple[Path, ...]:
     """
     Create ESGF files
@@ -126,6 +128,15 @@ def create_esgf_files(  # noqa: PLR0913
     res_timeout
         Time to wait for parallel results before timing out
 
+    output_filename_suffix
+        If supplied, inserted into the written filenames' `input4MIPs` token
+        as `"{output_filename_suffix}-input4MIPs"` (e.g. `"EO-update"` gives
+        `EO-update-input4MIPs`), after the normal CV-compliant file has been
+        written. Leaves the default naming untouched if `None`.
+
+    extra_comment
+        If supplied, appended to the written files' `comment` attribute
+
     Returns
     -------
     :
@@ -154,6 +165,8 @@ def create_esgf_files(  # noqa: PLR0913
             "references_short_names": references_short_names,
             "references_extensions_short_names": references_extensions_short_names,
             "reference_db": str(reference_db),
+            "output_filename_suffix": output_filename_suffix,
+            "extra_comment": extra_comment,
         },
         run_notebooks_dir=executed_notebooks_dir,
         identity=f"{ghg}_{cmip_scenario_name}",
