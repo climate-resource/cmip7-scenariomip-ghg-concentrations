@@ -11,6 +11,7 @@ scripts-ignore
 
 # MAGICC bits and pieces
 magicc
+magicc*.tar.gz
 magicc-pieces.tar.gz
 
 # Ignore data by default
@@ -158,3 +159,8 @@ dmypy.json
 
 # Mac stuff
 *.DS_Store
+
+# diffs output
+diffs/*
+!diffs/*.py
+!diffs/README.md
